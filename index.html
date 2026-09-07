@@ -6,15 +6,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Calories">
-<meta name="theme-color" content="#F6F5F1">
+<meta name="theme-color" content="#F4F3EE">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <title>Suivi calories</title>
 <style>
   :root{
-    --bg:#F6F5F1; --surface:#FFFFFF; --ink:#22261F; --ink-soft:#6E7266; --ink-faint:#A8AC9E;
-    --line:#E5E2D8; --accent:#2F5D46; --accent-soft:#E5EEE7; --warn:#B2502E; --warn-soft:#F5E7DF;
-    --protein:#2F5D46; --carbs:#C08A2E; --fat:#4C6E96; --radius:14px;
+    --bg:#F4F3EE; --surface:#FFFFFF; --ink:#1E221B; --ink-soft:#696D61; --ink-faint:#A3A795;
+    --line:#E2DFD3; --accent:#2F5D46; --accent-soft:#E3EDE6;
+    --good:#1E8E5C; --good-soft:#DFF2E7;
+    --bad:#C8432A; --bad-soft:#FBE5DF;
+    --hero-a:#1D3B2E; --hero-b:#0F241B;
+    --mint:#62D6A0; --coral:#FF8A6B;
+    --protein:#2F5D46; --carbs:#C0862B; --fat:#3E6699;
+    --radius:18px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -23,87 +28,131 @@
     -webkit-font-smoothing:antialiased;min-height:100vh;overscroll-behavior-y:none;}
   #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;
     padding-top:env(safe-area-inset-top);padding-bottom:calc(72px + env(safe-area-inset-bottom));}
-  header.top{padding:20px 20px 8px 20px;}
-  header.top h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-0.01em;}
-  main{flex:1;padding:12px 16px 24px 16px;}
+  header.top{padding:20px 20px 6px 20px;display:flex;align-items:baseline;justify-content:space-between;}
+  header.top h1{font-size:22px;font-weight:800;margin:0;letter-spacing:-0.02em;}
+  header.top .today{font-size:12px;color:var(--ink-faint);font-weight:600;text-transform:capitalize;}
+  main{flex:1;padding:10px 16px 24px 16px;}
   .view{display:none;} .view.active{display:block;}
 
-  .date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px;}
+  .date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;}
   .date-nav button{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:40px;height:40px;
-    border-radius:10px;font-size:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+    border-radius:12px;font-size:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;}
   .date-nav button:disabled{opacity:0.3;}
   .date-center{flex:1;text-align:center;position:relative;}
-  .date-label{font-size:15px;font-weight:600;text-transform:capitalize;}
+  .date-label{font-size:15px;font-weight:700;text-transform:capitalize;}
   .date-center input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px;}
   .date-hint{font-size:11px;color:var(--ink-faint);margin-top:2px;}
 
-  .card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--line);padding:16px;margin-bottom:12px;}
-  .total-card{padding:20px 16px;}
-  .total-row{display:flex;align-items:baseline;justify-content:space-between;}
-  .total-cal{font-size:36px;font-weight:700;letter-spacing:-0.02em;}
-  .total-cal small{font-size:15px;font-weight:500;color:var(--ink-soft);}
-  .diff-pill{display:inline-block;padding:5px 11px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap;}
-  .diff-pill.ok{background:var(--accent-soft);color:var(--accent);}
-  .diff-pill.warn{background:var(--warn-soft);color:var(--warn);}
-  .diff-pill.neutral{background:#EEEEE9;color:var(--ink-soft);}
-  .goal-sub{color:var(--ink-soft);font-size:13px;margin-top:6px;}
+  .card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--line);padding:18px 16px;margin-bottom:12px;}
+  .card-title{font-size:14px;font-weight:700;margin:0;}
+  .card-sub{font-size:12px;color:var(--ink-soft);margin:3px 0 12px 0;}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;}
+  .card-head .right{font-size:12px;color:var(--ink-faint);font-weight:600;}
 
-  .macro-row{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+  .hero{background:linear-gradient(160deg,var(--hero-a),var(--hero-b));color:#fff;border:none;
+    padding:20px 16px 16px 16px;box-shadow:0 8px 24px rgba(15,36,27,.22);}
+  .hero .card-title{color:rgba(255,255,255,.92);}
+  .hero .card-sub{color:rgba(255,255,255,.55);margin-bottom:4px;}
+  .gauge-wrap{position:relative;margin:4px auto 0 auto;width:100%;max-width:300px;}
+  .gauge-wrap svg{width:100%;height:auto;display:block;}
+  .gauge-center{position:absolute;left:0;right:0;bottom:22px;text-align:center;}
+  .gauge-num{font-size:42px;font-weight:800;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;}
+  .gauge-num.good{color:var(--mint);} .gauge-num.bad{color:var(--coral);} .gauge-num.neutral{color:rgba(255,255,255,.45);}
+  .gauge-lbl{font-size:11px;font-weight:800;margin-top:6px;letter-spacing:.08em;}
+  .gauge-lbl.good{color:var(--mint);} .gauge-lbl.bad{color:var(--coral);} .gauge-lbl.neutral{color:rgba(255,255,255,.45);}
+  .hero-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);}
+  .hero-meta div{text-align:center;}
+  .hero-meta .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .hero-meta .k{font-size:10.5px;color:rgba(255,255,255,.55);font-weight:600;margin-top:2px;}
+  .hero-meta .v.over{color:var(--coral);}
+  .hero-trend{margin-top:14px;}
+  .hero-trend .lbl{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;margin-bottom:6px;}
+  .hero-trend svg{width:100%;height:auto;display:block;}
+
+  .macro-flex{display:flex;align-items:center;gap:18px;}
+  .macro-legend{flex:1;display:flex;flex-direction:column;gap:9px;}
+  .legend-row{display:flex;align-items:center;gap:8px;font-size:13px;}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+  .legend-label{flex:1;color:var(--ink-soft);font-weight:600;}
+  .legend-val{font-variant-numeric:tabular-nums;font-weight:800;}
+  .legend-g{font-size:11px;color:var(--ink-faint);font-weight:600;margin-left:4px;min-width:36px;text-align:right;}
+  .legend-g.over{color:var(--bad);font-weight:800;}
+  .macro-bars{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
   .macro-line{display:flex;align-items:center;gap:10px;}
-  .macro-name{width:64px;font-size:13px;color:var(--ink-soft);font-weight:600;}
-  .macro-track{flex:1;height:6px;background:#EEEEE9;border-radius:3px;overflow:hidden;}
-  .macro-fill{height:100%;border-radius:3px;transition:width .2s;}
-  .macro-val{width:72px;text-align:right;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .macro-name{width:60px;font-size:12px;color:var(--ink-soft);font-weight:600;}
+  .macro-track{flex:1;height:6px;background:#EEEEE8;border-radius:3px;overflow:hidden;}
+  .macro-fill{height:100%;border-radius:3px;}
+  .macro-val{width:82px;text-align:right;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .macro-val b{font-weight:700;color:var(--ink);}
+  .macro-val.over b{color:var(--bad);}
 
-  .meal-title{font-size:15px;font-weight:700;margin:0 0 12px 0;}
+  section.title{font-size:13px;font-weight:700;color:var(--ink-soft);margin:20px 0 8px 4px;}
+  .meal-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .meal-title{font-size:15px;font-weight:700;margin:0;}
+  .meal-sub{font-size:12px;color:var(--ink-faint);font-weight:700;font-variant-numeric:tabular-nums;}
   .meal-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+  .meal-grid.three{grid-template-columns:1fr 1fr 1fr;}
+  .meal-hint{font-size:11px;color:var(--ink-faint);font-weight:600;margin-top:2px;}
+  .meal-note{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px;
+    background:#FBFBF9;color:var(--ink);font-family:inherit;resize:none;line-height:1.4;}
+  .meal-note:focus{outline:none;border-color:var(--accent);background:#fff;}
   .field{display:flex;flex-direction:column;gap:5px;}
   .field label{font-size:11px;color:var(--ink-soft);font-weight:600;}
-  .field input{border:1px solid var(--line);border-radius:9px;padding:9px 4px;font-size:16px;width:100%;text-align:center;
-    background:#FBFBF9;color:var(--ink);font-family:inherit;-moz-appearance:textfield;}
+  .field input{border:1px solid var(--line);border-radius:10px;padding:10px 4px;font-size:16px;width:100%;text-align:center;
+    background:#FBFBF9;color:var(--ink);font-family:inherit;font-weight:600;}
   .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   .field input:focus{outline:none;border-color:var(--accent);background:#fff;}
-  section.title{font-size:13px;font-weight:700;color:var(--ink-soft);margin:20px 0 8px 4px;}
 
-  .week-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
-  .stat{background:#FBFBF9;border-radius:10px;padding:12px;}
-  .stat .num{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;}
-  .stat .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .period-toggle{display:flex;background:#E9E8E1;border-radius:12px;padding:3px;margin-bottom:14px;}
+  .period-toggle button{flex:1;border:none;background:none;padding:9px 0;border-radius:10px;font-size:13px;font-weight:700;
+    color:var(--ink-soft);font-family:inherit;}
+  .period-toggle button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.10);}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat{background:#F8F8F4;border-radius:14px;padding:13px 14px;}
+  .stat .num{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+  .stat .num.good{color:var(--good);} .stat .num.bad{color:var(--bad);}
+  .stat .num small{font-size:12px;color:var(--ink-faint);font-weight:700;margin-left:3px;}
+  .stat .lbl{font-size:11px;color:var(--ink-soft);margin-top:3px;font-weight:600;}
+  .chart{margin-top:14px;} .chart svg{width:100%;height:auto;display:block;}
+  .day-list{max-height:360px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:8px;padding-bottom:8px;}
   .day-row{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--line);}
   .day-row:last-child{border-bottom:none;}
-  .day-row .dname{font-size:14px;font-weight:600;text-transform:capitalize;width:100px;}
-  .day-row .dcal{font-size:14px;color:var(--ink-soft);flex:1;text-align:right;padding-right:10px;font-variant-numeric:tabular-nums;}
-  .day-row .ddiff{font-size:13px;font-weight:600;width:70px;text-align:right;font-variant-numeric:tabular-nums;}
-  .empty-note{color:var(--ink-faint);font-size:13px;text-align:center;padding:6px 0;}
+  .day-row .dname{font-size:13px;font-weight:600;text-transform:capitalize;width:96px;flex-shrink:0;}
+  .day-row .dcal{font-size:13px;color:var(--ink-soft);flex:1;text-align:right;padding-right:10px;font-variant-numeric:tabular-nums;}
+  .day-row .ddiff{font-size:13px;font-weight:800;width:64px;text-align:right;font-variant-numeric:tabular-nums;}
+  .empty-note{color:var(--ink-faint);font-size:13px;text-align:center;padding:10px 0;}
 
   .settings-field{margin-bottom:16px;}
   .settings-field label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
-  .settings-field input{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:16px;
-    background:#FBFBF9;color:var(--ink);font-family:inherit;}
+  .settings-field .hint{font-size:11.5px;color:var(--ink-faint);margin-top:5px;line-height:1.4;}
+  .settings-field input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;
+    background:#FBFBF9;color:var(--ink);font-family:inherit;font-weight:600;}
   .settings-field input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .divider{height:1px;background:var(--line);margin:18px 0;}
   .btn{width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;font-family:inherit;margin-top:8px;}
   .btn.primary{background:var(--accent);color:#fff;}
   .btn.secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line);}
   .btn:active{opacity:0.85;}
   .note{text-align:center;color:var(--accent);font-size:13px;font-weight:600;margin-top:10px;min-height:16px;}
-  .note.err{color:var(--warn);}
+  .note.err{color:var(--bad);}
   .info{font-size:13px;color:var(--ink-soft);line-height:1.45;margin:0 0 12px 0;}
 
-  nav.tabbar{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:rgba(246,245,241,0.94);
-    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;
+  nav.tabbar{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:rgba(244,243,238,0.94);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;
     padding-bottom:env(safe-area-inset-bottom);}
   nav.tabbar button{flex:1;background:none;border:none;padding:10px 0 8px 0;display:flex;flex-direction:column;
     align-items:center;gap:3px;color:var(--ink-faint);font-family:inherit;}
   nav.tabbar button.active{color:var(--accent);}
   nav.tabbar button svg{width:22px;height:22px;}
-  nav.tabbar button span{font-size:11px;font-weight:600;}
+  nav.tabbar button span{font-size:11px;font-weight:700;}
 </style>
 </head>
 <body>
 <div id="app">
-  <header class="top"><h1>Suivi calories</h1></header>
+  <header class="top"><h1>Suivi calories</h1><span class="today" id="headerDate"></span></header>
   <main>
 
+    <!-- JOUR -->
     <div class="view active" id="view-day">
       <div class="date-nav">
         <button id="prevDay" aria-label="Jour précédent">‹</button>
@@ -115,45 +164,110 @@
         <button id="nextDay" aria-label="Jour suivant">›</button>
       </div>
 
-      <div class="card total-card">
-        <div class="total-row">
-          <div class="total-cal"><span id="dayTotalCal">0</span> <small>kcal</small></div>
-          <div id="dayDiffPill" class="diff-pill neutral">—</div>
+      <div class="card hero">
+        <div class="card-title">Bilan calorique</div>
+        <div class="card-sub">Écart entre ton apport et ton maintien</div>
+        <div class="gauge-wrap">
+          <div id="gauge"></div>
+          <div class="gauge-center">
+            <div class="gauge-num neutral" id="gaugeNum">—</div>
+            <div class="gauge-lbl neutral" id="gaugeLbl">Aucune saisie</div>
+          </div>
         </div>
-        <div class="goal-sub">Objectif : <span id="dayGoalCal">2000</span> kcal</div>
-        <div class="macro-row" id="dayMacroBars"></div>
+        <div class="hero-meta">
+          <div><div class="v" id="metaCal">0</div><div class="k">apport (kcal)</div></div>
+          <div><div class="v" id="metaGoal">2000</div><div class="k">objectif</div></div>
+          <div><div class="v" id="metaMaint">2600</div><div class="k">maintien</div></div>
+        </div>
+        <div class="hero-trend">
+          <div class="lbl">7 derniers jours · pointillé = maintien</div>
+          <div id="miniTrend"></div>
+        </div>
       </div>
 
-      <section class="title">Repas</section>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Macros</div><div class="right">% des calories</div></div>
+        <div class="card-sub">Répartition et progression vers tes objectifs</div>
+        <div class="macro-flex">
+          <div id="dayDonut"></div>
+          <div class="macro-legend" id="dayLegend"></div>
+        </div>
+        <div class="macro-bars" id="dayMacroBars"></div>
+      </div>
+
+      <section class="title">Repas · calories calculées automatiquement (4 kcal/g protéines et glucides, 9 kcal/g lipides)</section>
       <div id="mealsContainer"></div>
     </div>
 
-    <div class="view" id="view-week">
-      <div class="card">
-        <div class="meal-title">Bilan de la semaine</div>
-        <div class="week-summary-grid">
-          <div class="stat"><div class="num" id="weekAvgCal">—</div><div class="lbl">moyenne kcal/jour</div></div>
-          <div class="stat"><div class="num" id="weekDiffTotal">—</div><div class="lbl">bilan cumulé sur 7 jours</div></div>
-        </div>
-        <div class="macro-row" id="weekMacroBars"></div>
+    <!-- STATS -->
+    <div class="view" id="view-stats">
+      <div class="period-toggle">
+        <button class="active" data-period="7">7 jours</button>
+        <button data-period="30">30 jours</button>
+        <button data-period="all">Depuis le début</button>
       </div>
-      <section class="title">7 derniers jours</section>
-      <div class="card" id="weekDays"></div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title" id="statsTitle">Bilan de la semaine</div><div class="right" id="statsRange"></div></div>
+        <div class="card-sub" id="statsSub"></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="num" id="statBalance">—</div><div class="lbl">bilan cumulé (kcal)</div></div>
+          <div class="stat"><div class="num" id="statAvgBal">—</div><div class="lbl">bilan moyen / jour</div></div>
+          <div class="stat"><div class="num" id="statAvgCal">—</div><div class="lbl">apport moyen / jour</div></div>
+          <div class="stat"><div class="num" id="statDeficitDays">—</div><div class="lbl">jours en déficit</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Évolution du bilan cumulé</div><div class="right">kcal</div></div>
+        <div class="card-sub">Sous zéro = déficit accumulé, au-dessus = surplus</div>
+        <div class="chart" id="cumChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title" id="barsTitle">Apport par jour</div><div class="right">pointillé = maintien</div></div>
+        <div class="card-sub" id="barsSub">Vert sous le maintien, rouge au-dessus</div>
+        <div class="chart" id="statsChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Macros moyennes</div><div class="right">% des calories</div></div>
+        <div class="card-sub" id="macroSub"></div>
+        <div class="macro-flex">
+          <div id="statsDonut"></div>
+          <div class="macro-legend" id="statsLegend"></div>
+        </div>
+        <div class="macro-bars" id="statsMacroBars"></div>
+      </div>
+
+      <section class="title">Détail par jour</section>
+      <div class="card day-list" id="statsDays"></div>
     </div>
 
+    <!-- REGLAGES -->
     <div class="view" id="view-settings">
       <div class="card">
-        <div class="meal-title">Objectifs quotidiens</div>
-        <div class="settings-field"><label>Calories (kcal)</label><input type="number" inputmode="numeric" id="setCal"></div>
+        <div class="meal-title" style="margin-bottom:14px">Objectifs</div>
+        <div class="settings-field">
+          <label>Maintien calorique (TDEE)</label>
+          <input type="number" inputmode="numeric" id="setMaint">
+          <div class="hint">Calories brûlées par jour en moyenne. Le déficit/surplus est calculé par rapport à ce chiffre.</div>
+        </div>
+        <div class="settings-field">
+          <label>Objectif d'apport quotidien (kcal)</label>
+          <input type="number" inputmode="numeric" id="setCal">
+          <div class="hint">Ce que tu vises à manger chaque jour. Affiché comme repère, sans influence sur le bilan.</div>
+        </div>
+        <div class="divider"></div>
         <div class="settings-field"><label>Protéines (g)</label><input type="number" inputmode="numeric" id="setProtein"></div>
         <div class="settings-field"><label>Glucides (g)</label><input type="number" inputmode="numeric" id="setCarbs"></div>
         <div class="settings-field"><label>Lipides (g)</label><input type="number" inputmode="numeric" id="setFat"></div>
-        <button class="btn primary" id="saveSettings">Enregistrer les objectifs</button>
+        <button class="btn primary" id="saveSettings">Enregistrer</button>
         <div class="note" id="saveNote"></div>
       </div>
 
       <div class="card">
-        <div class="meal-title">Mes données</div>
+        <div class="meal-title" style="margin-bottom:10px">Mes données</div>
         <p class="info" id="dataInfo">Chargement…</p>
         <button class="btn secondary" id="exportBtn">Exporter une sauvegarde (.json)</button>
         <button class="btn secondary" id="importBtn">Restaurer depuis une sauvegarde</button>
@@ -169,9 +283,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
       <span>Jour</span>
     </button>
-    <button class="tab-btn" data-view="week">
+    <button class="tab-btn" data-view="stats">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/></svg>
-      <span>Semaine</span>
+      <span>Stats</span>
     </button>
     <button class="tab-btn" data-view="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
@@ -188,246 +302,347 @@
   const MEALS = [
     {key:"breakfast", label:"Petit-déjeuner"},
     {key:"lunch", label:"Déjeuner"},
-    {key:"dinner", label:"Dîner"}
+    {key:"dinner", label:"Dîner"},
+    {key:"other", label:"Autre", hasNote:true, hint:"Grignotages, shakers, collations…"}
   ];
+  const KCAL = {protein:4, carbs:4, fat:9}; // facteurs d'Atwater (FAO/USDA)
   const MACROS = [
-    {key:"protein", label:"Protéines", color:"var(--protein)"},
-    {key:"carbs", label:"Glucides", color:"var(--carbs)"},
-    {key:"fat", label:"Lipides", color:"var(--fat)"}
+    {key:"protein", label:"Protéines", color:"var(--protein)", kcalPerG:4},
+    {key:"carbs", label:"Glucides", color:"var(--carbs)", kcalPerG:4},
+    {key:"fat", label:"Lipides", color:"var(--fat)", kcalPerG:9}
   ];
-  const DEFAULT_SETTINGS = {calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65};
-  const emptyMeal = () => ({cal:0, protein:0, carbs:0, fat:0});
-  const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal()});
+  const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65};
+  const emptyMeal = () => ({protein:0, carbs:0, fat:0, note:""});
+  const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal()});
 
-  // ---------- state ----------
+  const LIGHT = {good:"var(--good)", bad:"var(--bad)", empty:"#DEDCD0", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line)"};
+  const DARK  = {good:"var(--mint)", bad:"var(--coral)", empty:"rgba(255,255,255,.12)", ref:"rgba(255,255,255,.45)", text:"rgba(255,255,255,.5)", zero:"rgba(255,255,255,.2)"};
+
   let db = {settings:{...DEFAULT_SETTINGS}, days:{}};
   let currentDate = todayISO();
+  let currentPeriod = "7";
   let saveTimer = null;
 
   // ---------- date utils ----------
-  function toISO(d){
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
-  }
+  function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
   function todayISO(){ return toISO(new Date()); }
-  function fromISO(iso){ const [y,m,d] = iso.split("-").map(Number); return new Date(y, m-1, d); }
-  function addDays(iso, delta){ const dt = fromISO(iso); dt.setDate(dt.getDate()+delta); return toISO(dt); }
+  function fromISO(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d); }
+  function addDays(iso,delta){ const dt=fromISO(iso); dt.setDate(dt.getDate()+delta); return toISO(dt); }
+  function daysBetween(a,b){ return Math.round((fromISO(b)-fromISO(a))/86400000); }
   function labelForDate(iso){
     const today = todayISO();
-    if(iso === today) return "Aujourd'hui";
-    if(iso === addDays(today, -1)) return "Hier";
+    if(iso===today) return "Aujourd'hui";
+    if(iso===addDays(today,-1)) return "Hier";
     const opts = {weekday:"short", day:"numeric", month:"short"};
-    if(iso.slice(0,4) !== today.slice(0,4)) opts.year = "numeric";
+    if(iso.slice(0,4)!==today.slice(0,4)) opts.year="numeric";
     return fromISO(iso).toLocaleDateString("fr-FR", opts);
   }
+  function shortLabel(iso){ return fromISO(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"numeric"}); }
+  function mediumLabel(iso){ return fromISO(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}); }
+  function weekStart(iso){ const dt=fromISO(iso); const dow=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-dow); return toISO(dt); }
 
-  // ---------- storage (localStorage) ----------
+  // ---------- storage ----------
   function loadDB(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       if(raw){
         const parsed = JSON.parse(raw);
-        if(parsed && typeof parsed === "object"){
-          db.settings = {...DEFAULT_SETTINGS, ...(parsed.settings || {})};
-          db.days = (parsed.days && typeof parsed.days === "object") ? parsed.days : {};
+        if(parsed && typeof parsed==="object"){
+          db.settings = {...DEFAULT_SETTINGS, ...(parsed.settings||{})};
+          db.days = (parsed.days && typeof parsed.days==="object") ? parsed.days : {};
         }
       }
-    }catch(e){
-      console.error("Lecture impossible", e);
-    }
+    }catch(e){ console.error("Lecture impossible", e); }
   }
   function persistNow(){
-    try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-      return true;
-    }catch(e){
-      console.error("Écriture impossible", e);
-      return false;
-    }
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); return true; }
+    catch(e){ console.error("Écriture impossible", e); return false; }
   }
-  function persistDebounced(){
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(persistNow, 300);
-  }
-  function getDay(iso){
-    if(!db.days[iso]) return emptyDay();
-    return {...emptyDay(), ...db.days[iso]};
-  }
-  function setDay(iso, data){
-    const t = totalsOf(data);
-    if(t.cal === 0 && t.protein === 0 && t.carbs === 0 && t.fat === 0){
-      delete db.days[iso];
-    }else{
-      db.days[iso] = data;
-    }
+  function persistDebounced(){ clearTimeout(saveTimer); saveTimer=setTimeout(persistNow,300); }
+  function getDay(iso){ if(!db.days[iso]) return emptyDay(); return {...emptyDay(), ...db.days[iso]}; }
+  function setDay(iso,data){
+    const t=totalsOf(data);
+    const anyNote = MEALS.some(m=>mealHasNote(data[m.key]));
+    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && !anyNote) delete db.days[iso]; else db.days[iso]=data;
     persistDebounced();
   }
-  function loggedDayCount(){
-    return Object.keys(db.days).length;
-  }
+  function loggedDates(){ return Object.keys(db.days).sort(); }
 
   // ---------- computations ----------
-  function num(v){ const n = Number(v); return isFinite(n) && n > 0 ? n : 0; }
+  function num(v){ const n=Number(v); return isFinite(n)&&n>0?n:0; }
+  function mealCal(meal){
+    meal = meal||{};
+    const fromMacros = num(meal.protein)*KCAL.protein + num(meal.carbs)*KCAL.carbs + num(meal.fat)*KCAL.fat;
+    // anciennes saisies (calories tapées à la main, sans macros) : on garde leur valeur
+    return fromMacros>0 ? fromMacros : num(meal.cal);
+  }
+  function mealHasNote(meal){ return !!(meal && typeof meal.note==="string" && meal.note.trim()); }
   function totalsOf(day){
-    const t = {cal:0, protein:0, carbs:0, fat:0};
-    MEALS.forEach(m=>{
-      const meal = day[m.key] || emptyMeal();
-      t.cal += num(meal.cal); t.protein += num(meal.protein);
-      t.carbs += num(meal.carbs); t.fat += num(meal.fat);
-    });
+    const t={cal:0,protein:0,carbs:0,fat:0};
+    MEALS.forEach(m=>{ const meal=day[m.key]||emptyMeal();
+      t.cal+=mealCal(meal); t.protein+=num(meal.protein); t.carbs+=num(meal.carbs); t.fat+=num(meal.fat); });
     return t;
   }
-  function setPill(el, cal){
-    const goal = db.settings.calGoal;
-    if(cal <= 0){ el.className = "diff-pill neutral"; el.textContent = "—"; return; }
-    const diff = goal - cal;
-    if(diff > 0){ el.className = "diff-pill ok"; el.textContent = "-" + Math.round(diff) + " kcal"; }
-    else if(diff < 0){ el.className = "diff-pill warn"; el.textContent = "+" + Math.round(-diff) + " kcal"; }
-    else { el.className = "diff-pill neutral"; el.textContent = "0 kcal"; }
+  function macroCalorieSplit(totals){ return MACROS.map(m=>({...m, val:(totals[m.key]||0)*m.kcalPerG})); }
+  function fmtSigned(v){ v=Math.round(v); return (v>0?"+":"")+v; }        // v = cal - maint (positif = surplus)
+  function fmtBalance(balance){ const r=Math.round(balance); return r>=0 ? "-"+r : "+"+(-r); } // balance = maint - cal
+
+  // ---------- SVG: gauge ----------
+  function gaugeSvg(cal, goal, maint){
+    const w=300, h=176, cx=150, cy=148, r=118, sw=18;
+    const pt=(f)=>{ const a=Math.PI*(1-f); return [cx+r*Math.cos(a), cy-r*Math.sin(a)]; };
+    // demi-cercle : l'arc ne dépasse jamais 180°, donc large-arc-flag = 0 en toutes circonstances
+    const arc=(f0,f1)=>{ const [x0,y0]=pt(f0), [x1,y1]=pt(Math.min(f1,0.9999));
+      return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+    const has = cal>0;
+    const frac = maint>0 ? Math.min(1, cal/maint) : 0;
+    const over = maint>0 && cal>maint;
+    let svg=`<svg viewBox="0 0 ${w} ${h}">`;
+    svg+=`<path d="${arc(0,1)}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="${sw}" stroke-linecap="round"/>`;
+    if(has && frac>0){
+      svg+=`<path d="${arc(0,Math.max(0.01,frac))}" fill="none" stroke="${over?'var(--coral)':'var(--mint)'}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    }
+    if(maint>0 && goal>0 && goal<maint){
+      const f=goal/maint; const a=Math.PI*(1-f);
+      const x1=cx+(r-sw/2-6)*Math.cos(a), y1=cy-(r-sw/2-6)*Math.sin(a);
+      const x2=cx+(r+sw/2+6)*Math.cos(a), y2=cy-(r+sw/2+6)*Math.sin(a);
+      svg+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(255,255,255,.85)" stroke-width="2.5" stroke-linecap="round"/>`;
+      const lx=cx+(r+sw/2+19)*Math.cos(a), ly=cy-(r+sw/2+19)*Math.sin(a);
+      svg+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="9.5" font-weight="700" fill="rgba(255,255,255,.7)" text-anchor="middle" dominant-baseline="middle">objectif</text>`;
+    }
+    svg+=`<text x="${cx-r}" y="${cy+26}" font-size="10" fill="rgba(255,255,255,.45)" text-anchor="middle" font-weight="600">0</text>`;
+    svg+=`<text x="${cx+r}" y="${cy+26}" font-size="10" fill="rgba(255,255,255,.45)" text-anchor="middle" font-weight="600">${maint}</text>`;
+    return svg+`</svg>`;
+  }
+
+  // ---------- SVG: donut ----------
+  function donutChart(parts,size){
+    size=size||108; const r=size*0.38, cx=size/2, cy=size/2, sw=size*0.16, circ=2*Math.PI*r;
+    const total=parts.reduce((s,p)=>s+p.val,0);
+    let svg=`<svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px;flex-shrink:0">`;
+    if(total<=0){ svg+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#ECECE6" stroke-width="${sw}"/>`; }
+    else{ let off=0; parts.forEach(p=>{ const frac=p.val/total; if(frac<=0) return; const len=frac*circ;
+      svg+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${p.color}" stroke-width="${sw}" stroke-dasharray="${len} ${circ-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`; off+=len; }); }
+    svg+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="${size*0.14}" font-weight="800" fill="var(--ink)">${Math.round(total)}</text>`;
+    svg+=`<text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="${size*0.085}" font-weight="600" fill="var(--ink-faint)">kcal macros</text>`;
+    return svg+`</svg>`;
+  }
+  function donutLegendHtml(parts, grams){
+    const total=parts.reduce((s,p)=>s+p.val,0);
+    return parts.map(p=>{ const pct=total>0?Math.round((p.val/total)*100):0;
+      const g=grams[p.key]||0, goal=db.settings[p.key+"Goal"]||0, over=goal>0&&g>goal;
+      return `<div class="legend-row"><span class="legend-dot" style="background:${p.color}"></span><span class="legend-label">${p.label}</span>`+
+        `<span class="legend-val">${pct}%</span><span class="legend-g${over?" over":""}">${Math.round(g)} g</span></div>`; }).join("");
   }
   function macroBarsHtml(totals){
-    return MACROS.map(m=>{
-      const val = totals[m.key] || 0;
-      const goal = db.settings[m.key + "Goal"] || 0;
-      const pct = goal > 0 ? Math.min(100, Math.round((val/goal)*100)) : 0;
-      return '<div class="macro-line"><div class="macro-name">' + m.label + '</div>' +
-        '<div class="macro-track"><div class="macro-fill" style="width:' + pct + '%;background:' + m.color + '"></div></div>' +
-        '<div class="macro-val">' + Math.round(val) + ' / ' + goal + ' g</div></div>';
-    }).join("");
+    return MACROS.map(m=>{ const val=totals[m.key]||0, goal=db.settings[m.key+"Goal"]||0;
+      const over = goal>0 && val>goal;
+      const pct = goal>0 ? Math.min(100, Math.round((val/goal)*100)) : 0;
+      const fillColor = over ? "var(--bad)" : m.color;
+      return `<div class="macro-line"><div class="macro-name">${m.label}</div>`+
+        `<div class="macro-track"><div class="macro-fill" style="width:${pct}%;background:${fillColor}"></div></div>`+
+        `<div class="macro-val${over?" over":""}"><b>${Math.round(val)}</b> / ${goal} g</div></div>`; }).join("");
+  }
+
+  // ---------- SVG: bar chart ----------
+  function barChartSvg(bars, ref, theme){
+    const w=320, h=140, padTop=14, padBottom=20; const n=bars.length;
+    const gap = n<=7?8 : n<=31?3 : 1.5;
+    const barW=(w-gap*(n-1))/n;
+    const maxVal=Math.max(ref||0, ...bars.map(b=>b.value), 1)*1.12;
+    const sy=(h-padTop-padBottom)/maxVal;
+    const refY=h-padBottom-(ref||0)*sy;
+    const labelEvery = n<=10?1 : Math.ceil(n/6);
+    let s="";
+    bars.forEach((b,i)=>{
+      const x=i*(barW+gap);
+      const bh=b.hasData?Math.max(2,b.value*sy):2;
+      const y=h-padBottom-bh;
+      const color=!b.hasData?theme.empty:(b.value<=ref?theme.good:theme.bad);
+      s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="${Math.min(3,barW/3).toFixed(1)}" fill="${color}"/>`;
+      if(n<=10 || i%labelEvery===0){
+        s+=`<text x="${(x+barW/2).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="${n<=10?'middle':(i===0?'start':'middle')}">${b.label}</text>`;
+      }
+    });
+    let refLine="";
+    if(ref){ refLine=`<line x1="0" y1="${refY.toFixed(1)}" x2="${w}" y2="${refY.toFixed(1)}" stroke="${theme.ref}" stroke-width="1" stroke-dasharray="4,4"/>`+
+      `<text x="${w}" y="${(refY-4).toFixed(1)}" font-size="9" font-weight="700" fill="${theme.ref}" text-anchor="end">${ref}</text>`; }
+    return `<svg viewBox="0 0 ${w} ${h}">${refLine}${s}</svg>`;
+  }
+
+  // ---------- SVG: cumulative line ----------
+  function lineChartSvg(points, theme){
+    const w=320, h=150, padL=4, padR=4, padTop=16, padBottom=20; const n=points.length;
+    if(n<2){ return `<svg viewBox="0 0 ${w} ${h}"><text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="12" font-weight="600" fill="${theme.text}">Pas encore assez de jours</text></svg>`; }
+    const vals=points.map(p=>p.value);
+    let minV=Math.min(0,...vals), maxV=Math.max(0,...vals);
+    if(maxV-minV<1) maxV=minV+1;
+    const range=maxV-minV; minV-=range*0.08; maxV+=range*0.08;
+    const sx=(w-padL-padR)/(n-1), sy=(h-padTop-padBottom)/(maxV-minV);
+    const X=i=>padL+i*sx, Y=v=>h-padBottom-(v-minV)*sy;
+    const zeroY=Y(0), last=vals[n-1];
+    const color= last<=0 ? theme.good : theme.bad;
+    let d="";
+    points.forEach((p,i)=>{ d+=(i===0?"M":"L")+X(i).toFixed(1)+" "+Y(p.value).toFixed(1)+" "; });
+    const area=d+`L${X(n-1).toFixed(1)} ${zeroY.toFixed(1)} L${X(0).toFixed(1)} ${zeroY.toFixed(1)} Z`;
+    const labelEvery=Math.max(1,Math.ceil(n/5));
+    let labels="";
+    points.forEach((p,i)=>{ if(i%labelEvery===0 || i===n-1){
+      labels+=`<text x="${X(i).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="${i===0?'start':(i===n-1?'end':'middle')}">${p.label}</text>`; } });
+    const lx=X(n-1), ly=Y(last);
+    return `<svg viewBox="0 0 ${w} ${h}">
+      <path d="${area}" fill="${color}" opacity="0.12"/>
+      <line x1="0" y1="${zeroY.toFixed(1)}" x2="${w}" y2="${zeroY.toFixed(1)}" stroke="${theme.zero}" stroke-width="1"/>
+      <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="${color}"/>
+      <text x="${(lx-8).toFixed(1)}" y="${(ly+(last<=0?-8:14)).toFixed(1)}" font-size="10" font-weight="800" fill="${color}" text-anchor="end">${fmtSigned(last)}</text>
+      ${labels}</svg>`;
   }
 
   // ---------- day view ----------
-  function updateDayTotals(day){
-    const totals = totalsOf(day);
-    document.getElementById("dayTotalCal").textContent = Math.round(totals.cal);
-    document.getElementById("dayGoalCal").textContent = db.settings.calGoal;
-    setPill(document.getElementById("dayDiffPill"), totals.cal);
-    document.getElementById("dayMacroBars").innerHTML = macroBarsHtml(totals);
+  function updateDayCards(day){
+    const totals=totalsOf(day), maint=db.settings.maintenance, goal=db.settings.calGoal;
+    const has=totals.cal>0, balance=maint-totals.cal;
+    const numEl=document.getElementById("gaugeNum"), lblEl=document.getElementById("gaugeLbl");
+    if(!has){ numEl.textContent="—"; numEl.className="gauge-num neutral"; lblEl.textContent="AUCUNE SAISIE"; lblEl.className="gauge-lbl neutral"; }
+    else if(balance>=0){ numEl.textContent=fmtBalance(balance); numEl.className="gauge-num good"; lblEl.textContent="DÉFICIT"; lblEl.className="gauge-lbl good"; }
+    else{ numEl.textContent=fmtBalance(balance); numEl.className="gauge-num bad"; lblEl.textContent="SURPLUS"; lblEl.className="gauge-lbl bad"; }
+    document.getElementById("gauge").innerHTML=gaugeSvg(totals.cal, goal, maint);
+    const mc=document.getElementById("metaCal"); mc.textContent=Math.round(totals.cal); mc.className="v"+(totals.cal>goal?" over":"");
+    document.getElementById("metaGoal").textContent=goal;
+    document.getElementById("metaMaint").textContent=maint;
+    const parts=macroCalorieSplit(totals);
+    document.getElementById("dayDonut").innerHTML=donutChart(parts);
+    document.getElementById("dayLegend").innerHTML=donutLegendHtml(parts, totals);
+    document.getElementById("dayMacroBars").innerHTML=macroBarsHtml(totals);
+    MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const c=mealCal(day[m.key]); el.textContent=c>0?Math.round(c)+" kcal":""; } });
+    renderMiniTrend();
+  }
+  function renderMiniTrend(){
+    const arr=[]; for(let i=6;i>=0;i--){ const iso=addDays(currentDate,-i); const t=totalsOf(getDay(iso)); arr.push({label:shortLabel(iso), value:t.cal, hasData:t.cal>0}); }
+    document.getElementById("miniTrend").innerHTML=barChartSvg(arr, db.settings.maintenance, DARK);
   }
   function renderDay(){
-    if(currentDate > todayISO()) currentDate = todayISO();
-    document.getElementById("dayLabel").textContent = labelForDate(currentDate);
-    document.getElementById("nextDay").disabled = currentDate === todayISO();
-    const picker = document.getElementById("datePicker");
-    picker.value = currentDate;
-    picker.max = todayISO();
-
-    const day = getDay(currentDate);
-    updateDayTotals(day);
-
-    const container = document.getElementById("mealsContainer");
-    container.innerHTML = MEALS.map(m=>{
-      const meal = day[m.key] || emptyMeal();
-      const f = (field, label) =>
-        '<div class="field"><label>' + label + '</label>' +
-        '<input type="number" inputmode="decimal" min="0" data-field="' + field + '" value="' + (num(meal[field]) || "") + '"></div>';
-      return '<div class="card meal-card" data-meal="' + m.key + '"><div class="meal-title">' + m.label + '</div>' +
-        '<div class="meal-grid">' + f("cal","Calories") + f("protein","Prot. (g)") + f("carbs","Gluc. (g)") + f("fat","Lip. (g)") + '</div></div>';
-    }).join("");
-    container.querySelectorAll("input").forEach(inp=>inp.addEventListener("input", onMealInput));
+    if(currentDate>todayISO()) currentDate=todayISO();
+    document.getElementById("dayLabel").textContent=labelForDate(currentDate);
+    document.getElementById("nextDay").disabled=currentDate===todayISO();
+    const picker=document.getElementById("datePicker"); picker.value=currentDate; picker.max=todayISO();
+    const day=getDay(currentDate);
+    const container=document.getElementById("mealsContainer");
+    container.innerHTML=MEALS.map(m=>{ const meal=day[m.key]||emptyMeal();
+      const f=(field,label)=>`<div class="field"><label>${label}</label><input type="number" inputmode="decimal" min="0" data-field="${field}" value="${num(meal[field])||""}"></div>`;
+      const esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+      const note = m.hasNote ? `<textarea class="meal-note" data-field="note" rows="2" placeholder="Ex. : 1 banane + shaker protéiné l'après-midi">${esc(meal.note)}</textarea>` : "";
+      const hint = m.hint ? `<div class="meal-hint">${m.hint}</div>` : "";
+      return `<div class="card meal-card" data-meal="${m.key}"><div class="meal-head"><div><div class="meal-title">${m.label}</div>${hint}</div><div class="meal-sub"></div></div>`+
+        `<div class="meal-grid three">${f("protein","Protéines (g)")}${f("carbs","Glucides (g)")}${f("fat","Lipides (g)")}</div>${note}</div>`; }).join("");
+    container.querySelectorAll("input, textarea").forEach(inp=>inp.addEventListener("input", onMealInput));
+    updateDayCards(day);
   }
   function onMealInput(e){
-    const mealKey = e.target.closest(".meal-card").dataset.meal;
-    const field = e.target.dataset.field;
-    const day = getDay(currentDate);
-    day[mealKey] = {...emptyMeal(), ...(day[mealKey] || {})};
-    day[mealKey][field] = num(e.target.value);
+    const mealKey=e.target.closest(".meal-card").dataset.meal, field=e.target.dataset.field;
+    const day=getDay(currentDate);
+    day[mealKey]={...emptyMeal(), ...(day[mealKey]||{})};
+    day[mealKey][field] = field==="note" ? String(e.target.value).slice(0,300) : num(e.target.value);
     setDay(currentDate, day);
-    updateDayTotals(day);
+    updateDayCards(day);
   }
 
-  // ---------- week view ----------
-  function renderWeek(){
-    const today = todayISO();
-    const days = [];
-    for(let i=6;i>=0;i--) days.push(addDays(today, -i));
-    const goal = db.settings.calGoal;
+  // ---------- stats view ----------
+  function renderStats(){
+    const today=todayISO(), maint=db.settings.maintenance;
+    const logged=loggedDates();
+    document.querySelectorAll(".period-toggle button").forEach(b=>b.classList.toggle("active", b.dataset.period===currentPeriod));
 
-    let logged=0, sumCal=0, sumDiff=0, sumP=0, sumC=0, sumF=0;
-    const rows = days.map(iso=>{
-      const t = totalsOf(getDay(iso));
-      const has = t.cal > 0;
-      let diffTxt = "—", color = "var(--ink-faint)";
-      if(has){
-        logged++; sumCal += t.cal; sumDiff += (goal - t.cal); sumP += t.protein; sumC += t.carbs; sumF += t.fat;
-        const d = goal - t.cal;
-        diffTxt = d >= 0 ? "-" + Math.round(d) : "+" + Math.round(-d);
-        color = d >= 0 ? "var(--accent)" : "var(--warn)";
-      }
-      return '<div class="day-row"><div class="dname">' + labelForDate(iso) + '</div>' +
-        '<div class="dcal">' + (has ? Math.round(t.cal) + " kcal" : "non renseigné") + '</div>' +
-        '<div class="ddiff" style="color:' + color + '">' + diffTxt + '</div></div>';
-    }).join("");
-    document.getElementById("weekDays").innerHTML = rows;
+    let start, title;
+    if(currentPeriod==="all"){ start = logged.length ? logged[0] : today; title="Depuis le début"; }
+    else{ const n=Number(currentPeriod); start=addDays(today,-(n-1)); title = n===7 ? "Bilan de la semaine" : "Bilan des 30 derniers jours"; }
+    const nDays=daysBetween(start,today)+1;
+    document.getElementById("statsTitle").textContent=title;
+    document.getElementById("statsRange").textContent = (currentPeriod==="all" && logged.length) ? "depuis le "+mediumLabel(start) : mediumLabel(start)+" → "+mediumLabel(today);
 
-    const avgEl = document.getElementById("weekAvgCal");
-    const diffEl = document.getElementById("weekDiffTotal");
-    const barsEl = document.getElementById("weekMacroBars");
-    if(logged === 0){
-      avgEl.textContent = "—"; diffEl.textContent = "—"; diffEl.style.color = "";
-      barsEl.innerHTML = '<div class="empty-note">Aucun jour enregistré sur les 7 derniers jours</div>';
+    let cnt=0, sumCal=0, sumBal=0, sumP=0, sumC=0, sumF=0, defDays=0, cum=0;
+    const bars=[], rows=[], cumPts=[];
+    for(let i=0;i<nDays;i++){
+      const iso=addDays(start,i);
+      const t=totalsOf(getDay(iso)); const has=t.cal>0;
+      let diffTxt="—", color="var(--ink-faint)";
+      if(has){ cnt++; sumCal+=t.cal; const bal=maint-t.cal; sumBal+=bal; sumP+=t.protein; sumC+=t.carbs; sumF+=t.fat; if(bal>=0) defDays++;
+        cum+=(t.cal-maint); diffTxt=fmtBalance(bal); color=bal>=0?"var(--good)":"var(--bad)"; }
+      bars.push({iso, label:shortLabel(iso), value:t.cal, hasData:has});
+      cumPts.push({label:shortLabel(iso), value:cum});
+      rows.push(`<div class="day-row"><div class="dname">${labelForDate(iso)}</div><div class="dcal">${has?Math.round(t.cal)+" kcal":"non renseigné"}</div><div class="ddiff" style="color:${color}">${diffTxt}</div></div>`);
+    }
+
+    let chartBars=bars, barsTitle="Apport par jour", barsSub="Vert sous le maintien, rouge au-dessus";
+    if(nDays>45){
+      const weeks={}, order=[];
+      bars.forEach(b=>{ const wk=weekStart(b.iso); if(!weeks[wk]){ weeks[wk]={sum:0,n:0}; order.push(wk); } if(b.hasData){ weeks[wk].sum+=b.value; weeks[wk].n++; } });
+      chartBars=order.map(wk=>({label:shortLabel(wk), value:weeks[wk].n?weeks[wk].sum/weeks[wk].n:0, hasData:weeks[wk].n>0}));
+      barsTitle="Apport moyen par semaine"; barsSub="Moyenne des jours renseignés de chaque semaine (à partir du lundi)";
+    }
+    document.getElementById("barsTitle").textContent=barsTitle;
+    document.getElementById("barsSub").textContent=barsSub;
+    document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, maint, LIGHT);
+    document.getElementById("cumChart").innerHTML=lineChartSvg(cnt?cumPts:[], LIGHT);
+    document.getElementById("statsDays").innerHTML = rows.length ? rows.reverse().join("") : `<div class="empty-note">Aucune donnée</div>`;
+
+    const bal=document.getElementById("statBalance"), avgBal=document.getElementById("statAvgBal"), avgCal=document.getElementById("statAvgCal"), dd=document.getElementById("statDeficitDays");
+    const donutEl=document.getElementById("statsDonut"), legendEl=document.getElementById("statsLegend"), barsEl=document.getElementById("statsMacroBars");
+    if(cnt===0){
+      document.getElementById("statsSub").textContent="Aucun jour renseigné sur cette période";
+      [bal,avgBal,avgCal,dd].forEach(el=>{ el.textContent="—"; el.className="num"; });
+      donutEl.innerHTML=donutChart([{val:0,color:"#ECECE6",label:"",key:"x"}]); legendEl.innerHTML="";
+      barsEl.innerHTML=`<div class="empty-note">Aucun jour enregistré sur cette période</div>`;
+      document.getElementById("macroSub").textContent="";
       return;
     }
-    avgEl.textContent = Math.round(sumCal/logged);
-    diffEl.textContent = (sumDiff >= 0 ? "-" : "+") + Math.round(Math.abs(sumDiff)) + " kcal";
-    diffEl.style.color = sumDiff >= 0 ? "var(--accent)" : "var(--warn)";
-    barsEl.innerHTML = macroBarsHtml({protein:sumP/logged, carbs:sumC/logged, fat:sumF/logged}) +
-      '<div class="empty-note">Moyennes sur ' + logged + ' jour' + (logged>1?"s":"") + ' enregistré' + (logged>1?"s":"") + '</div>';
+    document.getElementById("statsSub").textContent=`${cnt} jour${cnt>1?"s":""} renseigné${cnt>1?"s":""} sur ${nDays}`;
+    bal.textContent=fmtBalance(sumBal); bal.className="num "+(sumBal>=0?"good":"bad");
+    avgBal.textContent=fmtBalance(sumBal/cnt); avgBal.className="num "+(sumBal/cnt>=0?"good":"bad");
+    avgCal.innerHTML=Math.round(sumCal/cnt)+"<small>kcal</small>"; avgCal.className="num";
+    dd.innerHTML=defDays+"<small>/ "+cnt+"</small>"; dd.className="num "+(defDays>=cnt/2?"good":"bad");
+
+    const avgTotals={protein:sumP/cnt, carbs:sumC/cnt, fat:sumF/cnt};
+    const parts=macroCalorieSplit(avgTotals);
+    donutEl.innerHTML=donutChart(parts); legendEl.innerHTML=donutLegendHtml(parts, avgTotals);
+    barsEl.innerHTML=macroBarsHtml(avgTotals);
+    document.getElementById("macroSub").textContent="Moyenne par jour renseigné, comparée à tes objectifs";
   }
 
   // ---------- settings view ----------
   function renderSettings(){
-    document.getElementById("setCal").value = db.settings.calGoal;
-    document.getElementById("setProtein").value = db.settings.proteinGoal;
-    document.getElementById("setCarbs").value = db.settings.carbsGoal;
-    document.getElementById("setFat").value = db.settings.fatGoal;
-    document.getElementById("saveNote").textContent = "";
-    document.getElementById("dataNote").textContent = "";
-    const n = loggedDayCount();
-    const keys = Object.keys(db.days).sort();
-    let txt = n === 0 ? "Aucune donnée enregistrée pour le moment." :
-      n + " jour" + (n>1?"s":"") + " enregistré" + (n>1?"s":"") + " (depuis le " + fromISO(keys[0]).toLocaleDateString("fr-FR") + ").";
-    txt += " Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
-    document.getElementById("dataInfo").textContent = txt;
+    document.getElementById("setMaint").value=db.settings.maintenance;
+    document.getElementById("setCal").value=db.settings.calGoal;
+    document.getElementById("setProtein").value=db.settings.proteinGoal;
+    document.getElementById("setCarbs").value=db.settings.carbsGoal;
+    document.getElementById("setFat").value=db.settings.fatGoal;
+    document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
+    const keys=loggedDates(), n=keys.length;
+    let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString("fr-FR")}).`;
+    txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
+    document.getElementById("dataInfo").textContent=txt;
   }
-  function flash(id, msg, isErr){
-    const el = document.getElementById(id);
-    el.textContent = msg; el.className = "note" + (isErr ? " err" : "");
-    setTimeout(()=>{ el.textContent = ""; }, 2500);
-  }
+  function flash(id,msg,isErr){ const el=document.getElementById(id); el.textContent=msg; el.className="note"+(isErr?" err":""); setTimeout(()=>{el.textContent="";},2500); }
 
   // ---------- export / import ----------
   function exportData(){
     persistNow();
-    const payload = {app:"suivi-calories", version:1, exportedAt:new Date().toISOString(), settings:db.settings, days:db.days};
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "suivi-calories-" + todayISO() + ".json";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-    flash("dataNote", "Sauvegarde générée");
+    const payload={app:"suivi-calories", version:3, exportedAt:new Date().toISOString(), settings:db.settings, days:db.days};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download="suivi-calories-"+todayISO()+".json"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000); flash("dataNote","Sauvegarde générée");
   }
   function importData(file){
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      try{
-        const parsed = JSON.parse(reader.result);
-        if(!parsed || typeof parsed !== "object" || !parsed.days || typeof parsed.days !== "object"){
-          throw new Error("format");
-        }
-        // fusion : les jours du fichier remplacent les jours existants de même date
-        let added = 0;
-        Object.keys(parsed.days).forEach(iso=>{
-          if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){ db.days[iso] = {...emptyDay(), ...parsed.days[iso]}; added++; }
-        });
-        if(parsed.settings) db.settings = {...DEFAULT_SETTINGS, ...parsed.settings};
-        persistNow();
-        renderSettings();
-        flash("dataNote", added + " jour" + (added>1?"s":"") + " restauré" + (added>1?"s":""));
-      }catch(e){
-        flash("dataNote", "Fichier non reconnu", true);
-      }
-    };
+    const reader=new FileReader();
+    reader.onload=()=>{ try{
+        const parsed=JSON.parse(reader.result);
+        if(!parsed||typeof parsed!=="object"||!parsed.days||typeof parsed.days!=="object") throw new Error("format");
+        let added=0; Object.keys(parsed.days).forEach(iso=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){ db.days[iso]={...emptyDay(), ...parsed.days[iso]}; added++; } });
+        if(parsed.settings) db.settings={...DEFAULT_SETTINGS, ...parsed.settings};
+        persistNow(); renderSettings(); flash("dataNote",`${added} jour${added>1?"s":""} restauré${added>1?"s":""}`);
+      }catch(e){ flash("dataNote","Fichier non reconnu",true); } };
     reader.readAsText(file);
   }
 
@@ -437,56 +652,40 @@
     document.getElementById("view-"+name).classList.add("active");
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
     window.scrollTo(0,0);
-    if(name==="day") renderDay();
-    if(name==="week") renderWeek();
-    if(name==="settings") renderSettings();
+    if(name==="day") renderDay(); if(name==="stats") renderStats(); if(name==="settings") renderSettings();
   }
-  document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click", ()=>showView(btn.dataset.view)));
-  document.getElementById("prevDay").addEventListener("click", ()=>{ currentDate = addDays(currentDate,-1); renderDay(); });
-  document.getElementById("nextDay").addEventListener("click", ()=>{
-    if(currentDate < todayISO()){ currentDate = addDays(currentDate,1); renderDay(); }
+  document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showView(btn.dataset.view)));
+  document.getElementById("prevDay").addEventListener("click",()=>{ currentDate=addDays(currentDate,-1); renderDay(); });
+  document.getElementById("nextDay").addEventListener("click",()=>{ if(currentDate<todayISO()){ currentDate=addDays(currentDate,1); renderDay(); } });
+  document.getElementById("datePicker").addEventListener("change",(e)=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){ currentDate=e.target.value; renderDay(); } });
+  document.querySelectorAll(".period-toggle button").forEach(btn=>btn.addEventListener("click",()=>{ currentPeriod=btn.dataset.period; renderStats(); }));
+  document.getElementById("saveSettings").addEventListener("click",()=>{
+    db.settings.maintenance=num(document.getElementById("setMaint").value);
+    db.settings.calGoal=num(document.getElementById("setCal").value);
+    db.settings.proteinGoal=num(document.getElementById("setProtein").value);
+    db.settings.carbsGoal=num(document.getElementById("setCarbs").value);
+    db.settings.fatGoal=num(document.getElementById("setFat").value);
+    const ok=persistNow(); flash("saveNote", ok?"Objectifs enregistrés ✓":"Erreur d'enregistrement", !ok);
   });
-  document.getElementById("datePicker").addEventListener("change", (e)=>{
-    if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){ currentDate = e.target.value; renderDay(); }
-  });
-  document.getElementById("saveSettings").addEventListener("click", ()=>{
-    db.settings.calGoal = num(document.getElementById("setCal").value);
-    db.settings.proteinGoal = num(document.getElementById("setProtein").value);
-    db.settings.carbsGoal = num(document.getElementById("setCarbs").value);
-    db.settings.fatGoal = num(document.getElementById("setFat").value);
-    const ok = persistNow();
-    flash("saveNote", ok ? "Objectifs enregistrés ✓" : "Erreur d'enregistrement", !ok);
-  });
-  document.getElementById("exportBtn").addEventListener("click", exportData);
-  document.getElementById("importBtn").addEventListener("click", ()=>document.getElementById("importFile").click());
-  document.getElementById("importFile").addEventListener("change", (e)=>{
-    if(e.target.files && e.target.files[0]) importData(e.target.files[0]);
-    e.target.value = "";
-  });
+  document.getElementById("exportBtn").addEventListener("click",exportData);
+  document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change",(e)=>{ if(e.target.files&&e.target.files[0]) importData(e.target.files[0]); e.target.value=""; });
 
-  // sauvegarde immédiate si l'app passe en arrière-plan
-  document.addEventListener("visibilitychange", ()=>{ if(document.hidden){ clearTimeout(saveTimer); persistNow(); } });
-  window.addEventListener("pagehide", ()=>{ clearTimeout(saveTimer); persistNow(); });
-
-  // quand l'app est rouverte un autre jour (minuit passé), suivre le nouveau jour
-  let lastKnownToday = todayISO();
-  document.addEventListener("visibilitychange", ()=>{
-    if(document.hidden) return;
-    const now = todayISO();
-    if(now !== lastKnownToday){
-      if(currentDate === lastKnownToday) currentDate = now;
-      lastKnownToday = now;
-      const active = document.querySelector(".view.active").id.replace("view-","");
-      showView(active);
-    }
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden){ clearTimeout(saveTimer); persistNow(); } });
+  window.addEventListener("pagehide",()=>{ clearTimeout(saveTimer); persistNow(); });
+  function setHeaderDate(){ document.getElementById("headerDate").textContent=fromISO(todayISO()).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
+  let lastKnownToday=todayISO();
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden) return; const now=todayISO();
+    if(now!==lastKnownToday){ if(currentDate===lastKnownToday) currentDate=now; lastKnownToday=now; setHeaderDate();
+      showView(document.querySelector(".view.active").id.replace("view-","")); }
   });
 
   // ---------- init ----------
   loadDB();
-  if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
-  if("serviceWorker" in navigator){
-    window.addEventListener("load", ()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); });
-  }
+  setHeaderDate();
+  if(navigator.storage&&navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+  if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }
   renderDay();
 })();
 </script>
