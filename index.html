@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Calories">
+<meta name="theme-color" content="#F6F5F1">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<title>Suivi calories</title>
+<style>
+  :root{
+    --bg:#F6F5F1; --surface:#FFFFFF; --ink:#22261F; --ink-soft:#6E7266; --ink-faint:#A8AC9E;
+    --line:#E5E2D8; --accent:#2F5D46; --accent-soft:#E5EEE7; --warn:#B2502E; --warn-soft:#F5E7DF;
+    --protein:#2F5D46; --carbs:#C08A2E; --fat:#4C6E96; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100vh;overscroll-behavior-y:none;}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;
+    padding-top:env(safe-area-inset-top);padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+  header.top{padding:20px 20px 8px 20px;}
+  header.top h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  main{flex:1;padding:12px 16px 24px 16px;}
+  .view{display:none;} .view.active{display:block;}
+
+  .date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px;}
+  .date-nav button{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:40px;height:40px;
+    border-radius:10px;font-size:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+  .date-nav button:disabled{opacity:0.3;}
+  .date-center{flex:1;text-align:center;position:relative;}
+  .date-label{font-size:15px;font-weight:600;text-transform:capitalize;}
+  .date-center input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px;}
+  .date-hint{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+
+  .card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--line);padding:16px;margin-bottom:12px;}
+  .total-card{padding:20px 16px;}
+  .total-row{display:flex;align-items:baseline;justify-content:space-between;}
+  .total-cal{font-size:36px;font-weight:700;letter-spacing:-0.02em;}
+  .total-cal small{font-size:15px;font-weight:500;color:var(--ink-soft);}
+  .diff-pill{display:inline-block;padding:5px 11px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap;}
+  .diff-pill.ok{background:var(--accent-soft);color:var(--accent);}
+  .diff-pill.warn{background:var(--warn-soft);color:var(--warn);}
+  .diff-pill.neutral{background:#EEEEE9;color:var(--ink-soft);}
+  .goal-sub{color:var(--ink-soft);font-size:13px;margin-top:6px;}
+
+  .macro-row{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+  .macro-line{display:flex;align-items:center;gap:10px;}
+  .macro-name{width:64px;font-size:13px;color:var(--ink-soft);font-weight:600;}
+  .macro-track{flex:1;height:6px;background:#EEEEE9;border-radius:3px;overflow:hidden;}
+  .macro-fill{height:100%;border-radius:3px;transition:width .2s;}
+  .macro-val{width:72px;text-align:right;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+
+  .meal-title{font-size:15px;font-weight:700;margin:0 0 12px 0;}
+  .meal-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11px;color:var(--ink-soft);font-weight:600;}
+  .field input{border:1px solid var(--line);border-radius:9px;padding:9px 4px;font-size:16px;width:100%;text-align:center;
+    background:#FBFBF9;color:var(--ink);font-family:inherit;-moz-appearance:textfield;}
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .field input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  section.title{font-size:13px;font-weight:700;color:var(--ink-soft);margin:20px 0 8px 4px;}
+
+  .week-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+  .stat{background:#FBFBF9;border-radius:10px;padding:12px;}
+  .stat .num{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .day-row{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .day-row:last-child{border-bottom:none;}
+  .day-row .dname{font-size:14px;font-weight:600;text-transform:capitalize;width:100px;}
+  .day-row .dcal{font-size:14px;color:var(--ink-soft);flex:1;text-align:right;padding-right:10px;font-variant-numeric:tabular-nums;}
+  .day-row .ddiff{font-size:13px;font-weight:600;width:70px;text-align:right;font-variant-numeric:tabular-nums;}
+  .empty-note{color:var(--ink-faint);font-size:13px;text-align:center;padding:6px 0;}
+
+  .settings-field{margin-bottom:16px;}
+  .settings-field label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .settings-field input{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:16px;
+    background:#FBFBF9;color:var(--ink);font-family:inherit;}
+  .settings-field input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .btn{width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;font-family:inherit;margin-top:8px;}
+  .btn.primary{background:var(--accent);color:#fff;}
+  .btn.secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line);}
+  .btn:active{opacity:0.85;}
+  .note{text-align:center;color:var(--accent);font-size:13px;font-weight:600;margin-top:10px;min-height:16px;}
+  .note.err{color:var(--warn);}
+  .info{font-size:13px;color:var(--ink-soft);line-height:1.45;margin:0 0 12px 0;}
+
+  nav.tabbar{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:rgba(246,245,241,0.94);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;
+    padding-bottom:env(safe-area-inset-bottom);}
+  nav.tabbar button{flex:1;background:none;border:none;padding:10px 0 8px 0;display:flex;flex-direction:column;
+    align-items:center;gap:3px;color:var(--ink-faint);font-family:inherit;}
+  nav.tabbar button.active{color:var(--accent);}
+  nav.tabbar button svg{width:22px;height:22px;}
+  nav.tabbar button span{font-size:11px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top"><h1>Suivi calories</h1></header>
+  <main>
+
+    <div class="view active" id="view-day">
+      <div class="date-nav">
+        <button id="prevDay" aria-label="Jour précédent">‹</button>
+        <div class="date-center">
+          <div class="date-label" id="dayLabel">Aujourd'hui</div>
+          <div class="date-hint">toucher pour choisir une date</div>
+          <input type="date" id="datePicker" aria-label="Choisir une date">
+        </div>
+        <button id="nextDay" aria-label="Jour suivant">›</button>
+      </div>
+
+      <div class="card total-card">
+        <div class="total-row">
+          <div class="total-cal"><span id="dayTotalCal">0</span> <small>kcal</small></div>
+          <div id="dayDiffPill" class="diff-pill neutral">—</div>
+        </div>
+        <div class="goal-sub">Objectif : <span id="dayGoalCal">2000</span> kcal</div>
+        <div class="macro-row" id="dayMacroBars"></div>
+      </div>
+
+      <section class="title">Repas</section>
+      <div id="mealsContainer"></div>
+    </div>
+
+    <div class="view" id="view-week">
+      <div class="card">
+        <div class="meal-title">Bilan de la semaine</div>
+        <div class="week-summary-grid">
+          <div class="stat"><div class="num" id="weekAvgCal">—</div><div class="lbl">moyenne kcal/jour</div></div>
+          <div class="stat"><div class="num" id="weekDiffTotal">—</div><div class="lbl">bilan cumulé sur 7 jours</div></div>
+        </div>
+        <div class="macro-row" id="weekMacroBars"></div>
+      </div>
+      <section class="title">7 derniers jours</section>
+      <div class="card" id="weekDays"></div>
+    </div>
+
+    <div class="view" id="view-settings">
+      <div class="card">
+        <div class="meal-title">Objectifs quotidiens</div>
+        <div class="settings-field"><label>Calories (kcal)</label><input type="number" inputmode="numeric" id="setCal"></div>
+        <div class="settings-field"><label>Protéines (g)</label><input type="number" inputmode="numeric" id="setProtein"></div>
+        <div class="settings-field"><label>Glucides (g)</label><input type="number" inputmode="numeric" id="setCarbs"></div>
+        <div class="settings-field"><label>Lipides (g)</label><input type="number" inputmode="numeric" id="setFat"></div>
+        <button class="btn primary" id="saveSettings">Enregistrer les objectifs</button>
+        <div class="note" id="saveNote"></div>
+      </div>
+
+      <div class="card">
+        <div class="meal-title">Mes données</div>
+        <p class="info" id="dataInfo">Chargement…</p>
+        <button class="btn secondary" id="exportBtn">Exporter une sauvegarde (.json)</button>
+        <button class="btn secondary" id="importBtn">Restaurer depuis une sauvegarde</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+        <div class="note" id="dataNote"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-view="day">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      <span>Jour</span>
+    </button>
+    <button class="tab-btn" data-view="week">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/></svg>
+      <span>Semaine</span>
+    </button>
+    <button class="tab-btn" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+      <span>Réglages</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "suivi-calories:v1";
+  const MEALS = [
+    {key:"breakfast", label:"Petit-déjeuner"},
+    {key:"lunch", label:"Déjeuner"},
+    {key:"dinner", label:"Dîner"}
+  ];
+  const MACROS = [
+    {key:"protein", label:"Protéines", color:"var(--protein)"},
+    {key:"carbs", label:"Glucides", color:"var(--carbs)"},
+    {key:"fat", label:"Lipides", color:"var(--fat)"}
+  ];
+  const DEFAULT_SETTINGS = {calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65};
+  const emptyMeal = () => ({cal:0, protein:0, carbs:0, fat:0});
+  const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal()});
+
+  // ---------- state ----------
+  let db = {settings:{...DEFAULT_SETTINGS}, days:{}};
+  let currentDate = todayISO();
+  let saveTimer = null;
+
+  // ---------- date utils ----------
+  function toISO(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function todayISO(){ return toISO(new Date()); }
+  function fromISO(iso){ const [y,m,d] = iso.split("-").map(Number); return new Date(y, m-1, d); }
+  function addDays(iso, delta){ const dt = fromISO(iso); dt.setDate(dt.getDate()+delta); return toISO(dt); }
+  function labelForDate(iso){
+    const today = todayISO();
+    if(iso === today) return "Aujourd'hui";
+    if(iso === addDays(today, -1)) return "Hier";
+    const opts = {weekday:"short", day:"numeric", month:"short"};
+    if(iso.slice(0,4) !== today.slice(0,4)) opts.year = "numeric";
+    return fromISO(iso).toLocaleDateString("fr-FR", opts);
+  }
+
+  // ---------- storage (localStorage) ----------
+  function loadDB(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(parsed && typeof parsed === "object"){
+          db.settings = {...DEFAULT_SETTINGS, ...(parsed.settings || {})};
+          db.days = (parsed.days && typeof parsed.days === "object") ? parsed.days : {};
+        }
+      }
+    }catch(e){
+      console.error("Lecture impossible", e);
+    }
+  }
+  function persistNow(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      return true;
+    }catch(e){
+      console.error("Écriture impossible", e);
+      return false;
+    }
+  }
+  function persistDebounced(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistNow, 300);
+  }
+  function getDay(iso){
+    if(!db.days[iso]) return emptyDay();
+    return {...emptyDay(), ...db.days[iso]};
+  }
+  function setDay(iso, data){
+    const t = totalsOf(data);
+    if(t.cal === 0 && t.protein === 0 && t.carbs === 0 && t.fat === 0){
+      delete db.days[iso];
+    }else{
+      db.days[iso] = data;
+    }
+    persistDebounced();
+  }
+  function loggedDayCount(){
+    return Object.keys(db.days).length;
+  }
+
+  // ---------- computations ----------
+  function num(v){ const n = Number(v); return isFinite(n) && n > 0 ? n : 0; }
+  function totalsOf(day){
+    const t = {cal:0, protein:0, carbs:0, fat:0};
+    MEALS.forEach(m=>{
+      const meal = day[m.key] || emptyMeal();
+      t.cal += num(meal.cal); t.protein += num(meal.protein);
+      t.carbs += num(meal.carbs); t.fat += num(meal.fat);
+    });
+    return t;
+  }
+  function setPill(el, cal){
+    const goal = db.settings.calGoal;
+    if(cal <= 0){ el.className = "diff-pill neutral"; el.textContent = "—"; return; }
+    const diff = goal - cal;
+    if(diff > 0){ el.className = "diff-pill ok"; el.textContent = "-" + Math.round(diff) + " kcal"; }
+    else if(diff < 0){ el.className = "diff-pill warn"; el.textContent = "+" + Math.round(-diff) + " kcal"; }
+    else { el.className = "diff-pill neutral"; el.textContent = "0 kcal"; }
+  }
+  function macroBarsHtml(totals){
+    return MACROS.map(m=>{
+      const val = totals[m.key] || 0;
+      const goal = db.settings[m.key + "Goal"] || 0;
+      const pct = goal > 0 ? Math.min(100, Math.round((val/goal)*100)) : 0;
+      return '<div class="macro-line"><div class="macro-name">' + m.label + '</div>' +
+        '<div class="macro-track"><div class="macro-fill" style="width:' + pct + '%;background:' + m.color + '"></div></div>' +
+        '<div class="macro-val">' + Math.round(val) + ' / ' + goal + ' g</div></div>';
+    }).join("");
+  }
+
+  // ---------- day view ----------
+  function updateDayTotals(day){
+    const totals = totalsOf(day);
+    document.getElementById("dayTotalCal").textContent = Math.round(totals.cal);
+    document.getElementById("dayGoalCal").textContent = db.settings.calGoal;
+    setPill(document.getElementById("dayDiffPill"), totals.cal);
+    document.getElementById("dayMacroBars").innerHTML = macroBarsHtml(totals);
+  }
+  function renderDay(){
+    if(currentDate > todayISO()) currentDate = todayISO();
+    document.getElementById("dayLabel").textContent = labelForDate(currentDate);
+    document.getElementById("nextDay").disabled = currentDate === todayISO();
+    const picker = document.getElementById("datePicker");
+    picker.value = currentDate;
+    picker.max = todayISO();
+
+    const day = getDay(currentDate);
+    updateDayTotals(day);
+
+    const container = document.getElementById("mealsContainer");
+    container.innerHTML = MEALS.map(m=>{
+      const meal = day[m.key] || emptyMeal();
+      const f = (field, label) =>
+        '<div class="field"><label>' + label + '</label>' +
+        '<input type="number" inputmode="decimal" min="0" data-field="' + field + '" value="' + (num(meal[field]) || "") + '"></div>';
+      return '<div class="card meal-card" data-meal="' + m.key + '"><div class="meal-title">' + m.label + '</div>' +
+        '<div class="meal-grid">' + f("cal","Calories") + f("protein","Prot. (g)") + f("carbs","Gluc. (g)") + f("fat","Lip. (g)") + '</div></div>';
+    }).join("");
+    container.querySelectorAll("input").forEach(inp=>inp.addEventListener("input", onMealInput));
+  }
+  function onMealInput(e){
+    const mealKey = e.target.closest(".meal-card").dataset.meal;
+    const field = e.target.dataset.field;
+    const day = getDay(currentDate);
+    day[mealKey] = {...emptyMeal(), ...(day[mealKey] || {})};
+    day[mealKey][field] = num(e.target.value);
+    setDay(currentDate, day);
+    updateDayTotals(day);
+  }
+
+  // ---------- week view ----------
+  function renderWeek(){
+    const today = todayISO();
+    const days = [];
+    for(let i=6;i>=0;i--) days.push(addDays(today, -i));
+    const goal = db.settings.calGoal;
+
+    let logged=0, sumCal=0, sumDiff=0, sumP=0, sumC=0, sumF=0;
+    const rows = days.map(iso=>{
+      const t = totalsOf(getDay(iso));
+      const has = t.cal > 0;
+      let diffTxt = "—", color = "var(--ink-faint)";
+      if(has){
+        logged++; sumCal += t.cal; sumDiff += (goal - t.cal); sumP += t.protein; sumC += t.carbs; sumF += t.fat;
+        const d = goal - t.cal;
+        diffTxt = d >= 0 ? "-" + Math.round(d) : "+" + Math.round(-d);
+        color = d >= 0 ? "var(--accent)" : "var(--warn)";
+      }
+      return '<div class="day-row"><div class="dname">' + labelForDate(iso) + '</div>' +
+        '<div class="dcal">' + (has ? Math.round(t.cal) + " kcal" : "non renseigné") + '</div>' +
+        '<div class="ddiff" style="color:' + color + '">' + diffTxt + '</div></div>';
+    }).join("");
+    document.getElementById("weekDays").innerHTML = rows;
+
+    const avgEl = document.getElementById("weekAvgCal");
+    const diffEl = document.getElementById("weekDiffTotal");
+    const barsEl = document.getElementById("weekMacroBars");
+    if(logged === 0){
+      avgEl.textContent = "—"; diffEl.textContent = "—"; diffEl.style.color = "";
+      barsEl.innerHTML = '<div class="empty-note">Aucun jour enregistré sur les 7 derniers jours</div>';
+      return;
+    }
+    avgEl.textContent = Math.round(sumCal/logged);
+    diffEl.textContent = (sumDiff >= 0 ? "-" : "+") + Math.round(Math.abs(sumDiff)) + " kcal";
+    diffEl.style.color = sumDiff >= 0 ? "var(--accent)" : "var(--warn)";
+    barsEl.innerHTML = macroBarsHtml({protein:sumP/logged, carbs:sumC/logged, fat:sumF/logged}) +
+      '<div class="empty-note">Moyennes sur ' + logged + ' jour' + (logged>1?"s":"") + ' enregistré' + (logged>1?"s":"") + '</div>';
+  }
+
+  // ---------- settings view ----------
+  function renderSettings(){
+    document.getElementById("setCal").value = db.settings.calGoal;
+    document.getElementById("setProtein").value = db.settings.proteinGoal;
+    document.getElementById("setCarbs").value = db.settings.carbsGoal;
+    document.getElementById("setFat").value = db.settings.fatGoal;
+    document.getElementById("saveNote").textContent = "";
+    document.getElementById("dataNote").textContent = "";
+    const n = loggedDayCount();
+    const keys = Object.keys(db.days).sort();
+    let txt = n === 0 ? "Aucune donnée enregistrée pour le moment." :
+      n + " jour" + (n>1?"s":"") + " enregistré" + (n>1?"s":"") + " (depuis le " + fromISO(keys[0]).toLocaleDateString("fr-FR") + ").";
+    txt += " Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
+    document.getElementById("dataInfo").textContent = txt;
+  }
+  function flash(id, msg, isErr){
+    const el = document.getElementById(id);
+    el.textContent = msg; el.className = "note" + (isErr ? " err" : "");
+    setTimeout(()=>{ el.textContent = ""; }, 2500);
+  }
+
+  // ---------- export / import ----------
+  function exportData(){
+    persistNow();
+    const payload = {app:"suivi-calories", version:1, exportedAt:new Date().toISOString(), settings:db.settings, days:db.days};
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "suivi-calories-" + todayISO() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    flash("dataNote", "Sauvegarde générée");
+  }
+  function importData(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(!parsed || typeof parsed !== "object" || !parsed.days || typeof parsed.days !== "object"){
+          throw new Error("format");
+        }
+        // fusion : les jours du fichier remplacent les jours existants de même date
+        let added = 0;
+        Object.keys(parsed.days).forEach(iso=>{
+          if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){ db.days[iso] = {...emptyDay(), ...parsed.days[iso]}; added++; }
+        });
+        if(parsed.settings) db.settings = {...DEFAULT_SETTINGS, ...parsed.settings};
+        persistNow();
+        renderSettings();
+        flash("dataNote", added + " jour" + (added>1?"s":"") + " restauré" + (added>1?"s":""));
+      }catch(e){
+        flash("dataNote", "Fichier non reconnu", true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- navigation ----------
+  function showView(name){
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    document.getElementById("view-"+name).classList.add("active");
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
+    window.scrollTo(0,0);
+    if(name==="day") renderDay();
+    if(name==="week") renderWeek();
+    if(name==="settings") renderSettings();
+  }
+  document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click", ()=>showView(btn.dataset.view)));
+  document.getElementById("prevDay").addEventListener("click", ()=>{ currentDate = addDays(currentDate,-1); renderDay(); });
+  document.getElementById("nextDay").addEventListener("click", ()=>{
+    if(currentDate < todayISO()){ currentDate = addDays(currentDate,1); renderDay(); }
+  });
+  document.getElementById("datePicker").addEventListener("change", (e)=>{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){ currentDate = e.target.value; renderDay(); }
+  });
+  document.getElementById("saveSettings").addEventListener("click", ()=>{
+    db.settings.calGoal = num(document.getElementById("setCal").value);
+    db.settings.proteinGoal = num(document.getElementById("setProtein").value);
+    db.settings.carbsGoal = num(document.getElementById("setCarbs").value);
+    db.settings.fatGoal = num(document.getElementById("setFat").value);
+    const ok = persistNow();
+    flash("saveNote", ok ? "Objectifs enregistrés ✓" : "Erreur d'enregistrement", !ok);
+  });
+  document.getElementById("exportBtn").addEventListener("click", exportData);
+  document.getElementById("importBtn").addEventListener("click", ()=>document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change", (e)=>{
+    if(e.target.files && e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = "";
+  });
+
+  // sauvegarde immédiate si l'app passe en arrière-plan
+  document.addEventListener("visibilitychange", ()=>{ if(document.hidden){ clearTimeout(saveTimer); persistNow(); } });
+  window.addEventListener("pagehide", ()=>{ clearTimeout(saveTimer); persistNow(); });
+
+  // quand l'app est rouverte un autre jour (minuit passé), suivre le nouveau jour
+  let lastKnownToday = todayISO();
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden) return;
+    const now = todayISO();
+    if(now !== lastKnownToday){
+      if(currentDate === lastKnownToday) currentDate = now;
+      lastKnownToday = now;
+      const active = document.querySelector(".view.active").id.replace("view-","");
+      showView(active);
+    }
+  });
+
+  // ---------- init ----------
+  loadDB();
+  if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", ()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); });
+  }
+  renderDay();
+})();
+</script>
+</body>
+</html>
