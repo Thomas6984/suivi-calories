@@ -403,7 +403,7 @@
         <div class="macro-bars" id="dayMacroBars"></div>
       </div>
 
-      <section class="title">Repas · calories calculées automatiquement (4 kcal/g protéines et glucides, 9 kcal/g lipides)</section>
+      <section class="title">Repas · calories automatiques : 4 kcal/g protéines et glucides, 9 kcal/g lipides, 2 kcal/g fibres (via le scan)</section>
       <div id="mealsContainer"></div>
     </div>
 
@@ -624,7 +624,7 @@
     {key:"dinner", label:"Dîner"},
     {key:"other", label:"Autre", hasNote:true, hint:"Grignotages, shakers, collations…"}
   ];
-  const KCAL = {protein:4, carbs:4, fat:9}; // facteurs d'Atwater (FAO/USDA)
+  const KCAL = {protein:4, carbs:4, fat:9, fiber:2}; // règlement UE 1169/2011, annexe XIV — fibres 2 kcal/g
   const MACROS = [
     {key:"protein", label:"Protéines", color:"var(--protein)", kcalPerG:4},
     {key:"carbs", label:"Glucides", color:"var(--carbs)", kcalPerG:4},
@@ -633,7 +633,7 @@
   const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65,
                             weightGoal:78, height:1.91};
   // Aucune donnée pré-chargée : chaque installation démarre vierge.
-  const emptyMeal = () => ({protein:0, carbs:0, fat:0, note:""});
+  const emptyMeal = () => ({protein:0, carbs:0, fat:0, fiber:0, note:""});
   const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal()});
 
   const LIGHT = {good:"var(--good)", bad:"var(--bad)", empty:"var(--track)", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line-strong)"};
@@ -688,7 +688,7 @@
   function setDay(iso,data){
     const t=totalsOf(data);
     const anyNote = MEALS.some(m=>mealHasNote(data[m.key]));
-    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && !anyNote) delete db.days[iso]; else db.days[iso]=data;
+    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && t.fiber===0 && !anyNote) delete db.days[iso]; else db.days[iso]=data;
     persistDebounced();
   }
   function loggedDates(){ return Object.keys(db.days).sort(); }
@@ -701,36 +701,24 @@
     if(!db.days[iso]) db.days[iso]=emptyDay();
     if(val>0) db.days[iso].maint=Math.round(val); else delete db.days[iso].maint;
     const day=db.days[iso], t=totalsOf(day), anyNote=MEALS.some(m=>mealHasNote(day[m.key]));
-    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && !anyNote && !day.maint) delete db.days[iso];
+    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && t.fiber===0 && !anyNote && !day.maint) delete db.days[iso];
     persistNow();
   }
   function escHtml(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-  function effectiveMaintenance(iso){
-    const ov = db.days[iso] && Number(db.days[iso].maint);
-    return (ov>0) ? ov : db.settings.maintenance;
-  }
-  function hasMaintOverride(iso){ return !!(db.days[iso] && Number(db.days[iso].maint)>0); }
-  function setDayMaintenance(iso, val){
-    if(!db.days[iso]) db.days[iso]=emptyDay();
-    if(val>0) db.days[iso].maint=Math.round(val); else delete db.days[iso].maint;
-    const day=db.days[iso], t=totalsOf(day), anyNote=MEALS.some(m=>mealHasNote(day[m.key]));
-    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && !anyNote && !day.maint) delete db.days[iso];
-    persistNow();
-  }
 
   // ---------- computations ----------
   function num(v){ const n=Number(v); return isFinite(n)&&n>0?n:0; }
   function mealCal(meal){
     meal = meal||{};
-    const fromMacros = num(meal.protein)*KCAL.protein + num(meal.carbs)*KCAL.carbs + num(meal.fat)*KCAL.fat;
+    const fromMacros = num(meal.protein)*KCAL.protein + num(meal.carbs)*KCAL.carbs + num(meal.fat)*KCAL.fat + num(meal.fiber)*KCAL.fiber;
     // anciennes saisies (calories tapées à la main, sans macros) : on garde leur valeur
     return fromMacros>0 ? fromMacros : num(meal.cal);
   }
   function mealHasNote(meal){ return !!(meal && typeof meal.note==="string" && meal.note.trim()); }
   function totalsOf(day){
-    const t={cal:0,protein:0,carbs:0,fat:0};
+    const t={cal:0,protein:0,carbs:0,fat:0,fiber:0};
     MEALS.forEach(m=>{ const meal=day[m.key]||emptyMeal();
-      t.cal+=mealCal(meal); t.protein+=num(meal.protein); t.carbs+=num(meal.carbs); t.fat+=num(meal.fat); });
+      t.cal+=mealCal(meal); t.protein+=num(meal.protein); t.carbs+=num(meal.carbs); t.fat+=num(meal.fat); t.fiber+=num(meal.fiber); });
     return t;
   }
   function macroCalorieSplit(totals){ return MACROS.map(m=>({...m, val:(totals[m.key]||0)*m.kcalPerG})); }
@@ -1108,7 +1096,8 @@
     document.getElementById("dayDonut").innerHTML=donutChart(parts);
     document.getElementById("dayLegend").innerHTML=donutLegendHtml(parts, totals);
     document.getElementById("dayMacroBars").innerHTML=macroBarsHtml(totals);
-    MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const c=mealCal(day[m.key]); el.textContent=c>0?Math.round(c)+" kcal":""; } });
+    MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const c=mealCal(day[m.key]), fi=num((day[m.key]||{}).fiber);
+      el.textContent=c>0?Math.round(c)+" kcal"+(fi>0?" · "+(Math.round(fi*10)/10)+" g fibres":""):""; } });
     renderMiniTrend();
   }
   function renderMiniTrend(){
@@ -1140,6 +1129,7 @@
     const day=getDay(currentDate);
     day[mealKey]={...emptyMeal(), ...(day[mealKey]||{})};
     day[mealKey][field] = field==="note" ? String(e.target.value).slice(0,300) : num(e.target.value);
+    if(num(day[mealKey].protein)===0 && num(day[mealKey].carbs)===0 && num(day[mealKey].fat)===0) day[mealKey].fiber=0;
     setDay(currentDate, day);
     updateDayCards(day);
   }
@@ -1271,8 +1261,8 @@
   function basketHtml(){
     const a=(scanState&&scanState.added)||[];
     if(!a.length) return "";
-    const tot=a.reduce((s,x)=>({p:s.p+x.p,c:s.c+x.c,f:s.f+x.f}),{p:0,c:0,f:0});
-    const kcal=Math.round(tot.p*KCAL.protein+tot.c*KCAL.carbs+tot.f*KCAL.fat);
+    const tot=a.reduce((s,x)=>({p:s.p+x.p,c:s.c+x.c,f:s.f+x.f,fi:s.fi+(x.fi||0)}),{p:0,c:0,f:0,fi:0});
+    const kcal=Math.round(tot.p*KCAL.protein+tot.c*KCAL.carbs+tot.f*KCAL.fat+tot.fi*KCAL.fiber);
     const d1=v=>Math.round(v*10)/10;
     return `<div class="basket"><div class="bt">Déjà ajouté à ce repas · ${a.length} produit${a.length>1?"s":""}</div>`+
       a.map(x=>`<div class="bi"><span>${escHtml(x.name)}</span><span>${Math.round(x.qty)} g · ${x.kcal} kcal</span></div>`).join("")+
@@ -1387,6 +1377,7 @@
       if(data.status!==1 || !data.product) return renderScanError("Ce produit n'est pas encore dans la base Open Food Facts.", code);
       const p=data.product, n=p.nutriments||{};
       const prot=Number(n["proteins_100g"]), carb=Number(n["carbohydrates_100g"]), fat=Number(n["fat_100g"]);
+      const fib=Number(n["fiber_100g"]), labelKcal=Number(n["energy-kcal_100g"]);
       if(!isFinite(prot)&&!isFinite(carb)&&!isFinite(fat))
         return renderScanError("Produit trouvé, mais ses valeurs nutritionnelles ne sont pas renseignées.", code);
       scanState.product={
@@ -1394,6 +1385,7 @@
         name:(p.product_name_fr||p.product_name||"Produit").slice(0,90),
         brand:(p.brands||"").split(",")[0].trim().slice(0,40),
         protein:isFinite(prot)?prot:0, carbs:isFinite(carb)?carb:0, fat:isFinite(fat)?fat:0,
+        fiber:isFinite(fib)&&fib>0?fib:0, labelKcal:isFinite(labelKcal)&&labelKcal>0?labelKcal:0,
         serving:Number(p.serving_quantity)||0
       };
       scanState.qty=100;
@@ -1405,12 +1397,14 @@
 
   function scaled(){
     const p=scanState.product, q=num(scanState.qty)/100;
-    return {protein:p.protein*q, carbs:p.carbs*q, fat:p.fat*q};
+    return {protein:p.protein*q, carbs:p.carbs*q, fat:p.fat*q, fiber:p.fiber*q};
   }
   function renderScanResult(){
     const p=scanState.product, sc=scaled();
-    const kcal=Math.round(sc.protein*KCAL.protein+sc.carbs*KCAL.carbs+sc.fat*KCAL.fat);
+    const kcal=Math.round(sc.protein*KCAL.protein+sc.carbs*KCAL.carbs+sc.fat*KCAL.fat+sc.fiber*KCAL.fiber);
     const d1=v=>Math.round(v*10)/10;
+    const per100=Math.round(p.protein*KCAL.protein+p.carbs*KCAL.carbs+p.fat*KCAL.fat+p.fiber*KCAL.fiber);
+    const labelLine = p.labelKcal ? ` · étiquette : <b>${Math.round(p.labelKcal)} kcal</b>` : "";
     const servBtn = p.serving>0 ? `<button data-qty="${p.serving}">1 portion (${p.serving} g)</button>` : `<button data-qty="150">150 g</button>`;
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet">
       <h3>Produit trouvé</h3>
@@ -1419,18 +1413,19 @@
       <div class="prod">
         <div class="n">${escHtml(p.name)}</div>
         ${p.brand?`<div class="b">${escHtml(p.brand)}</div>`:""}
-        <div class="per">Pour 100 g</div>
-        <div class="k">${d1(p.protein)} g prot · ${d1(p.carbs)} g gluc · ${d1(p.fat)} g lip</div>
+        <div class="per">Pour 100 g · calculé : <b>${per100} kcal</b>${labelLine}</div>
+        <div class="k">${d1(p.protein)} g prot · ${d1(p.carbs)} g gluc · ${d1(p.fat)} g lip${p.fiber?` · ${d1(p.fiber)} g fibres`:""}</div>
       </div>
       <label class="f">Quantité consommée (g)</label>
       <input class="t" id="qtyInput" type="number" inputmode="decimal" min="0" step="1" value="${scanState.qty}">
       <div class="qty-row"><button data-qty="50">50 g</button><button data-qty="100">100 g</button>${servBtn}</div>
       <div class="prod">
         <div class="per">À ajouter · <b style="color:var(--acc)">${kcal} kcal</b></div>
-        <div class="res-grid">
-          <div class="field"><label>Prot. (g)</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rP" value="${d1(sc.protein)}"></div>
-          <div class="field"><label>Gluc. (g)</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rC" value="${d1(sc.carbs)}"></div>
-          <div class="field"><label>Lip. (g)</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rF" value="${d1(sc.fat)}"></div>
+        <div class="res-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
+          <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rP" value="${d1(sc.protein)}"></div>
+          <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rC" value="${d1(sc.carbs)}"></div>
+          <div class="field"><label>Lip.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rF" value="${d1(sc.fat)}"></div>
+          <div class="field"><label>Fibres</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rFi" value="${d1(sc.fiber)}"></div>
         </div>
       </div>
       <div class="sheet-actions">
@@ -1442,23 +1437,23 @@
     bindSheet();
     const qi=document.getElementById("qtyInput");
     qi.addEventListener("input",()=>{ scanState.qty=num(qi.value); const s2=scaled();
-      document.getElementById("rP").value=d1(s2.protein); document.getElementById("rC").value=d1(s2.carbs); document.getElementById("rF").value=d1(s2.fat); refreshScanKcal(); });
+      document.getElementById("rP").value=d1(s2.protein); document.getElementById("rC").value=d1(s2.carbs); document.getElementById("rF").value=d1(s2.fat); document.getElementById("rFi").value=d1(s2.fiber); refreshScanKcal(); });
     sheetRoot.querySelectorAll("[data-qty]").forEach(b=>b.addEventListener("click",()=>{ scanState.qty=Number(b.dataset.qty); qi.value=scanState.qty; qi.dispatchEvent(new Event("input")); }));
-    ["rP","rC","rF"].forEach(id=>document.getElementById(id).addEventListener("input",refreshScanKcal));
+    ["rP","rC","rF","rFi"].forEach(id=>document.getElementById(id).addEventListener("input",refreshScanKcal));
   }
   function refreshScanKcal(){
-    const p=num(document.getElementById("rP").value), c=num(document.getElementById("rC").value), f=num(document.getElementById("rF").value);
+    const p=num(document.getElementById("rP").value), c=num(document.getElementById("rC").value), f=num(document.getElementById("rF").value), fi=num((document.getElementById("rFi")||{}).value);
     const el=sheetRoot.querySelectorAll(".prod .per")[1];
-    if(el) el.innerHTML='À ajouter · <b style="color:var(--acc)">'+Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat)+' kcal</b>';
+    if(el) el.innerHTML='À ajouter · <b style="color:var(--acc)">'+Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat+fi*KCAL.fiber)+' kcal</b>';
   }
   // Enregistre le produit courant dans le repas. keepOpen : on repart sur le scanner pour enchaîner.
   function applyScan(keepOpen){
     const st=scanState; if(!st||!st.product) return;
-    const p=num(document.getElementById("rP").value), c=num(document.getElementById("rC").value), f=num(document.getElementById("rF").value);
-    if(p<=0 && c<=0 && f<=0) return;
+    const p=num(document.getElementById("rP").value), c=num(document.getElementById("rC").value), f=num(document.getElementById("rF").value), fi=num((document.getElementById("rFi")||{}).value);
+    if(p<=0 && c<=0 && f<=0 && fi<=0) return;
     const day=getDay(currentDate);
     const meal={...emptyMeal(), ...(day[st.mealKey]||{})};
-    meal.protein=num(meal.protein)+p; meal.carbs=num(meal.carbs)+c; meal.fat=num(meal.fat)+f;
+    meal.protein=num(meal.protein)+p; meal.carbs=num(meal.carbs)+c; meal.fat=num(meal.fat)+f; meal.fiber=num(meal.fiber)+fi;
     const def=MEALS.find(m=>m.key===st.mealKey);
     if(def && def.hasNote){
       const line=st.product.name+(st.qty?" ("+Math.round(st.qty)+" g)":"");
@@ -1467,7 +1462,7 @@
     }
     day[st.mealKey]=meal;
     setDay(currentDate, day);
-    st.added.push({name:st.product.name, qty:st.qty, p:p, c:c, f:f, kcal:Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat)});
+    st.added.push({name:st.product.name, qty:st.qty, p:p, c:c, f:f, fi:fi, kcal:Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat+fi*KCAL.fiber)});
     st.product=null; st.qty=100;
     renderDay();                       // le total du repas se met à jour en arrière-plan
     if(keepOpen) renderScanStage();    // on relance la caméra pour le produit suivant
