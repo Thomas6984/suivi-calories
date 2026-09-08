@@ -28,6 +28,43 @@
     -webkit-font-smoothing:antialiased;min-height:100vh;overscroll-behavior-y:none;}
   #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;
     padding-top:env(safe-area-inset-top);padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+  .section-switch{display:flex;background:#E9E8E1;border-radius:13px;padding:3px;margin:0 16px 4px 16px;}
+  .section-switch button{flex:1;border:none;background:none;padding:10px 0;border-radius:11px;font-size:14px;font-weight:800;
+    color:var(--ink-soft);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .section-switch button.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.10);}
+  .section-switch button svg{width:16px;height:16px;}
+  .section{display:none;} .section.active{display:block;}
+
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .kpi{background:#F8F8F4;border-radius:14px;padding:13px 14px;}
+  .kpi .num{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+  .kpi .num.good{color:var(--good);} .kpi .num.bad{color:var(--bad);}
+  .kpi .num small{font-size:12px;color:var(--ink-faint);font-weight:700;margin-left:3px;}
+  .kpi .lbl{font-size:11px;color:var(--ink-soft);margin-top:3px;font-weight:600;}
+
+  .proj-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .proj{background:#F8F8F4;border-radius:14px;padding:13px 14px;}
+  .proj .d{font-size:16px;font-weight:800;letter-spacing:-0.01em;}
+  .proj .r{font-size:11.5px;color:var(--ink-soft);font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;}
+  .proj .k{font-size:10.5px;color:var(--ink-faint);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+
+  .goal-bar{height:9px;background:rgba(255,255,255,.14);border-radius:5px;overflow:hidden;margin-top:14px;}
+  .goal-bar>div{height:100%;background:var(--mint);border-radius:5px;}
+  .goal-ends{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.6);font-weight:700;margin-top:6px;}
+
+  .w-form{display:grid;grid-template-columns:1.15fr 1fr auto;gap:8px;align-items:end;}
+  .w-form .field input{padding:11px 8px;}
+  .w-add{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0 16px;font-size:15px;
+    font-weight:800;font-family:inherit;height:42px;}
+  .w-add:active{opacity:.85;}
+
+  .w-row{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;border-bottom:1px solid var(--line);gap:6px;}
+  .w-row:last-child{border-bottom:none;}
+  .w-row .wd{font-size:13px;font-weight:600;width:82px;flex-shrink:0;}
+  .w-row .wk{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;width:62px;text-align:right;}
+  .w-row .wv{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:1;text-align:right;}
+  .w-row .wx{background:none;border:none;color:var(--ink-faint);font-size:18px;padding:2px 2px 2px 8px;font-family:inherit;line-height:1;}
+
   header.top{padding:20px 20px 6px 20px;display:flex;align-items:baseline;justify-content:space-between;}
   header.top h1{font-size:22px;font-weight:800;margin:0;letter-spacing:-0.02em;}
   header.top .today{font-size:12px;color:var(--ink-faint);font-weight:600;text-transform:capitalize;}
@@ -150,7 +187,15 @@
 <body>
 <div id="app">
   <header class="top"><h1>Suivi calories</h1><span class="today" id="headerDate"></span></header>
+  <div class="section-switch">
+    <button class="sec-btn active" data-section="nutrition">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 3v7a3 3 0 003 3v8M7 3v6M10 3v6M17 3c-1.5 2-2 4-2 7 0 2 .7 3 2 3v8"/></svg>Nutrition</button>
+    <button class="sec-btn" data-section="poids">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 21h16l-2.5-12H6.5L4 21z"/><circle cx="12" cy="5" r="2.5"/></svg>Poids</button>
+  </div>
+
   <main>
+   <div class="section active" id="section-nutrition">
 
     <!-- JOUR -->
     <div class="view active" id="view-day">
@@ -275,10 +320,118 @@
         <div class="note" id="dataNote"></div>
       </div>
     </div>
+   </div>
+
+   <!-- ============ SECTION POIDS ============ -->
+   <div class="section" id="section-poids">
+
+    <div class="view active" id="view-wsuivi">
+      <div class="card hero">
+        <div class="card-title">Poids actuel</div>
+        <div class="card-sub" id="wHeroSub">Aucune pesée enregistrée</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px">
+          <span class="gauge-num neutral" id="wCurrent" style="font-size:44px">—</span>
+          <span style="font-size:15px;font-weight:700;color:rgba(255,255,255,.6)">kg</span>
+          <span class="gauge-lbl neutral" id="wSinceStart" style="margin-left:auto;margin-top:0;font-size:14px;letter-spacing:0">—</span>
+        </div>
+        <div class="goal-bar"><div id="wGoalFill" style="width:0%"></div></div>
+        <div class="goal-ends"><span id="wStartLbl">—</span><span id="wPct">—</span><span id="wGoalLbl">—</span></div>
+        <div class="hero-trend" style="margin-top:16px">
+          <div class="lbl">Courbe de poids · axe temporel réel · pointillé = objectif</div>
+          <div id="wCurve"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Variations</div><div class="right">kg</div></div>
+        <div class="card-sub">Écarts calculés à la date exacte, avec interpolation entre deux pesées</div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="num" id="wVar7">—</div><div class="lbl">7 derniers jours</div></div>
+          <div class="kpi"><div class="num" id="wVar30">—</div><div class="lbl">30 derniers jours</div></div>
+          <div class="kpi"><div class="num" id="wVarAll">—</div><div class="lbl">depuis le début</div></div>
+          <div class="kpi"><div class="num" id="wRemain">—</div><div class="lbl">reste à perdre</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Projection d'objectif</div><div class="right" id="wGoalRight">—</div></div>
+        <div class="card-sub">Deux rythmes comparés : l'écart entre les deux dates dit si tu accélères ou si tu ralentis</div>
+        <div class="proj-grid">
+          <div class="proj"><div class="k">Rythme global</div><div class="d" id="wProjAllDate">—</div><div class="r" id="wProjAllRate">—</div></div>
+          <div class="proj"><div class="k">30 derniers jours</div><div class="d" id="wProj30Date">—</div><div class="r" id="wProj30Rate">—</div></div>
+        </div>
+        <div class="card-sub" id="wTrendNote" style="margin:12px 0 0 0"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Rythme entre pesées</div><div class="right">kg / semaine</div></div>
+        <div class="card-sub">Vert = perte, rouge = prise. Une barre par intervalle</div>
+        <div class="chart" id="wRateChart"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-wsaisie">
+      <div class="card">
+        <div class="card-title">Nouvelle pesée</div>
+        <div class="card-sub">Une valeur par date. Réenregistrer une date existante remplace la valeur.</div>
+        <div class="w-form" style="margin-top:12px">
+          <div class="field"><label>Date</label><input type="date" id="wDate"></div>
+          <div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" min="0" id="wKg" placeholder="82.6"></div>
+          <button class="w-add" id="wAdd">Ajouter</button>
+        </div>
+        <div class="note" id="wNote"></div>
+      </div>
+
+      <section class="title">Historique</section>
+      <div class="card day-list" id="wList"></div>
+    </div>
+
+    <div class="view" id="view-wreglages">
+      <div class="card">
+        <div class="meal-title" style="margin-bottom:14px">Objectif de poids</div>
+        <div class="settings-field">
+          <label>Poids cible (kg)</label>
+          <input type="number" inputmode="decimal" step="0.1" id="setWGoal">
+          <div class="hint">Sert au pourcentage d'avancement et aux deux projections.</div>
+        </div>
+        <div class="settings-field">
+          <label>Taille (m)</label>
+          <input type="number" inputmode="decimal" step="0.01" id="setHeight">
+          <div class="hint">Sert uniquement au calcul de l'IMC.</div>
+        </div>
+        <button class="btn primary" id="saveWSettings">Enregistrer</button>
+        <div class="note" id="wSaveNote"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">IMC</div><div class="right" id="bmiRight">—</div></div>
+        <div class="card-sub" id="bmiSub">Indice de masse corporelle, calculé depuis ta dernière pesée</div>
+        <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+          <div class="kpi"><div class="num" id="bmiNow">—</div><div class="lbl">IMC actuel</div></div>
+          <div class="kpi"><div class="num" id="bmiGoal">—</div><div class="lbl">IMC à l'objectif</div></div>
+        </div>
+      </div>
+    </div>
+
+   </div>
 
   </main>
 
-  <nav class="tabbar">
+  <nav class="tabbar" id="tabsPoids" style="display:none">
+    <button class="tab-btn active" data-view="wsuivi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg>
+      <span>Suivi</span>
+    </button>
+    <button class="tab-btn" data-view="wsaisie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Pesées</span>
+    </button>
+    <button class="tab-btn" data-view="wreglages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+      <span>Objectif</span>
+    </button>
+  </nav>
+
+  <nav class="tabbar" id="tabsNutrition">
     <button class="tab-btn active" data-view="day">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
       <span>Jour</span>
@@ -311,14 +464,22 @@
     {key:"carbs", label:"Glucides", color:"var(--carbs)", kcalPerG:4},
     {key:"fat", label:"Lipides", color:"var(--fat)", kcalPerG:9}
   ];
-  const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65};
+  const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65,
+                            weightGoal:78, height:1.91};
+  // Historique repris du fichier Excel « Evolution_muscu ». Chargé une seule fois, puis modifiable dans l'app.
+  const SEED_WEIGHTS = {
+    "2026-02-20":98, "2026-03-19":94.5, "2026-04-29":91.7, "2026-05-29":89.6,
+    "2026-06-18":88, "2026-06-26":87.8, "2026-07-27":84.5, "2026-08-21":83.5, "2026-09-08":82.6
+  };
   const emptyMeal = () => ({protein:0, carbs:0, fat:0, note:""});
   const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal()});
 
   const LIGHT = {good:"var(--good)", bad:"var(--bad)", empty:"#DEDCD0", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line)"};
   const DARK  = {good:"var(--mint)", bad:"var(--coral)", empty:"rgba(255,255,255,.12)", ref:"rgba(255,255,255,.45)", text:"rgba(255,255,255,.5)", zero:"rgba(255,255,255,.2)"};
 
-  let db = {settings:{...DEFAULT_SETTINGS}, days:{}};
+  let db = {settings:{...DEFAULT_SETTINGS}, days:{}, weights:{}, seeded:false};
+  let currentSection = "nutrition";
+  let currentWView = "wsuivi";
   let currentDate = todayISO();
   let currentPeriod = "7";
   let saveTimer = null;
@@ -350,9 +511,16 @@
         if(parsed && typeof parsed==="object"){
           db.settings = {...DEFAULT_SETTINGS, ...(parsed.settings||{})};
           db.days = (parsed.days && typeof parsed.days==="object") ? parsed.days : {};
+          db.weights = (parsed.weights && typeof parsed.weights==="object") ? parsed.weights : {};
+          db.seeded = parsed.seeded===true;
         }
       }
     }catch(e){ console.error("Lecture impossible", e); }
+    // premier lancement : on installe l'historique Excel, une seule fois
+    if(!db.seeded){
+      Object.keys(SEED_WEIGHTS).forEach(iso=>{ if(db.weights[iso]==null) db.weights[iso]=SEED_WEIGHTS[iso]; });
+      db.seeded=true; persistNow();
+    }
   }
   function persistNow(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); return true; }
@@ -386,6 +554,39 @@
   function macroCalorieSplit(totals){ return MACROS.map(m=>({...m, val:(totals[m.key]||0)*m.kcalPerG})); }
   function fmtSigned(v){ v=Math.round(v); return (v>0?"+":"")+v; }        // v = cal - maint (positif = surplus)
   function fmtBalance(balance){ const r=Math.round(balance); return r>=0 ? "-"+r : "+"+(-r); } // balance = maint - cal
+
+  // ---------- données de poids ----------
+  function weightEntries(){
+    return Object.keys(db.weights).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k) && Number(db.weights[k])>0)
+      .sort().map(iso=>({iso, kg:Number(db.weights[iso]), t:fromISO(iso).getTime()}));
+  }
+  function setWeight(iso,kg){ if(kg>0) db.weights[iso]=Math.round(kg*10)/10; else delete db.weights[iso]; persistNow(); }
+  function removeWeight(iso){ delete db.weights[iso]; persistNow(); }
+
+  // Poids à une date donnée : valeur exacte, ou interpolation linéaire entre les deux pesées encadrantes.
+  function weightAt(list, t){
+    if(!list.length) return null;
+    if(t<=list[0].t) return null;                 // avant la première pesée : on n'extrapole pas
+    if(t>=list[list.length-1].t) return list[list.length-1].kg;
+    for(let i=0;i<list.length-1;i++){
+      if(t>=list[i].t && t<=list[i+1].t){
+        const span=list[i+1].t-list[i].t;
+        if(span<=0) return list[i].kg;
+        return list[i].kg + (list[i+1].kg-list[i].kg)*((t-list[i].t)/span);
+      }
+    }
+    return null;
+  }
+  const DAY_MS=86400000;
+  function fmtKg(v,signed){
+    const r=Math.round(v*10)/10;
+    const txt=Math.abs(r).toFixed(1).replace(".",",");
+    if(!signed) return txt;
+    return (r>0?"+":r<0?"−":"")+txt;
+  }
+  function fmtDateLong(t){
+    return new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  }
 
   // ---------- SVG: gauge ----------
   function gaugeSvg(cal, goal, maint){
@@ -497,6 +698,209 @@
       <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="${color}"/>
       <text x="${(lx-8).toFixed(1)}" y="${(ly+(last<=0?-8:14)).toFixed(1)}" font-size="10" font-weight="800" fill="${color}" text-anchor="end">${fmtSigned(last)}</text>
       ${labels}</svg>`;
+  }
+
+  // ---------- SVG: courbe de poids (axe temporel proportionnel) ----------
+  function weightCurveSvg(list, goal, theme){
+    const w=320,h=150,padL=6,padR=6,padTop=14,padBottom=20;
+    if(list.length<2) return `<svg viewBox="0 0 ${w} ${h}"><text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="12" font-weight="600" fill="${theme.text}">Au moins deux pesées sont nécessaires</text></svg>`;
+    const t0=list[0].t, t1=list[list.length-1].t, span=Math.max(1,t1-t0);
+    const vals=list.map(p=>p.kg);
+    let minV=Math.min(...vals), maxV=Math.max(...vals);
+    if(goal>0){ minV=Math.min(minV,goal); maxV=Math.max(maxV,goal); }
+    const pad=Math.max(0.4,(maxV-minV)*0.12); minV-=pad; maxV+=pad;
+    const X=t=>padL+((t-t0)/span)*(w-padL-padR);          // espacement réel selon les jours écoulés
+    const Y=v=>h-padBottom-((v-minV)/(maxV-minV))*(h-padTop-padBottom);
+    let d="";
+    list.forEach((p,i)=>{ d+=(i===0?"M":"L")+X(p.t).toFixed(1)+" "+Y(p.kg).toFixed(1)+" "; });
+    const area=d+`L${X(t1).toFixed(1)} ${(h-padBottom).toFixed(1)} L${X(t0).toFixed(1)} ${(h-padBottom).toFixed(1)} Z`;
+    const color=theme.good;
+    let dots="";
+    list.forEach(p=>{ dots+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.kg).toFixed(1)}" r="2.6" fill="${color}"/>`; });
+    let goalLine="";
+    if(goal>0 && goal>=minV && goal<=maxV){
+      const gy=Y(goal).toFixed(1);
+      goalLine=`<line x1="0" y1="${gy}" x2="${w}" y2="${gy}" stroke="${theme.ref}" stroke-width="1" stroke-dasharray="4,4"/>`+
+        `<text x="${w}" y="${(Y(goal)-4).toFixed(1)}" font-size="9" font-weight="700" fill="${theme.ref}" text-anchor="end">${fmtKg(goal)} kg</text>`;
+    }
+    // repères de dates : premier, dernier, et un intermédiaire proche du milieu temporel
+    const marks=[list[0]];
+    if(list.length>2){ const mid=t0+span/2; let best=list[1], bd=Infinity;
+      list.slice(1,-1).forEach(p=>{ const dd=Math.abs(p.t-mid); if(dd<bd){bd=dd;best=p;} }); marks.push(best); }
+    marks.push(list[list.length-1]);
+    let labels="";
+    marks.forEach((p,i)=>{ const anchor = i===0?"start":(i===marks.length-1?"end":"middle");
+      labels+=`<text x="${X(p.t).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="${anchor}">${shortLabel(p.iso)}</text>`; });
+    const last=list[list.length-1];
+    return `<svg viewBox="0 0 ${w} ${h}">
+      <path d="${area}" fill="${color}" opacity="0.14"/>
+      ${goalLine}
+      <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      <circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.kg).toFixed(1)}" r="4" fill="${color}"/>
+      ${labels}</svg>`;
+  }
+
+  // ---------- vue Poids ----------
+  function renderWeight(){
+    const list=weightEntries();
+    const goal=Number(db.settings.weightGoal)||0;
+    const cur=list.length?list[list.length-1]:null;
+    const el=id=>document.getElementById(id);
+
+    if(!cur){
+      el("wCurrent").textContent="—"; el("wCurrent").className="gauge-num neutral"; el("wCurrent").style.fontSize="44px";
+      el("wHeroSub").textContent="Aucune pesée enregistrée";
+      el("wSinceStart").textContent="—"; el("wSinceStart").className="gauge-lbl neutral";
+      el("wGoalFill").style.width="0%"; el("wStartLbl").textContent="—"; el("wPct").textContent="—"; el("wGoalLbl").textContent="—";
+      el("wCurve").innerHTML=weightCurveSvg([],goal,DARK);
+      ["wVar7","wVar30","wVarAll","wRemain"].forEach(i=>{ el(i).textContent="—"; el(i).className="num"; });
+      ["wProjAllDate","wProj30Date"].forEach(i=>el(i).textContent="—");
+      ["wProjAllRate","wProj30Rate"].forEach(i=>el(i).textContent="—");
+      el("wTrendNote").textContent=""; el("wGoalRight").textContent="—";
+      el("wRateChart").innerHTML=barChartSvg([{label:"",value:0,hasData:false}],0,LIGHT);
+      return;
+    }
+
+    const start=list[0];
+    el("wCurrent").textContent=fmtKg(cur.kg); el("wCurrent").className="gauge-num good"; el("wCurrent").style.fontSize="44px";
+    el("wHeroSub").textContent="Pesée du "+fmtDateLong(cur.t)+" · "+list.length+" mesure"+(list.length>1?"s":"");
+    const totalDelta=cur.kg-start.kg;
+    el("wSinceStart").textContent=fmtKg(totalDelta,true)+" kg depuis le début";
+    el("wSinceStart").className="gauge-lbl "+(totalDelta<=0?"good":"bad");
+
+    // progression vers l'objectif
+    const totalToLose=start.kg-goal;
+    let pct = totalToLose>0 ? Math.max(0,Math.min(100,((start.kg-cur.kg)/totalToLose)*100)) : 0;
+    el("wGoalFill").style.width=pct.toFixed(0)+"%";
+    el("wStartLbl").textContent=fmtKg(start.kg)+" kg";
+    el("wPct").textContent=Math.round(pct)+" % accompli";
+    el("wGoalLbl").textContent=fmtKg(goal)+" kg";
+    el("wCurve").innerHTML=weightCurveSvg(list,goal,DARK);
+
+    // variations
+    function setVar(id,days){
+      const past=weightAt(list, cur.t-days*DAY_MS);
+      const e=el(id);
+      if(past==null){ e.textContent="—"; e.className="num"; return null; }
+      const dv=cur.kg-past;
+      e.innerHTML=fmtKg(dv,true)+"<small>kg</small>"; e.className="num "+(dv<=0?"good":"bad");
+      return dv;
+    }
+    setVar("wVar7",7); setVar("wVar30",30);
+    const eAll=el("wVarAll"); eAll.innerHTML=fmtKg(totalDelta,true)+"<small>kg</small>"; eAll.className="num "+(totalDelta<=0?"good":"bad");
+    const remain=cur.kg-goal;
+    const eR=el("wRemain");
+    eR.innerHTML = remain>0 ? fmtKg(remain)+"<small>kg</small>" : "Atteint";
+    eR.className="num "+(remain>0?"":"good");
+
+    // projections
+    const daysTotal=Math.max(1,(cur.t-start.t)/DAY_MS);
+    const rateAll=(start.kg-cur.kg)/daysTotal;                 // kg perdus par jour
+    const past30=weightAt(list, cur.t-30*DAY_MS);
+    const rate30 = past30==null ? null : (past30-cur.kg)/30;
+    el("wGoalRight").textContent="cible "+fmtKg(goal)+" kg";
+
+    function showProj(dateId,rateId,rate){
+      const dEl=el(dateId), rEl=el(rateId);
+      if(rate==null){ dEl.textContent="—"; rEl.textContent="pas assez de recul"; return null; }
+      rEl.textContent=fmtKg(rate*7,true).replace("+","+")+" kg / semaine";
+      if(remain<=0){ dEl.textContent="Atteint"; dEl.style.color="var(--good)"; return 0; }
+      if(rate<=0){ dEl.textContent="Non atteint"; dEl.style.color="var(--bad)"; return null; }
+      const daysLeft=remain/rate;
+      if(daysLeft>3650){ dEl.textContent="Trop lointain"; dEl.style.color="var(--bad)"; return null; }
+      dEl.textContent=new Date(cur.t+daysLeft*DAY_MS).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+      dEl.style.color="var(--ink)";
+      return daysLeft;
+    }
+    const dAll=showProj("wProjAllDate","wProjAllRate",rateAll);
+    const d30=showProj("wProj30Date","wProj30Rate",rate30);
+    // le rythme est affiché comme une perte : on force le signe négatif
+    el("wProjAllRate").textContent="−"+fmtKg(rateAll*7)+" kg / semaine";
+    if(rate30!=null) el("wProj30Rate").textContent=(rate30>=0?"−":"+")+fmtKg(Math.abs(rate30)*7)+" kg / semaine";
+
+    let note="";
+    if(rate30!=null && rateAll>0){
+      const ratio=rate30/rateAll;
+      if(ratio<0.75) note="Ton rythme récent est plus lent que ta moyenne : la date réaliste se situe plutôt vers la seconde projection.";
+      else if(ratio>1.25) note="Ton rythme récent est plus rapide que ta moyenne : tu es en avance sur ta trajectoire.";
+      else note="Ton rythme récent est conforme à ta moyenne : la trajectoire est régulière.";
+      if(dAll!=null && d30!=null && Math.abs(d30-dAll)>14) note+=" L'écart entre les deux dates est de "+Math.round(Math.abs(d30-dAll))+" jours.";
+    }
+    el("wTrendNote").textContent=note;
+
+    // rythme entre pesées
+    const bars=[];
+    for(let i=1;i<list.length;i++){
+      const dd=Math.max(1,(list[i].t-list[i-1].t)/DAY_MS);
+      const perWeek=(list[i].kg-list[i-1].kg)/dd*7;
+      bars.push({label:shortLabel(list[i].iso), value:perWeek});
+    }
+    el("wRateChart").innerHTML=rateBarsSvg(bars, LIGHT);
+
+    // IMC
+    const hgt=Number(db.settings.height)||0;
+    const bN=el("bmiNow"), bG=el("bmiGoal");
+    if(hgt>0){
+      const bmi=cur.kg/(hgt*hgt), bmiG=goal>0?goal/(hgt*hgt):null;
+      bN.textContent=bmi.toFixed(1).replace(".",",");
+      bN.className="num "+(bmi<25?"good":"bad");
+      bG.textContent=bmiG?bmiG.toFixed(1).replace(".",","):"—";
+      bG.className="num "+(bmiG&&bmiG<25?"good":"");
+      el("bmiRight").textContent=hgt.toFixed(2).replace(".",",")+" m";
+      el("bmiSub").textContent = bmi>=25
+        ? "Un IMC sous 25 correspond à la plage de corpulence normale de la classification OMS."
+        : "Tu es dans la plage de corpulence normale de la classification OMS (18,5 à 25).";
+    }else{
+      bN.textContent="—"; bG.textContent="—"; el("bmiRight").textContent="—";
+      el("bmiSub").textContent="Renseigne ta taille pour afficher l'IMC.";
+    }
+  }
+
+  // barres signées autour d'un axe zéro (perte vers le bas, prise vers le haut)
+  function rateBarsSvg(bars, theme){
+    const w=320,h=140,padTop=14,padBottom=20; const n=bars.length;
+    if(!n) return `<svg viewBox="0 0 ${w} ${h}"><text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="12" font-weight="600" fill="${theme.text}">Pas encore d'intervalle</text></svg>`;
+    const gap=n<=8?8:3, barW=(w-gap*(n-1))/n;
+    const maxAbs=Math.max(0.2,...bars.map(b=>Math.abs(b.value)))*1.2;
+    const mid=padTop+(h-padTop-padBottom)/2;
+    const sy=((h-padTop-padBottom)/2)/maxAbs;
+    let s="";
+    bars.forEach((b,i)=>{
+      const x=i*(barW+gap);
+      const hh=Math.max(2,Math.abs(b.value)*sy);
+      const y=b.value<=0 ? mid : mid-hh;                    // perte : barre sous l'axe
+      const color=b.value<=0?theme.good:theme.bad;
+      s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${hh.toFixed(1)}" rx="${Math.min(3,barW/3).toFixed(1)}" fill="${color}"/>`;
+      if(n<=8) s+=`<text x="${(x+barW/2).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="middle">${b.label}</text>`;
+    });
+    return `<svg viewBox="0 0 ${w} ${h}"><line x1="0" y1="${mid}" x2="${w}" y2="${mid}" stroke="${theme.zero}" stroke-width="1"/>${s}</svg>`;
+  }
+
+  function renderWeightList(){
+    const list=weightEntries().slice().reverse();
+    const el=document.getElementById("wList");
+    if(!list.length){ el.innerHTML=`<div class="empty-note">Aucune pesée enregistrée</div>`; return; }
+    el.innerHTML=list.map((p,i)=>{
+      const prev=list[i+1];
+      let v="—", color="var(--ink-faint)";
+      if(prev){ const dv=p.kg-prev.kg; const dd=Math.max(1,(p.t-prev.t)/DAY_MS);
+        v=fmtKg(dv,true)+" kg · "+Math.round(dd)+" j"; color=dv<=0?"var(--good)":"var(--bad)"; }
+      return `<div class="w-row"><div class="wd">${fromISO(p.iso).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"2-digit"})}</div>`+
+        `<div class="wk">${fmtKg(p.kg)}</div>`+
+        `<div class="wv" style="color:${color}">${v}</div>`+
+        `<button class="wx" data-del="${p.iso}" aria-label="Supprimer">×</button></div>`;
+    }).join("");
+    el.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{
+      removeWeight(b.dataset.del); renderWeightList(); renderWeight();
+    }));
+  }
+
+  function renderWeightSettings(){
+    document.getElementById("setWGoal").value=db.settings.weightGoal;
+    document.getElementById("setHeight").value=db.settings.height;
+    document.getElementById("wSaveNote").textContent="";
+    renderWeight();
   }
 
   // ---------- day view ----------
@@ -620,6 +1024,8 @@
     document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
     const keys=loggedDates(), n=keys.length;
     let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString("fr-FR")}).`;
+    const nw=weightEntries().length;
+    if(nw) txt+=` ${nw} pesée${nw>1?"s":""} enregistrée${nw>1?"s":""}.`;
     txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
     document.getElementById("dataInfo").textContent=txt;
   }
@@ -628,7 +1034,8 @@
   // ---------- export / import ----------
   function exportData(){
     persistNow();
-    const payload={app:"suivi-calories", version:3, exportedAt:new Date().toISOString(), settings:db.settings, days:db.days};
+    const payload={app:"suivi-calories", version:6, exportedAt:new Date().toISOString(),
+                   settings:db.settings, days:db.days, weights:db.weights, seeded:true};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob); const a=document.createElement("a");
     a.href=url; a.download="suivi-calories-"+todayISO()+".json"; document.body.appendChild(a); a.click(); a.remove();
@@ -640,21 +1047,70 @@
         const parsed=JSON.parse(reader.result);
         if(!parsed||typeof parsed!=="object"||!parsed.days||typeof parsed.days!=="object") throw new Error("format");
         let added=0; Object.keys(parsed.days).forEach(iso=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){ db.days[iso]={...emptyDay(), ...parsed.days[iso]}; added++; } });
+        let wAdded=0;
+        if(parsed.weights && typeof parsed.weights==="object"){
+          Object.keys(parsed.weights).forEach(iso=>{ const v=Number(parsed.weights[iso]);
+            if(/^\d{4}-\d{2}-\d{2}$/.test(iso) && v>0){ db.weights[iso]=v; wAdded++; } });
+        }
         if(parsed.settings) db.settings={...DEFAULT_SETTINGS, ...parsed.settings};
-        persistNow(); renderSettings(); flash("dataNote",`${added} jour${added>1?"s":""} restauré${added>1?"s":""}`);
+        persistNow(); renderSettings();
+        flash("dataNote",`${added} jour${added>1?"s":""} restauré${added>1?"s":""}`+(wAdded?` et ${wAdded} pesée${wAdded>1?"s":""}`:""));
       }catch(e){ flash("dataNote","Fichier non reconnu",true); } };
     reader.readAsText(file);
   }
 
   // ---------- navigation ----------
+  const WEIGHT_VIEWS=["wsuivi","wsaisie","wreglages"];
   function showView(name){
-    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    const sec = WEIGHT_VIEWS.includes(name) ? "poids" : "nutrition";
+    const scope = document.getElementById("section-"+sec);
+    scope.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     document.getElementById("view-"+name).classList.add("active");
-    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
+    const bar = document.getElementById(sec==="poids" ? "tabsPoids" : "tabsNutrition");
+    bar.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
     window.scrollTo(0,0);
-    if(name==="day") renderDay(); if(name==="stats") renderStats(); if(name==="settings") renderSettings();
+    if(sec==="poids"){ currentWView=name; } 
+    if(name==="day") renderDay();
+    else if(name==="stats") renderStats();
+    else if(name==="settings") renderSettings();
+    else if(name==="wsuivi") renderWeight();
+    else if(name==="wsaisie"){ renderWeightList(); }
+    else if(name==="wreglages") renderWeightSettings();
   }
+  function showSection(sec){
+    currentSection=sec;
+    document.querySelectorAll(".section").forEach(x=>x.classList.toggle("active", x.id==="section-"+sec));
+    document.querySelectorAll(".sec-btn").forEach(b=>b.classList.toggle("active", b.dataset.section===sec));
+    document.getElementById("tabsNutrition").style.display = sec==="nutrition" ? "flex" : "none";
+    document.getElementById("tabsPoids").style.display = sec==="poids" ? "flex" : "none";
+    document.querySelector("header.top h1").textContent = sec==="poids" ? "Suivi du poids" : "Suivi calories";
+    if(sec==="poids") showView(currentWView);
+    else showView(document.querySelector("#section-nutrition .view.active").id.replace("view-",""));
+  }
+  document.querySelectorAll(".sec-btn").forEach(b=>b.addEventListener("click",()=>showSection(b.dataset.section)));
   document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showView(btn.dataset.view)));
+
+  // saisie d'une pesée
+  document.getElementById("wAdd").addEventListener("click",()=>{
+    const dEl=document.getElementById("wDate"), kEl=document.getElementById("wKg");
+    const iso=dEl.value, kg=Number(String(kEl.value).replace(",","."));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return flash("wNote","Choisis une date",true);
+    if(!(kg>0) || kg>500) return flash("wNote","Poids invalide",true);
+    const existed = db.weights[iso]!=null;
+    setWeight(iso,kg);
+    kEl.value="";
+    renderWeightList(); renderWeight();
+    flash("wNote", existed ? "Pesée du "+fromISO(iso).toLocaleDateString("fr-FR")+" mise à jour" : "Pesée enregistrée ✓");
+  });
+  document.getElementById("saveWSettings").addEventListener("click",()=>{
+    const g=Number(String(document.getElementById("setWGoal").value).replace(",","."));
+    const h=Number(String(document.getElementById("setHeight").value).replace(",","."));
+    db.settings.weightGoal = (g>0&&g<500)?g:0;
+    db.settings.height = (h>0.5&&h<2.6)?h:0;
+    const ok=persistNow();
+    flash("wSaveNote", ok?"Objectif enregistré ✓":"Erreur d'enregistrement", !ok);
+    renderWeight();
+  });
   document.getElementById("prevDay").addEventListener("click",()=>{ currentDate=addDays(currentDate,-1); renderDay(); });
   document.getElementById("nextDay").addEventListener("click",()=>{ if(currentDate<todayISO()){ currentDate=addDays(currentDate,1); renderDay(); } });
   document.getElementById("datePicker").addEventListener("change",(e)=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){ currentDate=e.target.value; renderDay(); } });
@@ -686,6 +1142,8 @@
   setHeaderDate();
   if(navigator.storage&&navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
   if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }
+  document.getElementById("wDate").value=todayISO();
+  document.getElementById("wDate").max=todayISO();
   renderDay();
 })();
 </script>
