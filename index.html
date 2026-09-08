@@ -1285,11 +1285,12 @@
   function closeScanner(){ stopCamera(); closeSheet(); scanState=null; }
 
   function renderScanStage(){
+    codeHandled=false;
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet">
       <h3>Scanner un code-barres</h3>
       <p class="sub">Vise le code-barres. Tu peux enchaîner plusieurs produits : chacun s'additionne au repas.</p>
       ${basketHtml()}
-      <div class="scan-stage"><video id="scanVideo" playsinline muted></video><div class="scan-frame"></div><div class="scan-hint" id="scanHint">Recherche du code…</div></div>
+      <div class="scan-stage"><video id="scanVideo" playsinline muted autoplay></video><div class="scan-frame"></div><div class="scan-hint" id="scanHint">Recherche du code…</div></div>
       <label class="f">Ou saisis le code à la main</label>
       <input class="t" id="manualCode" type="text" inputmode="numeric" placeholder="Ex. : 3017620422003">
       <div class="sheet-actions">
@@ -1306,51 +1307,60 @@
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ hint.textContent="Caméra indisponible — saisis le code à la main"; return; }
     let stream;
     try{
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false});
+      // Résolution élevée demandée : un code EAN-13 a besoin de détails fins pour être lu à distance.
+      stream=await navigator.mediaDevices.getUserMedia({audio:false,
+        video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}});
     }catch(e){
-      hint.textContent="Accès caméra refusé — saisis le code à la main"; return;
+      try{ stream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}}}); }
+      catch(e2){ hint.textContent="Accès caméra refusé — saisis le code à la main"; return; }
     }
-    video.srcObject=stream; video.setAttribute("playsinline","");
-    try{ await video.play(); }catch(e){}
     let stopped=false;
-    scanStop=()=>{ stopped=true; try{stream.getTracks().forEach(t=>t.stop());}catch(e){} };
+    const stopTracks=()=>{ try{stream.getTracks().forEach(t=>t.stop());}catch(e){} };
+    scanStop=()=>{ stopped=true; stopTracks(); };
 
-    // 1) API native quand elle existe (Chrome Android)
+    // 1) API native (Chrome Android) : boucle image par image
     if("BarcodeDetector" in window){
       try{
         const det=new window.BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
+        video.srcObject=stream; video.setAttribute("playsinline",""); video.muted=true;
+        try{ await video.play(); }catch(e){}
+        hint.textContent="Vise le code-barres";
         const loop=async()=>{
           if(stopped) return;
-          try{ const codes=await det.detect(video); if(codes && codes.length){ onCodeFound(codes[0].rawValue); return; } }catch(e){}
-          requestAnimationFrame(loop);
+          try{ if(video.readyState>=2){ const codes=await det.detect(video); if(codes&&codes.length){ onCodeFound(codes[0].rawValue); return; } } }catch(e){}
+          setTimeout(()=>requestAnimationFrame(loop),120);
         };
         requestAnimationFrame(loop); return;
       }catch(e){ /* on bascule sur le décodeur embarqué */ }
     }
-    // 2) décodeur embarqué (iOS/Safari, qui n'a pas l'API native)
-    if(window.ZXing){
+    // 2) Décodeur embarqué (iOS/Safari). decodeFromStream décode EN CONTINU et gère la lecture vidéo.
+    if(window.ZXing && window.ZXing.BrowserMultiFormatReader){
       try{
-        const hints=new Map();
-        hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS,
-          [window.ZXing.BarcodeFormat.EAN_13, window.ZXing.BarcodeFormat.EAN_8, window.ZXing.BarcodeFormat.UPC_A, window.ZXing.BarcodeFormat.UPC_E]);
-        const reader=new window.ZXing.BrowserMultiFormatReader(hints, 250);
-        const prevStop=scanStop;
-        scanStop=()=>{ try{reader.reset();}catch(e){} prevStop(); };
-        reader.decodeFromVideoElement(video,(result,err)=>{
+        const Z=window.ZXing, hints=new Map();
+        hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E]);
+        hints.set(Z.DecodeHintType.TRY_HARDER,true);
+        const reader=new Z.BrowserMultiFormatReader(hints, 150);
+        scanStop=()=>{ stopped=true; try{reader.reset();}catch(e){} stopTracks(); };
+        hint.textContent="Vise le code-barres";
+        await reader.decodeFromStream(stream, video, (result, err)=>{
           if(stopped) return;
-          if(result) onCodeFound(result.getText());
+          if(result){ const txt=result.getText ? result.getText() : (result.text||""); if(txt) onCodeFound(txt); }
+          // err = NotFoundException à chaque image sans code : normal, on continue
         });
         return;
-      }catch(e){}
+      }catch(e){ console.error("ZXing", e); }
     }
     hint.textContent="Lecture auto indisponible — saisis le code à la main";
   }
 
+  let codeHandled=false;
   function onCodeFound(raw){
     const code=String(raw||"").replace(/[^0-9]/g,"");
-    if(!code) return;
+    if(!code || codeHandled) return;
+    codeHandled=true;
     stopCamera();
-    lookupProduct(code);
+    if(navigator.vibrate) { try{ navigator.vibrate(40); }catch(e){} }
+    lookupProduct(code).finally(()=>{ codeHandled=false; });
   }
 
   function renderScanLoading(code){
