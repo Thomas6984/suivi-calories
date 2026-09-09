@@ -488,7 +488,7 @@
         <div class="balance-side"><span class="bs-k" id="sideLabel">Bilan vs maintien</span><span class="bs-v" id="sideBalance">—</span></div>
         <div class="adjusted-note" id="adjustedNote"></div>
         <div class="hero-trend">
-          <div class="lbl">7 derniers jours · pointillé = objectif</div>
+          <div class="lbl">7 derniers jours · objectif et maintien en pointillés</div>
           <div id="miniTrend"></div>
         </div>
       </div>
@@ -796,8 +796,8 @@
     return out;
   }
 
-  const LIGHT = {good:"var(--good)", bad:"var(--bad)", empty:"var(--track)", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line-strong)"};
-  const DARK  = {good:"var(--mint)", bad:"var(--coral)", empty:"rgba(255,255,255,.12)", ref:"rgba(255,255,255,.5)", text:"rgba(255,255,255,.55)", zero:"rgba(255,255,255,.25)"};
+  const LIGHT = {good:"var(--good)", mid:"var(--carbs-c)", bad:"var(--bad)", empty:"var(--track)", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line-strong)"};
+  const DARK  = {good:"var(--mint)", mid:"var(--carbs-c)", bad:"var(--coral)", empty:"rgba(255,255,255,.12)", ref:"rgba(255,255,255,.5)", text:"rgba(255,255,255,.55)", zero:"rgba(255,255,255,.25)"};
 
   let db = {settings:{...DEFAULT_SETTINGS}, days:{}, weights:{}, foods:[], seeded:false};
   let currentSection = "nutrition";
@@ -1010,11 +1010,13 @@
   }
 
   // ---------- SVG: bar chart ----------
-  function barChartSvg(bars, ref, theme){
+  // ref  = objectif d'apport (pointillé serré). ref2 = maintien (pointillé large).
+  // Entre les deux, on dépasse son objectif tout en restant en déficit : la barre passe en orange, pas en rouge.
+  function barChartSvg(bars, ref, theme, ref2){
     const w=320, h=140, padTop=14, padBottom=20; const n=bars.length;
     const gap = n<=7?8 : n<=31?3 : 1.5;
     const barW=(w-gap*(n-1))/n;
-    const maxRef=Math.max(ref||0, ...bars.map(b=>b.ref||0));
+    const maxRef=Math.max(ref||0, ref2||0, ...bars.map(b=>Math.max(b.ref||0, b.ref2||0)));
     const maxVal=Math.max(maxRef, ...bars.map(b=>b.value), 1)*1.12;
     const sy=(h-padTop-padBottom)/maxVal;
     const refY=h-padBottom-(ref||0)*sy;
@@ -1024,8 +1026,13 @@
       const x=i*(barW+gap);
       const bh=b.hasData?Math.max(2,b.value*sy):2;
       const y=h-padBottom-bh;
-      const barRef = (b.ref!=null) ? b.ref : ref;
-      const color=!b.hasData?theme.empty:(b.value<=barRef?theme.good:theme.bad);
+      const barRef  = (b.ref!=null)  ? b.ref  : ref;
+      const barRef2 = (b.ref2!=null) ? b.ref2 : ref2;
+      let color;
+      if(!b.hasData) color=theme.empty;
+      else if(b.value<=barRef) color=theme.good;                        // sous l'objectif
+      else if(barRef2 && b.value<=barRef2) color=theme.mid||theme.bad;  // au-dessus de l'objectif, toujours en déficit
+      else color=theme.bad;                                             // au-dessus du maintien : surplus réel
       s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="${Math.min(3,barW/3).toFixed(1)}" fill="${color}"/>`;
       if(b.override){ s+=`<circle class="bar-mark" cx="${(x+barW/2).toFixed(1)}" cy="${(y-5).toFixed(1)}" r="2" fill="${theme.ref}"/>`; }
       if(n<=10 || i%labelEvery===0){
@@ -1033,8 +1040,13 @@
       }
     });
     let refLine="";
-    if(ref){ refLine=`<line x1="0" y1="${refY.toFixed(1)}" x2="${w}" y2="${refY.toFixed(1)}" stroke="${theme.ref}" stroke-width="1" stroke-dasharray="4,4"/>`+
+    if(ref){ refLine+=`<line x1="0" y1="${refY.toFixed(1)}" x2="${w}" y2="${refY.toFixed(1)}" stroke="${theme.ref}" stroke-width="1" stroke-dasharray="4,4"/>`+
       `<text x="${w}" y="${(refY-4).toFixed(1)}" font-size="9" font-weight="700" fill="${theme.ref}" text-anchor="end">${ref}</text>`; }
+    if(ref2 && Math.abs(ref2-ref)>1){
+      const r2Y=h-padBottom-ref2*sy;
+      refLine+=`<line x1="0" y1="${r2Y.toFixed(1)}" x2="${w}" y2="${r2Y.toFixed(1)}" stroke="${theme.mid||theme.ref}" stroke-width="1" stroke-dasharray="2,6" opacity=".9"/>`+
+        `<text x="${w}" y="${(r2Y-4).toFixed(1)}" font-size="9" font-weight="700" fill="${theme.mid||theme.ref}" text-anchor="end">${Math.round(ref2)}</text>`;
+    }
     return `<svg viewBox="0 0 ${w} ${h}">${refLine}${s}</svg>`;
   }
 
@@ -1312,8 +1324,9 @@
   }
   function renderMiniTrend(){
     const arr=[]; for(let i=6;i>=0;i--){ const iso=addDays(currentDate,-i); const t=totalsOf(getDay(iso));
-      arr.push({label:shortLabel(iso), value:t.cal, hasData:t.cal>0, ref:db.settings.calGoal, override:hasMaintOverride(iso)}); }
-    document.getElementById("miniTrend").innerHTML=barChartSvg(arr, db.settings.calGoal, DARK);
+      arr.push({label:shortLabel(iso), value:t.cal, hasData:t.cal>0, ref:db.settings.calGoal,
+                ref2:effectiveMaintenance(iso), override:hasMaintOverride(iso)}); }
+    document.getElementById("miniTrend").innerHTML=barChartSvg(arr, db.settings.calGoal, DARK, db.settings.maintenance);
   }
   function renderDay(){
     if(currentDate>todayISO()) currentDate=todayISO();
@@ -1408,25 +1421,25 @@
         cum+=(t.cal-dayMaint); diffTxt=fmtBalance(bal); color=bal>=0?"var(--good)":"var(--bad)"; }
       const wv=dayWater(iso); if(wv>0){ sumWater+=wv; waterDays++; if(wGoalS>0 && wv>=wGoalS) waterOk++; }
       wBars.push({iso, label:shortLabel(iso), value:wv, hasData:wv>0, ref:wGoalS});
-      bars.push({iso, label:shortLabel(iso), value:t.cal, hasData:has, ref:dayMaint, override:ov});
+      bars.push({iso, label:shortLabel(iso), value:t.cal, hasData:has, ref:db.settings.calGoal, ref2:dayMaint, override:ov});
       cumPts.push({label:shortLabel(iso), value:cum});
       rows.push(`<div class="day-row"><div class="dname">${labelForDate(iso)}</div><div class="dcal">${has?Math.round(t.cal)+" kcal":"non renseigné"}</div><div class="ddiff" style="color:${color}">${diffTxt}</div></div>`);
     }
 
-    let chartBars=bars, barsTitle="Apport par jour", barsSub="Vert sous le maintien, rouge au-dessus";
+    let chartBars=bars, barsTitle="Apport par jour", barsSub="Vert sous l'objectif, orange entre objectif et maintien, rouge au-dessus du maintien";
     if(nDays>45){
       const weeks={}, order=[];
       bars.forEach(b=>{ const wk=weekStart(b.iso); if(!weeks[wk]){ weeks[wk]={sum:0,n:0,refSum:0,refN:0,ov:false}; order.push(wk); }
         if(b.hasData){ weeks[wk].sum+=b.value; weeks[wk].n++; weeks[wk].refSum+=b.ref; weeks[wk].refN++; }
         if(b.override) weeks[wk].ov=true; });
       chartBars=order.map(wk=>({label:shortLabel(wk), value:weeks[wk].n?weeks[wk].sum/weeks[wk].n:0, hasData:weeks[wk].n>0,
-        ref:weeks[wk].refN?weeks[wk].refSum/weeks[wk].refN:maint, override:weeks[wk].ov}));
+        ref:db.settings.calGoal, ref2:weeks[wk].refN?weeks[wk].refSum/weeks[wk].refN:maint, override:weeks[wk].ov}));
       barsTitle="Apport moyen par semaine"; barsSub="Moyenne des jours renseignés de chaque semaine (à partir du lundi)";
     }
     document.getElementById("barsTitle").textContent=barsTitle;
     document.getElementById("barsSub").textContent=barsSub;
     document.getElementById("barsSub").textContent = barsSub + (overrideDays ? ` · ${overrideDays} jour${overrideDays>1?"s":""} avec un maintien ajusté (point marqué sur la barre)` : "");
-    document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, maint, LIGHT);
+    document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, db.settings.calGoal, LIGHT, maint);
     document.getElementById("cumChart").innerHTML=lineChartSvg(cnt?cumPts:[], LIGHT);
     document.getElementById("statsDays").innerHTML = rows.length ? rows.reverse().join("") : `<div class="empty-note">Aucune donnée</div>`;
     renderWaterStats(sumWater, waterDays, waterOk, nDays, wBars, wGoalS);
@@ -2233,7 +2246,9 @@
     "AU-DESSUS DE L'OBJECTIF":{en:"OVER THE GOAL",zh:"超出目标",es:"POR ENCIMA DEL OBJETIVO",it:"SOPRA L'OBIETTIVO",de:"ÜBER DEM ZIEL",pt:"ACIMA DO OBJETIVO",ar:"فوق الهدف",hi:"लक्ष्य से ऊपर"},
     "Écart entre ton apport et ton objectif":{en:"Gap between your intake and your goal",zh:"摄入量与目标的差值",es:"Diferencia entre tu ingesta y tu objetivo",it:"Differenza tra apporto e obiettivo",de:"Differenz zwischen Zufuhr und Ziel",pt:"Diferença entre a tua ingestão e o objetivo",ar:"الفرق بين ما تتناوله وهدفك",hi:"आपके सेवन और लक्ष्य के बीच का अंतर"},
     "7 derniers jours · pointillé = objectif":{en:"Last 7 days · dashed line = goal",zh:"最近 7 天 · 虚线 = 目标",es:"Últimos 7 días · línea discontinua = objetivo",it:"Ultimi 7 giorni · linea tratteggiata = obiettivo",de:"Letzte 7 Tage · gestrichelt = Ziel",pt:"Últimos 7 dias · linha tracejada = objetivo",ar:"آخر 7 أيام · الخط المتقطع = الهدف",hi:"पिछले 7 दिन · बिंदुदार रेखा = लक्ष्य"},
-    "Bilan vs maintien":{en:"Balance vs maintenance",zh:"相对维持量的结余",es:"Balance vs mantenimiento",it:"Bilancio vs mantenimento",de:"Bilanz vs. Erhaltung",pt:"Balanço vs manutenção",ar:"الميزان مقابل الحاجة اليومية",hi:"मेंटेनेंस की तुलना में संतुलन"}
+    "Bilan vs maintien":{en:"Balance vs maintenance",zh:"相对维持量的结余",es:"Balance vs mantenimiento",it:"Bilancio vs mantenimento",de:"Bilanz vs. Erhaltung",pt:"Balanço vs manutenção",ar:"الميزان مقابل الحاجة اليومية",hi:"मेंटेनेंस की तुलना में संतुलन"},
+    "7 derniers jours · objectif et maintien en pointillés":{en:"Last 7 days · goal and maintenance shown as dashed lines",zh:"最近 7 天 · 目标与维持量以虚线表示",es:"Últimos 7 días · objetivo y mantenimiento en líneas discontinuas",it:"Ultimi 7 giorni · obiettivo e mantenimento tratteggiati",de:"Letzte 7 Tage · Ziel und Erhaltung gestrichelt",pt:"Últimos 7 dias · objetivo e manutenção a tracejado",ar:"آخر 7 أيام · الهدف والحاجة اليومية بخطوط متقطعة",hi:"पिछले 7 दिन · लक्ष्य और मेंटेनेंस बिंदुदार रेखाओं में"},
+    "Vert sous l'objectif, orange entre objectif et maintien, rouge au-dessus du maintien":{en:"Green below the goal, orange between goal and maintenance, red above maintenance",zh:"低于目标为绿色，目标与维持量之间为橙色，高于维持量为红色",es:"Verde por debajo del objetivo, naranja entre objetivo y mantenimiento, rojo por encima del mantenimiento",it:"Verde sotto l'obiettivo, arancione tra obiettivo e mantenimento, rosso sopra il mantenimento",de:"Grün unter dem Ziel, orange zwischen Ziel und Erhaltung, rot über der Erhaltung",pt:"Verde abaixo do objetivo, laranja entre objetivo e manutenção, vermelho acima da manutenção",ar:"أخضر تحت الهدف، برتقالي بين الهدف والحاجة اليومية، أحمر فوقها",hi:"लक्ष्य से नीचे हरा, लक्ष्य और मेंटेनेंस के बीच नारंगी, मेंटेनेंस से ऊपर लाल"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
