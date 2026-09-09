@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Calories">
@@ -32,6 +32,8 @@
     --shadow-lift:0 18px 40px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.06) inset;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  /* touch-action:manipulation supprime le double-tap-zoom sans bloquer le défilement */
+  html,body,button,input,textarea,select,a,label,.card,.food,.row,.day-row,.w-row{touch-action:manipulation;}
   html,body{margin:0;padding:0;}
   html{background:var(--bg0);}
   body{color:var(--ink);background:var(--bg0);
@@ -164,7 +166,7 @@
   .meal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .field{display:flex;flex-direction:column;gap:5px;}
   .field label{font-size:11px;color:var(--ink-soft);font-weight:700;}
-  .field input{border:1px solid var(--line-strong);border-radius:12px;padding:11px 4px;font-size:16px;width:100%;text-align:center;
+  .field input{border:1px solid var(--line-strong);border-radius:12px;padding:11px 4px;font-size:16px;/* 16px minimum : évite le zoom auto d'iOS */width:100%;text-align:center;
     background:var(--surface-2);color:var(--ink);font-family:inherit;font-weight:800;box-shadow:inset 0 2px 4px rgba(0,0,0,.35);
     transition:border-color .15s ease, box-shadow .15s ease;}
   .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
@@ -2244,6 +2246,20 @@
     }
     window.addEventListener("scroll",onScroll,{passive:true});
     onScroll();
+  })();
+
+  // ---------- blocage du zoom ----------
+  // iOS n'applique pas toujours user-scalable=no : on neutralise aussi les gestes.
+  (function(){
+    ["gesturestart","gesturechange","gestureend"].forEach(ev=>
+      document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
+    document.addEventListener("touchmove", e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
+    let lastTouch=0;
+    document.addEventListener("touchend", e=>{
+      const now=Date.now();
+      if(now-lastTouch<=320) e.preventDefault();   // double-tap rapproché : on annule le zoom
+      lastTouch=now;
+    }, {passive:false});
   })();
 
   // ---------- init ----------
