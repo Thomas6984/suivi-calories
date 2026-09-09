@@ -297,6 +297,8 @@
   .bar-mark{opacity:.95;}
   .chart svg, .mini svg, .hero-trend svg{touch-action:manipulation;}
   .bar-val{pointer-events:none;}
+  .scrub{pointer-events:none;}
+  svg[data-scrub]{touch-action:pan-y;}
   .meal-split{display:flex;align-items:center;gap:14px;margin-top:14px;padding:12px;background:var(--surface-2);
     border:1px solid var(--line);border-radius:14px;}
   .meal-split .ms-legend{flex:1;display:flex;flex-direction:column;gap:6px;}
@@ -747,7 +749,7 @@
         <div class="goal-bar"><div id="wGoalFill" style="width:0%"></div></div>
         <div class="goal-ends"><span id="wStartLbl">—</span><span id="wPct">—</span><span id="wGoalLbl">—</span></div>
         <div class="hero-trend" style="margin-top:16px">
-          <div class="lbl">Courbe de poids · axe temporel réel · pointillé = objectif</div>
+          <div class="lbl">Courbe de poids · fais glisser ton doigt pour lire une pesée</div>
           <div id="wCurve"></div>
         </div>
       </div>
@@ -864,7 +866,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "37";                 // numéro affiché dans les réglages
+  const APP_VERSION = "38";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1185,13 +1187,14 @@
     points.forEach((p,i)=>{ if(i%labelEvery===0 || i===n-1){
       labels+=`<text x="${X(i).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="${i===0?'start':(i===n-1?'end':'middle')}">${p.label}</text>`; } });
     const lx=X(n-1), ly=Y(last);
-    return `<svg viewBox="0 0 ${w} ${h}">
+    const pts=points.map((p,i)=>({x:+X(i).toFixed(1), y:+Y(p.value).toFixed(1), l:p.label, v:fmtSigned(p.value)+" kcal"}));
+    return `<svg viewBox="0 0 ${w} ${h}" data-scrub="1" data-pts='${JSON.stringify(pts)}'>
       <path d="${area}" fill="${color}" opacity="0.12"/>
       <line x1="0" y1="${zeroY.toFixed(1)}" x2="${w}" y2="${zeroY.toFixed(1)}" stroke="${theme.zero}" stroke-width="1"/>
       <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
       <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="${color}"/>
       <text x="${(lx-8).toFixed(1)}" y="${(ly+(last<=0?-8:14)).toFixed(1)}" font-size="10" font-weight="800" fill="${color}" text-anchor="end">${fmtSigned(last)}</text>
-      ${labels}</svg>`;
+      ${labels}<g class="scrub"></g></svg>`;
   }
 
   // ---------- SVG: courbe de poids (axe temporel proportionnel) ----------
@@ -1226,13 +1229,16 @@
     marks.forEach((p,i)=>{ const anchor = i===0?"start":(i===marks.length-1?"end":"middle");
       labels+=`<text x="${X(p.t).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="${anchor}">${shortLabel(p.iso)}</text>`; });
     const last=list[list.length-1];
-    return `<svg viewBox="0 0 ${w} ${h}">
+    // points exposés pour la lecture au doigt
+    const pts=list.map(p=>({x:+X(p.t).toFixed(1), y:+Y(p.kg).toFixed(1),
+      l:fromISO(p.iso).toLocaleDateString(loc(),{day:"numeric",month:"short",year:"numeric"}), v:fmtKg(p.kg)+" kg"}));
+    return `<svg viewBox="0 0 ${w} ${h}" data-scrub="1" data-pts='${JSON.stringify(pts)}'>
       <path d="${area}" fill="${color}" opacity="0.14"/>
       ${goalLine}
       <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
       ${dots}
       <circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.kg).toFixed(1)}" r="4" fill="${color}"/>
-      ${labels}</svg>`;
+      ${labels}<g class="scrub"></g></svg>`;
   }
 
   // ---------- vue Poids ----------
@@ -1398,6 +1404,46 @@
     document.getElementById("wSaveNote").textContent="";
     renderWeight();
   }
+
+  // ---------- lecture au doigt sur une courbe ----------
+  // Le doigt glisse sur la courbe : un repère vertical suit le point le plus proche
+  // et affiche sa date et sa valeur.
+  (function(){
+    let active=null;
+    function pointsOf(svg){ try{ return JSON.parse(svg.getAttribute("data-pts")||"[]"); }catch(e){ return []; } }
+    function draw(svg, clientX){
+      const pts=pointsOf(svg); if(!pts.length) return;
+      const box=svg.getBoundingClientRect();
+      const vb=(svg.getAttribute("viewBox")||"0 0 320 150").split(" ").map(Number);
+      const sx=(clientX-box.left)/Math.max(1,box.width)*vb[2];
+      let best=pts[0], bd=Infinity;
+      pts.forEach(p=>{ const dd=Math.abs(p.x-sx); if(dd<bd){ bd=dd; best=p; } });
+      const g=svg.querySelector(".scrub"); if(!g) return;
+      const txt=best.l+" · "+best.v;
+      const wBox=Math.max(74, txt.length*5.3+16), hBox=17;
+      const bx=Math.max(1, Math.min(vb[2]-wBox-1, best.x-wBox/2));
+      const by=Math.max(1, best.y-hBox-9);
+      g.innerHTML=`<line x1="${best.x}" y1="0" x2="${best.x}" y2="${vb[3]-18}" stroke="var(--acc)" stroke-width="1" stroke-dasharray="3,3" opacity=".7"/>`+
+        `<circle cx="${best.x}" cy="${best.y}" r="5.5" fill="var(--acc)" stroke="#000" stroke-width="1.5"/>`+
+        `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${wBox.toFixed(1)}" height="${hBox}" rx="5" fill="rgba(0,0,0,.85)" stroke="rgba(255,255,255,.28)"/>`+
+        `<text x="${(bx+wBox/2).toFixed(1)}" y="${(by+hBox/2+3.7).toFixed(1)}" font-size="9.5" font-weight="800" fill="#fff" text-anchor="middle">${txt}</text>`;
+    }
+    function clear(svg){ const g=svg&&svg.querySelector(".scrub"); if(g) g.innerHTML=""; }
+    function start(e, clientX){
+      const svg=e.target.closest && e.target.closest("svg[data-scrub]");
+      if(!svg) return; active=svg; draw(svg, clientX);
+    }
+    document.addEventListener("touchstart",(e)=>{ if(e.touches[0]) start(e, e.touches[0].clientX); },{passive:true});
+    document.addEventListener("touchmove",(e)=>{
+      if(!active || !e.touches[0]) return;
+      e.preventDefault();                     // on lit la courbe, la page ne défile pas
+      draw(active, e.touches[0].clientX);
+    },{passive:false});
+    document.addEventListener("touchend",()=>{ if(!active) return; const svg=active; active=null; setTimeout(()=>clear(svg),2200); },{passive:true});
+    document.addEventListener("mousedown",(e)=>start(e, e.clientX));
+    document.addEventListener("mousemove",(e)=>{ if(active) draw(active, e.clientX); });
+    document.addEventListener("mouseup",()=>{ if(!active) return; const svg=active; active=null; setTimeout(()=>clear(svg),2200); });
+  })();
 
   // ---------- valeur affichée au toucher d'une barre ----------
   // Délégation sur le document : les graphiques sont redessinés en permanence,
@@ -2471,7 +2517,8 @@
     "Chronologie":{en:"Timeline"},
     "Fais défiler du plus ancien au plus récent":{en:"Swipe from oldest to newest"},
     "Touche une photo pour l'ouvrir en plein écran et faire défiler":{en:"Tap a photo to open it full screen and swipe through"},
-    "Pince ou double-touche pour zoomer":{en:"Pinch or double-tap to zoom"}
+    "Pince ou double-touche pour zoomer":{en:"Pinch or double-tap to zoom"},
+    "Courbe de poids · fais glisser ton doigt pour lire une pesée":{en:"Weight curve · drag your finger to read a weigh-in"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
