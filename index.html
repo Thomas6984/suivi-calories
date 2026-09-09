@@ -1358,7 +1358,9 @@
 
   function renderScanLoading(code){
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Recherche</h3>
-      <p class="sub">Code ${escHtml(code)}</p><div class="spin"><i></i> Interrogation d'Open Food Facts…</div></div></div>`;
+      <p class="sub">Code ${escHtml(code)}</p><div class="spin"><i></i> Interrogation d'Open Food Facts…</div>
+      <button class="btn secondary" data-act="rescan">Annuler</button></div></div>`;
+    bindSheet();
   }
   function renderScanError(msg, code){
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Produit introuvable</h3>
@@ -1369,13 +1371,38 @@
     bindSheet();
   }
 
+  // Une requête bornée dans le temps : sans cela, une absence de réponse laisse l'écran figé.
+  function fetchJson(url, ms){
+    return new Promise((resolve,reject)=>{
+      let done=false;
+      const ctrl = ("AbortController" in window) ? new AbortController() : null;
+      const timer=setTimeout(()=>{ if(!done){ done=true; if(ctrl) try{ctrl.abort();}catch(e){} reject(new Error("timeout")); } }, ms||12000);
+      fetch(url, ctrl?{signal:ctrl.signal, cache:"no-store"}:{cache:"no-store"})
+        .then(r=>{ if(!r.ok) throw new Error("http "+r.status); return r.json(); })
+        .then(j=>{ if(!done){ done=true; clearTimeout(timer); resolve(j); } })
+        .catch(e=>{ if(!done){ done=true; clearTimeout(timer); reject(e); } });
+    });
+  }
+
   async function lookupProduct(code){
     renderScanLoading(code);
+    const c=encodeURIComponent(code);
+    const urls=[
+      OFF_URL+c+".json?fields=product_name,product_name_fr,brands,nutriments,serving_quantity",
+      "https://world.openfoodfacts.org/api/v2/product/"+c+".json",   // sans filtre de champs
+      "https://fr.openfoodfacts.org/api/v2/product/"+c+".json"       // miroir français
+    ];
+    let data=null, lastErr=null;
+    for(const u of urls){
+      try{ data=await fetchJson(u, 10000); break; }
+      catch(e){ lastErr=e; }
+    }
+    if(!data){
+      if(lastErr && String(lastErr.message)==="timeout")
+        return renderScanError("Open Food Facts n'a pas répondu à temps. Vérifie ta connexion et réessaie.", code);
+      return renderScanError("Impossible de joindre Open Food Facts. Vérifie ta connexion, puis réessaie.", code);
+    }
     try{
-      const url=OFF_URL+encodeURIComponent(code)+".json?fields=product_name,product_name_fr,brands,nutriments,serving_quantity";
-      const res=await fetch(url,{headers:{"Accept":"application/json"}});
-      if(!res.ok) return renderScanError("Le service n'a pas répondu (erreur "+res.status+"). Réessaie plus tard.", code);
-      const data=await res.json();
       // Open Food Facts répond 200 même si le produit n'existe pas : le vrai indicateur est le champ status.
       if(data.status!==1 || !data.product) return renderScanError("Ce produit n'est pas encore dans la base Open Food Facts.", code);
       const p=data.product, n=p.nutriments||{};
@@ -1394,7 +1421,7 @@
       scanState.qty=100;
       renderScanResult();
     }catch(e){
-      renderScanError("Connexion impossible. Le scan a besoin d'internet ; vérifie ta connexion.", code);
+      renderScanError("Réponse inattendue du service. Réessaie ou saisis les macros à la main.", code);
     }
   }
 
