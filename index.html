@@ -84,9 +84,10 @@
   /* ---------- cartes : verre fumé, révélées au défilement ---------- */
   .card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),var(--surface);
     border:1px solid var(--line);border-radius:var(--radius);padding:18px 16px;margin-bottom:14px;box-shadow:var(--shadow);
-    opacity:0;transform:translateX(-56px) rotate(-1.2deg) scale(.97);
-    transition:opacity .6s cubic-bezier(.2,.7,.2,1), transform .65s cubic-bezier(.2,.75,.2,1);}
-  .card.from-right{transform:translateX(56px) rotate(1.2deg) scale(.97);}
+    opacity:0;transform:translateX(-72px) rotate(-1.5deg) scale(.96);
+    transition:opacity .5s cubic-bezier(.2,.7,.2,1), transform .6s cubic-bezier(.16,.9,.24,1.08);
+    will-change:transform,opacity;}
+  .card.from-right{transform:translateX(72px) rotate(1.5deg) scale(.96);}
   .card.in{opacity:1;transform:none;}
   main{overflow-x:hidden;}
   .card-title{font-size:14px;font-weight:800;margin:0;letter-spacing:-.01em;}
@@ -206,7 +207,7 @@
   .proj .r{font-size:11.5px;color:var(--ink-soft);font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;}
   .proj .k{font-size:10.5px;color:var(--ink-faint);font-weight:800;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
   .chart{margin-top:14px;} .chart svg{width:100%;height:auto;display:block;}
-  .day-list{max-height:360px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:8px;padding-bottom:8px;}
+  .day-list{padding-top:8px;padding-bottom:8px;}
   .day-row,.w-row{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;border-bottom:1px solid var(--line);gap:6px;}
   .day-row:last-child,.w-row:last-child{border-bottom:none;}
   .day-row .dname{font-size:13px;font-weight:700;text-transform:capitalize;width:96px;flex-shrink:0;}
@@ -224,7 +225,9 @@
   .goal-bar>div{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--mint-deep),var(--mint),var(--acc-light));
     box-shadow:0 0 16px rgba(var(--acc-rgb),.7);transition:width .7s cubic-bezier(.2,.8,.2,1);}
   .goal-ends{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.6);font-weight:800;margin-top:6px;}
-  .w-form{display:grid;grid-template-columns:1.15fr 1fr auto;gap:8px;align-items:end;}
+  .w-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;}
+  .w-form .field.full{grid-column:1 / -1;}
+  .w-form input[type=date]{min-width:0;-webkit-appearance:none;appearance:none;text-align:left;padding-left:12px;}
   .w-form .field input{padding:11px 8px;}
   .w-add{background:linear-gradient(180deg,var(--acc-light),var(--mint) 55%,var(--mint-deep));color:#08120D;border:none;border-radius:12px;padding:0 16px;font-size:15px;
     font-weight:900;font-family:inherit;height:44px;box-shadow:0 8px 18px rgba(var(--acc-rgb),.3), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.15);
@@ -539,7 +542,7 @@
         <div class="card-title">Nouvelle pesée</div>
         <div class="card-sub">Une valeur par date. Réenregistrer une date existante remplace la valeur.</div>
         <div class="w-form" style="margin-top:12px">
-          <div class="field"><label>Date</label><input type="date" id="wDate"></div>
+          <div class="field full"><label>Date</label><input type="date" id="wDate"></div>
           <div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" min="0" id="wKg" placeholder="82.6"></div>
           <button class="w-add" id="wAdd">Ajouter</button>
         </div>
@@ -1599,8 +1602,11 @@
     let io=null;
     if("IntersectionObserver" in window && !reduce){
       io=new IntersectionObserver((entries)=>{
-        entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
-      },{rootMargin:"0px 0px -8% 0px", threshold:0.06});
+        entries.forEach(e=>{
+          if(e.isIntersecting){ e.target.classList.add("in"); }
+          else { e.target.classList.remove("in"); }   // en sortant de l'écran, la carte se réarme
+        });
+      },{rootMargin:"-4% 0px -4% 0px", threshold:0.02});
     }
     function observeCards(root){
       const all=[...document.querySelectorAll(".view.active .card, .section.active .card")];
@@ -1608,7 +1614,7 @@
         if(!io){ c.classList.add("in"); return; }
         // une carte sur deux arrive de la droite, l'autre de la gauche
         const idx=all.indexOf(c); if(idx%2===1) c.classList.add("from-right");
-        c.style.transitionDelay=(Math.min(idx<0?0:idx,5)*60)+"ms";
+        c.style.transitionDelay=(Math.min(idx<0?0:idx,4)*50)+"ms";
         io.observe(c);
       });
     }
