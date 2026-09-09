@@ -288,6 +288,12 @@
   .sheet-actions .btn{margin-top:0;}
 
   .bar-mark{opacity:.95;}
+  .lang-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .lang-btn{background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink-soft);border-radius:12px;
+    padding:13px 4px;font-size:14px;font-weight:800;font-family:inherit;transition:transform .12s ease;}
+  .lang-btn:active{transform:scale(.96);}
+  .lang-btn.active{color:#08120D;background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));
+    border-color:transparent;box-shadow:0 6px 16px rgba(var(--acc-rgb),.3);}
   .scan-btn{margin-top:12px;width:100%;border:1px dashed var(--line-strong);background:rgba(255,255,255,.04);color:var(--ink-soft);
     border-radius:13px;padding:12px;font-size:13.5px;font-weight:800;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;
     transition:transform .12s ease, background .2s ease;}
@@ -478,6 +484,17 @@
       </div>
 
       <div class="card">
+        <div class="meal-title" style="margin-bottom:10px">Langue</div>
+        <div class="lang-row">
+          <button class="lang-btn active" data-lang="fr">Français</button>
+          <button class="lang-btn" data-lang="en">English</button>
+          <button class="lang-btn" data-lang="zh">中文</button>
+        </div>
+        <div class="hint" style="margin-top:10px">Choisis la langue de l'application.</div>
+        <div class="note" id="langNote"></div>
+      </div>
+
+      <div class="card">
         <div class="meal-title" style="margin-bottom:10px">Mes données</div>
         <p class="info" id="dataInfo">Chargement…</p>
         <button class="btn secondary" id="exportBtn">Exporter une sauvegarde (.json)</button>
@@ -634,7 +651,7 @@
     {key:"fat", label:"Lipides", color:"var(--fat)", kcalPerG:9}
   ];
   const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65,
-                            weightGoal:78, height:1.91};
+                            weightGoal:78, height:1.91, lang:"fr"};
   // Aucune donnée pré-chargée : chaque installation démarre vierge.
   const emptyMeal = () => ({protein:0, carbs:0, fat:0, fiber:0, note:""});
   const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal()});
@@ -661,10 +678,10 @@
     if(iso===addDays(today,-1)) return "Hier";
     const opts = {weekday:"short", day:"numeric", month:"short"};
     if(iso.slice(0,4)!==today.slice(0,4)) opts.year="numeric";
-    return fromISO(iso).toLocaleDateString("fr-FR", opts);
+    return fromISO(iso).toLocaleDateString(loc(), opts);
   }
-  function shortLabel(iso){ return fromISO(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"numeric"}); }
-  function mediumLabel(iso){ return fromISO(iso).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}); }
+  function shortLabel(iso){ return fromISO(iso).toLocaleDateString(loc(),{day:"numeric",month:"numeric"}); }
+  function mediumLabel(iso){ return fromISO(iso).toLocaleDateString(loc(),{day:"numeric",month:"short"}); }
   function weekStart(iso){ const dt=fromISO(iso); const dow=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-dow); return toISO(dt); }
 
   // ---------- storage ----------
@@ -751,14 +768,15 @@
     return null;
   }
   const DAY_MS=86400000;
+  function decSep(){ return currentLang()==="fr" ? "," : "."; }
   function fmtKg(v,signed){
     const r=Math.round(v*10)/10;
-    const txt=Math.abs(r).toFixed(1).replace(".",",");
+    const txt=Math.abs(r).toFixed(1).replace(".",decSep());
     if(!signed) return txt;
     return (r>0?"+":r<0?"−":"")+txt;
   }
   function fmtDateLong(t){
-    return new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    return new Date(t).toLocaleDateString(loc(),{day:"numeric",month:"long",year:"numeric"});
   }
 
   // ---------- SVG: gauge ----------
@@ -985,7 +1003,7 @@
       if(rate<=0){ dEl.textContent="Non atteint"; dEl.style.color="var(--bad)"; return null; }
       const daysLeft=remain/rate;
       if(daysLeft>3650){ dEl.textContent="Trop lointain"; dEl.style.color="var(--bad)"; return null; }
-      dEl.textContent=new Date(cur.t+daysLeft*DAY_MS).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+      dEl.textContent=new Date(cur.t+daysLeft*DAY_MS).toLocaleDateString(loc(),{day:"numeric",month:"short",year:"numeric"});
       dEl.style.color="var(--ink)";
       return daysLeft;
     }
@@ -1019,11 +1037,11 @@
     const bN=el("bmiNow"), bG=el("bmiGoal");
     if(hgt>0){
       const bmi=cur.kg/(hgt*hgt), bmiG=goal>0?goal/(hgt*hgt):null;
-      bN.textContent=bmi.toFixed(1).replace(".",",");
+      bN.textContent=bmi.toFixed(1).replace(".",decSep());
       bN.className="num "+(bmi<25?"good":"bad");
-      bG.textContent=bmiG?bmiG.toFixed(1).replace(".",","):"—";
+      bG.textContent=bmiG?bmiG.toFixed(1).replace(".",decSep()):"—";
       bG.className="num "+(bmiG&&bmiG<25?"good":"");
-      el("bmiRight").textContent=hgt.toFixed(2).replace(".",",")+" m";
+      el("bmiRight").textContent=hgt.toFixed(2).replace(".",decSep())+" m";
       el("bmiSub").textContent = bmi>=25
         ? "Un IMC sous 25 correspond à la plage de corpulence normale de la classification OMS."
         : "Tu es dans la plage de corpulence normale de la classification OMS (18,5 à 25).";
@@ -1062,7 +1080,7 @@
       let v="—", color="var(--ink-faint)";
       if(prev){ const dv=p.kg-prev.kg; const dd=Math.max(1,(p.t-prev.t)/DAY_MS);
         v=fmtKg(dv,true)+" kg · "+Math.round(dd)+" j"; color=dv<=0?"var(--good)":"var(--bad)"; }
-      return `<div class="w-row"><div class="wd">${fromISO(p.iso).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"2-digit"})}</div>`+
+      return `<div class="w-row"><div class="wd">${fromISO(p.iso).toLocaleDateString(loc(),{day:"2-digit",month:"2-digit",year:"2-digit"})}</div>`+
         `<div class="wk">${fmtKg(p.kg)}</div>`+
         `<div class="wv" style="color:${color}">${v}</div>`+
         `<button class="wx" data-del="${p.iso}" aria-label="Supprimer">×</button></div>`;
@@ -1126,6 +1144,7 @@
     container.querySelectorAll("input, textarea").forEach(inp=>inp.addEventListener("input", onMealInput));
     container.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>openScanner(b.dataset.scan)));
     updateDayCards(day);
+    applyI18n();
   }
   function onMealInput(e){
     const mealKey=e.target.closest(".meal-card").dataset.meal, field=e.target.dataset.field;
@@ -1215,7 +1234,7 @@
     document.getElementById("setFat").value=db.settings.fatGoal;
     document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
     const keys=loggedDates(), n=keys.length;
-    let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString("fr-FR")}).`;
+    let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString(loc())}).`;
     const nw=weightEntries().length;
     if(nw) txt+=` ${nw} pesée${nw>1?"s":""} enregistrée${nw>1?"s":""}.`;
     txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
@@ -1290,7 +1309,7 @@
         <button class="btn secondary" data-act="closeScan">Annuler</button>
         <button class="btn primary" data-act="manualLookup">Chercher</button>
       </div></div></div>`;
-    bindSheet();
+    bindSheet(); applyI18n(sheetRoot);
     startCamera();
   }
 
@@ -1356,11 +1375,11 @@
     lookupProduct(code).finally(()=>{ codeHandled=false; });
   }
 
-  function renderScanLoading(code){
+  function renderScanLoading(code){ /* traduit via bindSheet */
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Recherche</h3>
       <p class="sub">Code ${escHtml(code)}</p><div class="spin"><i></i> Interrogation d'Open Food Facts…</div>
       <button class="btn secondary" data-act="rescan">Annuler</button></div></div>`;
-    bindSheet();
+    bindSheet(); applyI18n(sheetRoot);
   }
   function renderScanError(msg, code){
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Produit introuvable</h3>
@@ -1368,7 +1387,7 @@
       ${code?`<p class="sub">Code lu : ${escHtml(code)}. Tu peux saisir les macros à la main dans la carte du repas.</p>`:""}
       <div class="sheet-actions"><button class="btn secondary" data-act="closeScan">Fermer</button><button class="btn primary" data-act="rescan">Rescanner</button></div>
       </div></div>`;
-    bindSheet();
+    bindSheet(); applyI18n(sheetRoot);
   }
 
   // Une requête bornée dans le temps : sans cela, une absence de réponse laisse l'écran figé.
@@ -1464,7 +1483,7 @@
       </div>
       <button class="btn secondary" style="margin-top:10px" data-act="rescan">Annuler ce produit</button>
       </div></div>`;
-    bindSheet();
+    bindSheet(); applyI18n(sheetRoot);
     const qi=document.getElementById("qtyInput");
     qi.addEventListener("input",()=>{ scanState.qty=num(qi.value); const s2=scaled();
       document.getElementById("rP").value=d1(s2.protein); document.getElementById("rC").value=d1(s2.carbs); document.getElementById("rF").value=d1(s2.fat); document.getElementById("rFi").value=d1(s2.fiber); refreshScanKcal(); });
@@ -1499,6 +1518,261 @@
     else closeScanner();
   }
 
+
+  // ================= LANGUES =================
+  // Une seule table français -> [anglais, mandarin]. Un parcours du DOM après chaque
+  // rendu traduit aussi bien les textes fixes que ceux générés par le code.
+  const LANGS=[["fr","Français"],["en","English"],["zh","中文"]];
+  const LOCALES={fr:"fr-FR",en:"en-GB",zh:"zh-CN"};
+  const DICT={
+    "Nutrition":["Nutrition","饮食"],
+    "Poids":["Weight","体重"],
+    "Jour":["Day","当天"],
+    "Stats":["Stats","统计"],
+    "Réglages":["Settings","设置"],
+    "Suivi":["Overview","概览"],
+    "Pesées":["Weigh-ins","称重"],
+    "Objectif":["Goal","目标"],
+    "Suivi calories":["Calorie tracker","热量记录"],
+    "Suivi du poids":["Weight tracking","体重追踪"],
+    "Aujourd'hui":["Today","今天"],
+    "Hier":["Yesterday","昨天"],
+    "toucher pour choisir une date":["tap to pick a date","点击选择日期"],
+    "Bilan calorique":["Calorie balance","热量结余"],
+    "Écart entre ton apport et ton maintien":["Gap between your intake and your maintenance","摄入量与维持量的差值"],
+    "Aucune saisie":["No entry","暂无记录"],
+    "AUCUNE SAISIE":["NO ENTRY","暂无记录"],
+    "DÉFICIT":["DEFICIT","热量赤字"],
+    "SURPLUS":["SURPLUS","热量盈余"],
+    "apport (kcal)":["intake (kcal)","摄入 (千卡)"],
+    "objectif":["goal","目标"],
+    "maintien":["maintenance","维持量"],
+    "7 derniers jours · pointillé = maintien":["Last 7 days · dashed line = maintenance","最近 7 天 · 虚线 = 维持量"],
+    "Macros":["Macros","宏量营养素"],
+    "% des calories":["% of calories","占热量百分比"],
+    "Répartition et progression vers tes objectifs":["Split and progress towards your goals","分布及目标达成进度"],
+    "Protéines":["Protein","蛋白质"],
+    "Glucides":["Carbs","碳水化合物"],
+    "Lipides":["Fat","脂肪"],
+    "Fibres":["Fibre","膳食纤维"],
+    "Protéines (g)":["Protein (g)","蛋白质 (克)"],
+    "Glucides (g)":["Carbs (g)","碳水化合物 (克)"],
+    "Lipides (g)":["Fat (g)","脂肪 (克)"],
+    "Prot.":["Prot.","蛋白"],
+    "Gluc.":["Carbs","碳水"],
+    "Lip.":["Fat","脂肪"],
+    "Petit-déjeuner":["Breakfast","早餐"],
+    "Déjeuner":["Lunch","午餐"],
+    "Dîner":["Dinner","晚餐"],
+    "Autre":["Other","其他"],
+    "Grignotages, shakers, collations…":["Snacks, shakes, small bites…","零食、蛋白粉、加餐…"],
+    "Ex. : 1 banane + shaker protéiné l'après-midi":["E.g. 1 banana + protein shake in the afternoon","例如：下午一根香蕉 + 一杯蛋白粉"],
+    "Scanner un code-barres":["Scan a barcode","扫描条形码"],
+    "Maintien du jour":["Maintenance for today","当天维持量"],
+    "kcal":["kcal","千卡"],
+    "kcal macros":["macro kcal","宏量热量"],
+    "kg":["kg","公斤"],
+    "kg / semaine":["kg / week","公斤 / 周"],
+    "7 jours":["7 days","7 天"],
+    "30 jours":["30 days","30 天"],
+    "Depuis le début":["All time","全部"],
+    "Bilan de la semaine":["Weekly balance","本周结余"],
+    "Bilan des 30 derniers jours":["Last 30 days balance","最近 30 天结余"],
+    "bilan cumulé (kcal)":["cumulative balance (kcal)","累计结余 (千卡)"],
+    "bilan moyen / jour":["average balance / day","日均结余"],
+    "apport moyen / jour":["average intake / day","日均摄入"],
+    "jours en déficit":["days in deficit","赤字天数"],
+    "Évolution du bilan cumulé":["Cumulative balance over time","累计结余变化"],
+    "Sous zéro = déficit accumulé, au-dessus = surplus":["Below zero = accumulated deficit, above = surplus","低于零 = 累计赤字，高于零 = 盈余"],
+    "Apport par jour":["Daily intake","每日摄入"],
+    "Apport moyen par semaine":["Average intake per week","每周平均摄入"],
+    "Vert sous le maintien, rouge au-dessus":["Green below maintenance, red above","低于维持量为绿色，高于为红色"],
+    "Moyenne des jours renseignés de chaque semaine (à partir du lundi)":["Average of logged days each week (starting Monday)","每周已记录天数的平均值（从周一起）"],
+    "pointillé = maintien":["dashed line = maintenance","虚线 = 维持量"],
+    "Macros moyennes":["Average macros","平均宏量营养素"],
+    "Moyenne par jour renseigné, comparée à tes objectifs":["Average per logged day, compared with your goals","按已记录天数平均，与目标对比"],
+    "Détail par jour":["Day by day","每日明细"],
+    "non renseigné":["not logged","未记录"],
+    "Aucune donnée":["No data","暂无数据"],
+    "Aucun jour renseigné sur cette période":["No day logged in this period","此期间没有记录"],
+    "Aucun jour enregistré sur cette période":["No day logged in this period","此期间没有记录"],
+    "Pas encore assez de jours":["Not enough days yet","天数还不够"],
+    "Poids actuel":["Current weight","当前体重"],
+    "Aucune pesée enregistrée":["No weigh-in recorded","尚无称重记录"],
+    "Aucune pesée":["No weigh-in","尚无称重"],
+    "Courbe de poids · axe temporel réel · pointillé = objectif":["Weight curve · true time axis · dashed line = goal","体重曲线 · 真实时间轴 · 虚线 = 目标"],
+    "Variations":["Changes","变化"],
+    "Écarts calculés à la date exacte, avec interpolation entre deux pesées":["Changes computed on the exact date, interpolating between weigh-ins","按精确日期计算，两次称重之间做插值"],
+    "7 derniers jours":["Last 7 days","最近 7 天"],
+    "30 derniers jours":["Last 30 days","最近 30 天"],
+    "depuis le début":["all time","全部时间"],
+    "reste à perdre":["left to lose","还需减去"],
+    "Atteint":["Reached","已达成"],
+    "Projection d'objectif":["Goal projection","目标预测"],
+    "Deux rythmes comparés : l'écart entre les deux dates dit si tu accélères ou si tu ralentis":["Two paces compared: the gap between the dates tells you if you are speeding up or slowing down","两种速度对比：日期差异说明你在加快还是放慢"],
+    "Rythme global":["Overall pace","总体速度"],
+    "Non atteint":["Not reachable","无法达成"],
+    "Trop lointain":["Too far off","过于遥远"],
+    "pas assez de recul":["not enough history","数据不足"],
+    "Ton rythme récent est plus lent que ta moyenne : la date réaliste se situe plutôt vers la seconde projection.":["Your recent pace is slower than your average: the realistic date is closer to the second projection.","你近期的速度慢于平均值：更现实的日期接近第二个预测。"],
+    "Ton rythme récent est plus rapide que ta moyenne : tu es en avance sur ta trajectoire.":["Your recent pace is faster than your average: you are ahead of schedule.","你近期的速度快于平均值：进度超前。"],
+    "Ton rythme récent est conforme à ta moyenne : la trajectoire est régulière.":["Your recent pace matches your average: the trajectory is steady.","你近期的速度与平均值一致：进展稳定。"],
+    "Rythme entre pesées":["Pace between weigh-ins","两次称重之间的速度"],
+    "Vert = perte, rouge = prise. Une barre par intervalle":["Green = loss, red = gain. One bar per interval","绿色 = 减少，红色 = 增加。每段一根柱"],
+    "Pas encore d'intervalle":["No interval yet","尚无区间"],
+    "Au moins deux pesées sont nécessaires":["At least two weigh-ins are needed","至少需要两次称重"],
+    "Nouvelle pesée":["New weigh-in","新增称重"],
+    "Une valeur par date. Réenregistrer une date existante remplace la valeur.":["One value per date. Saving an existing date replaces the value.","每个日期一个数值。重复保存会覆盖原值。"],
+    "Date":["Date","日期"],
+    "Poids (kg)":["Weight (kg)","体重 (公斤)"],
+    "Ajouter":["Add","添加"],
+    "Historique":["History","历史记录"],
+    "Objectif de poids":["Weight goal","体重目标"],
+    "Poids cible (kg)":["Target weight (kg)","目标体重 (公斤)"],
+    "Sert au pourcentage d'avancement et aux deux projections.":["Used for the progress percentage and both projections.","用于计算进度百分比和两个预测。"],
+    "Taille (m)":["Height (m)","身高 (米)"],
+    "Sert uniquement au calcul de l'IMC.":["Only used to compute BMI.","仅用于计算 BMI。"],
+    "IMC":["BMI","BMI"],
+    "IMC actuel":["Current BMI","当前 BMI"],
+    "IMC à l'objectif":["BMI at goal","目标 BMI"],
+    "Indice de masse corporelle, calculé depuis ta dernière pesée":["Body mass index, from your latest weigh-in","身体质量指数，根据最近一次称重计算"],
+    "Renseigne ta taille pour afficher l'IMC.":["Enter your height to see your BMI.","请填写身高以显示 BMI。"],
+    "Un IMC sous 25 correspond à la plage de corpulence normale de la classification OMS.":["A BMI below 25 falls in the normal range of the WHO classification.","BMI 低于 25 属于世界卫生组织分类中的正常范围。"],
+    "Tu es dans la plage de corpulence normale de la classification OMS (18,5 à 25).":["You are in the normal range of the WHO classification (18.5 to 25).","你处于世界卫生组织分类的正常范围（18.5 至 25）。"],
+    "Choisis une date":["Pick a date","请选择日期"],
+    "Poids invalide":["Invalid weight","体重数值无效"],
+    "Pesée enregistrée ✓":["Weigh-in saved ✓","称重已保存 ✓"],
+    "Pesées effacées":["Weigh-ins cleared","称重记录已清除"],
+    "Aucune pesée à effacer":["No weigh-in to clear","没有可清除的称重"],
+    "Effacer les pesées":["Clear weigh-ins","清除称重记录"],
+    "Effacer toutes les pesées":["Clear all weigh-ins","清除全部称重"],
+    "Effacer":["Clear","清除"],
+    "Objectifs":["Goals","目标设置"],
+    "Maintien calorique (TDEE)":["Maintenance calories (TDEE)","维持热量 (TDEE)"],
+    "Objectif d'apport quotidien (kcal)":["Daily intake goal (kcal)","每日摄入目标 (千卡)"],
+    "Ce que tu vises à manger chaque jour. Affiché comme repère, sans influence sur le bilan.":["What you aim to eat each day. Shown as a marker; it does not affect the balance.","你每天计划摄入的量。仅作参考，不影响结余。"],
+    "Enregistrer":["Save","保存"],
+    "Objectifs enregistrés ✓":["Goals saved ✓","目标已保存 ✓"],
+    "Objectif enregistré ✓":["Goal saved ✓","目标已保存 ✓"],
+    "Erreur d'enregistrement":["Could not save","保存失败"],
+    "Mes données":["My data","我的数据"],
+    "Chargement…":["Loading…","加载中…"],
+    "Exporter une sauvegarde (.json)":["Export a backup (.json)","导出备份 (.json)"],
+    "Restaurer depuis une sauvegarde":["Restore from a backup","从备份恢复"],
+    "Sauvegarde générée":["Backup created","备份已生成"],
+    "Fichier non reconnu":["File not recognised","无法识别的文件"],
+    "Aucune donnée enregistrée pour le moment.":["No data recorded yet.","目前还没有任何数据。"],
+    "Langue":["Language","语言"],
+    "Français":["French","法语"],
+    "Anglais":["English","英语"],
+    "Mandarin":["Chinese","中文"],
+    "Choisis la langue de l'application.":["Choose the app language.","选择应用语言。"],
+    "Langue enregistrée ✓":["Language saved ✓","语言已保存 ✓"],
+    "Recherche":["Searching","查询中"],
+    "Interrogation d'Open Food Facts…":["Querying Open Food Facts…","正在查询 Open Food Facts…"],
+    "Annuler":["Cancel","取消"],
+    "Fermer":["Close","关闭"],
+    "Chercher":["Search","搜索"],
+    "Rescanner":["Scan again","重新扫描"],
+    "Annuler ce produit":["Discard this item","放弃此商品"],
+    "Ajouter + scanner":["Add + scan again","添加并继续扫描"],
+    "Ajouter et fermer":["Add and close","添加并关闭"],
+    "Ou saisis le code à la main":["Or type the code manually","或手动输入条码"],
+    "Vise le code-barres. Tu peux enchaîner plusieurs produits : chacun s'additionne au repas.":["Point at the barcode. You can chain several items: each one adds to the meal.","对准条形码。可以连续扫描多个商品，每个都会累加到该餐。"],
+    "Vise le code-barres":["Point at the barcode","对准条形码"],
+    "Recherche du code…":["Looking for a code…","正在寻找条码…"],
+    "Caméra indisponible — saisis le code à la main":["Camera unavailable — type the code manually","无法使用相机 — 请手动输入条码"],
+    "Accès caméra refusé — saisis le code à la main":["Camera access denied — type the code manually","相机权限被拒绝 — 请手动输入条码"],
+    "Lecture auto indisponible — saisis le code à la main":["Automatic reading unavailable — type the code manually","无法自动识别 — 请手动输入条码"],
+    "Produit trouvé":["Product found","已找到商品"],
+    "Produit introuvable":["Product not found","未找到商品"],
+    "Ce produit n'est pas encore dans la base Open Food Facts.":["This product is not in the Open Food Facts database yet.","该商品尚未收录于 Open Food Facts 数据库。"],
+    "Produit trouvé, mais ses valeurs nutritionnelles ne sont pas renseignées.":["Product found, but its nutrition values are missing.","找到商品，但缺少营养成分数据。"],
+    "Open Food Facts n'a pas répondu à temps. Vérifie ta connexion et réessaie.":["Open Food Facts did not respond in time. Check your connection and try again.","Open Food Facts 响应超时。请检查网络后重试。"],
+    "Impossible de joindre Open Food Facts. Vérifie ta connexion, puis réessaie.":["Could not reach Open Food Facts. Check your connection and try again.","无法连接 Open Food Facts。请检查网络后重试。"],
+    "Réponse inattendue du service. Réessaie ou saisis les macros à la main.":["Unexpected response from the service. Try again or enter the macros manually.","服务返回异常。请重试或手动输入营养数据。"],
+    "Lecture impossible":["Cannot read","无法读取"],
+    "Quantité consommée (g)":["Amount eaten (g)","食用量 (克)"],
+    "Total ajouté":["Total added","已添加合计"],
+    "Image illisible":["Unreadable image","图片无法读取"]
+  };
+  // Phrases contenant des nombres : on traduit la forme, pas le contenu.
+  const PATTERNS=[
+    [/^(\d+) jours? renseignés? sur (\d+)$/, {en:"$1 day(s) logged out of $2", zh:"已记录 $1 天 / 共 $2 天"}],
+    [/^(\d+) % accompli$/, {en:"$1 % done", zh:"已完成 $1 %"}],
+    [/^Objectif (.+) kcal$/, {en:"Goal $1 kcal", zh:"目标 $1 千卡"}],
+    [/^Cible (.+) kg$/, {en:"Target $1 kg", zh:"目标 $1 公斤"}],
+    [/^cible (.+) kg$/, {en:"target $1 kg", zh:"目标 $1 公斤"}],
+    [/^Pour 100 g · calculé : $/, {en:"Per 100 g · computed: ", zh:"每 100 克 · 计算值："}],
+    [/^ · étiquette : $/, {en:" · label: ", zh:" · 标签值："}],
+    [/^À ajouter · $/, {en:"To add · ", zh:"将添加 · "}],
+    [/^(.+) g prot · (.+) g gluc · (.+) g lip$/, {en:"$1 g prot · $2 g carbs · $3 g fat", zh:"$1 克蛋白 · $2 克碳水 · $3 克脂肪"}],
+    [/^(.+) g prot · (.+) g gluc · (.+) g lip · (.+) g fibres$/, {en:"$1 g prot · $2 g carbs · $3 g fat · $4 g fibre", zh:"$1 克蛋白 · $2 克碳水 · $3 克脂肪 · $4 克纤维"}],
+    [/^(.+) kcal · (.+) g fibres$/, {en:"$1 kcal · $2 g fibre", zh:"$1 千卡 · $2 克纤维"}],
+    [/^(.+) kcal$/, {en:"$1 kcal", zh:"$1 千卡"}],
+    [/^(.+) kg depuis le début$/, {en:"$1 kg since the start", zh:"自开始以来 $1 公斤"}],
+    [/^Pesée du (.+) · (\d+) mesures?$/, {en:"Weigh-in on $1 · $2 measurement(s)", zh:"$1 的称重 · 共 $2 次"}],
+    [/^(.+) kg · (\d+) j$/, {en:"$1 kg · $2 d", zh:"$1 公斤 · $2 天"}],
+    [/^(.+) kg \/ semaine$/, {en:"$1 kg / week", zh:"$1 公斤 / 周"}],
+    [/^Code (.+)$/, {en:"Code $1", zh:"条码 $1"}],
+    [/^Déjà ajouté à ce repas · (\d+) produits?$/, {en:"Already added to this meal · $1 item(s)", zh:"已加入本餐 · $1 项"}],
+    [/^Maintien pour (.+) \(kcal\)$/, {en:"Maintenance for $1 (kcal)", zh:"$1 的维持量 (千卡)"}],
+    [/^Maintien ajusté pour cette journée \(habituel : (\d+) kcal\)$/, {en:"Maintenance adjusted for this day (usual: $1 kcal)", zh:"当天维持量已调整（平时为 $1 千卡）"}],
+    [/^Revenir au maintien habituel \((\d+) kcal\)$/, {en:"Back to usual maintenance ($1 kcal)", zh:"恢复平时维持量（$1 千卡）"}],
+    [/^objectif (\d+) g$/, {en:"goal $1 g", zh:"目标 $1 克"}]
+  ];
+  let translatedOnce=false;
+  function currentLang(){ return db.settings.lang || "fr"; }
+  function loc(){ return LOCALES[currentLang()] || "fr-FR"; }
+  function tr(txt){
+    const lang=currentLang();
+    if(lang==="fr") return txt;
+    const idx = lang==="en" ? 0 : 1;
+    const key=txt.trim();
+    if(DICT[key]) return txt.replace(key, DICT[key][idx]);
+    for(const [re,alt] of PATTERNS){
+      const m=key.match(re);
+      if(m){ let out=(lang==="en"?alt.en:alt.zh); m.slice(1).forEach((g,i)=>{ out=out.split("$"+(i+1)).join(g); }); return txt.replace(key,out); }
+    }
+    return txt;
+  }
+  // Parcourt les textes affichés et les remplace. L'original français est mémorisé
+  // sur le nœud pour pouvoir rebasculer de langue sans recharger.
+  function applyI18n(root){
+    if(currentLang()==="fr" && !translatedOnce) return;
+    const scope=root||document.body;
+    const walker=document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+      acceptNode(n){
+        if(!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const p=n.parentNode;
+        if(!p || p.nodeName==="SCRIPT" || p.nodeName==="STYLE") return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }});
+    const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(n=>{
+      if(n.__fr===undefined) n.__fr=n.nodeValue;
+      const out=tr(n.__fr);
+      if(n.nodeValue!==out) n.nodeValue=out;
+    });
+    scope.querySelectorAll("[placeholder],[aria-label]").forEach(el=>{
+      if(!el.__frAttrs) el.__frAttrs={};
+      ["placeholder","aria-label"].forEach(a=>{
+        const v=el.getAttribute(a); if(v==null) return;
+        if(el.__frAttrs[a]===undefined) el.__frAttrs[a]=v;
+        el.setAttribute(a, tr(el.__frAttrs[a]));
+      });
+    });
+    translatedOnce=true;
+    document.documentElement.lang=currentLang();
+  }
+  function setLang(l){
+    db.settings.lang=l; persistNow();
+    document.querySelectorAll("[data-lang]").forEach(b=>b.classList.toggle("active", b.dataset.lang===l));
+    setHeaderDate();
+    showView(document.querySelector(".view.active").id.replace("view-",""));
+    flash("langNote","Langue enregistrée ✓");
+  }
+
   // ---------- navigation ----------
   const WEIGHT_VIEWS=["wsuivi","wsaisie","wreglages"];
   function showView(name){
@@ -1516,6 +1790,7 @@
     else if(name==="wsuivi") renderWeight();
     else if(name==="wsaisie"){ renderWeightList(); }
     else if(name==="wreglages") renderWeightSettings();
+    applyI18n();
   }
   function showSection(sec){
     currentSection=sec;
@@ -1526,6 +1801,7 @@
     document.querySelector("header.top h1").textContent = sec==="poids" ? "Suivi du poids" : "Suivi calories";
     if(sec==="poids") showView(currentWView);
     else showView(document.querySelector("#section-nutrition .view.active").id.replace("view-",""));
+    applyI18n();
   }
   document.querySelectorAll(".sec-btn").forEach(b=>b.addEventListener("click",()=>showSection(b.dataset.section)));
   document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showView(btn.dataset.view)));
@@ -1540,7 +1816,7 @@
     setWeight(iso,kg);
     kEl.value="";
     renderWeightList(); renderWeight();
-    flash("wNote", existed ? "Pesée du "+fromISO(iso).toLocaleDateString("fr-FR")+" mise à jour" : "Pesée enregistrée ✓");
+    flash("wNote", existed ? "Pesée du "+fromISO(iso).toLocaleDateString(loc())+" mise à jour" : "Pesée enregistrée ✓");
   });
   document.getElementById("saveWSettings").addEventListener("click",()=>{
     const g=Number(String(document.getElementById("setWGoal").value).replace(",","."));
@@ -1583,7 +1859,7 @@
       </div>
       ${ov ? `<button class="btn secondary" style="margin-top:10px" data-act="resetMaint">Revenir au maintien habituel (${db.settings.maintenance} kcal)</button>` : ""}
       </div></div>`;
-    bindSheet();
+    bindSheet(); applyI18n(sheetRoot);
   }
   document.getElementById("metaMaintBtn").addEventListener("click", openMaintSheet);
 
@@ -1600,6 +1876,7 @@
     const ok=persistNow(); flash("saveNote", ok?"Objectifs enregistrés ✓":"Erreur d'enregistrement", !ok);
   });
   document.getElementById("exportBtn").addEventListener("click",exportData);
+  document.querySelectorAll("[data-lang]").forEach(b=>b.addEventListener("click",()=>setLang(b.dataset.lang)));
   document.getElementById("clearWeights").addEventListener("click",()=>{
     const n=weightEntries().length;
     if(!n) return flash("dataNote","Aucune pesée à effacer");
@@ -1607,14 +1884,14 @@
       <p class="sub">${n} pesée${n>1?"s":""} seront définitivement supprimée${n>1?"s":""} de ce téléphone. Tes données de nutrition ne sont pas touchées.</p>
       <div class="sheet-actions"><button class="btn secondary" data-act="close">Annuler</button>
       <button class="btn primary" style="background:var(--bad);color:#fff" data-act="confirmClearW">Effacer</button></div></div></div>`;
-    bindSheet();
+    bindSheet(); applyI18n(sheetRoot);
   });
   document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
   document.getElementById("importFile").addEventListener("change",(e)=>{ if(e.target.files&&e.target.files[0]) importData(e.target.files[0]); e.target.value=""; });
 
   document.addEventListener("visibilitychange",()=>{ if(document.hidden){ clearTimeout(saveTimer); persistNow(); } });
   window.addEventListener("pagehide",()=>{ clearTimeout(saveTimer); persistNow(); });
-  function setHeaderDate(){ document.getElementById("headerDate").textContent=fromISO(todayISO()).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
+  function setHeaderDate(){ document.getElementById("headerDate").textContent=fromISO(todayISO()).toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long"}); }
   let lastKnownToday=todayISO();
   document.addEventListener("visibilitychange",()=>{
     if(document.hidden) return; const now=todayISO();
@@ -1674,12 +1951,14 @@
 
   // ---------- init ----------
   loadDB();
+  document.querySelectorAll("[data-lang]").forEach(b=>b.classList.toggle("active", b.dataset.lang===currentLang()));
   setHeaderDate();
   if(navigator.storage&&navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
   if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }
   document.getElementById("wDate").value=todayISO();
   document.getElementById("wDate").max=todayISO();
   renderDay();
+  applyI18n();
 })();
 </script>
 </body>
