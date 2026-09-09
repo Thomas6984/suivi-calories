@@ -1595,13 +1595,21 @@
       <button class="btn secondary" data-act="closeSearch">Annuler</button></div></div>`;
     bindSheet();
   }
+  function pickLang(v){
+    if(v==null) return "";
+    if(typeof v==="string") return v;
+    if(typeof v==="object"){ const l=currentLang(); return v[l]||v.fr||v.en||v.main||Object.values(v).find(x=>typeof x==="string")||""; }
+    return String(v);
+  }
   function readProduct(p){
+    if(!p||typeof p!=="object") return null;
     const n=p.nutriments||{};
     const per100={protein:Number(n["proteins_100g"])||0, carbs:Number(n["carbohydrates_100g"])||0,
                   fat:Number(n["fat_100g"])||0, fiber:Number(n["fiber_100g"])||0};
     if(per100.protein<=0 && per100.carbs<=0 && per100.fat<=0) return null;
-    return {name:(p.product_name_fr||p.product_name||"Produit").slice(0,70),
-            brand:((p.brands||"").split(",")[0]||"").trim().slice(0,40),
+    const nm=pickLang(p.product_name_fr)||pickLang(p.product_name)||"Produit";
+    return {name:String(nm).slice(0,70),
+            brand:(pickLang(p.brands).split(",")[0]||"").trim().slice(0,40),
             per100, serving:Number(p.serving_quantity)||0,
             kcal100: Number(n["energy-kcal_100g"])>0 ? Number(n["energy-kcal_100g"])
               : per100.protein*KCAL.protein+per100.carbs*KCAL.carbs+per100.fat*KCAL.fat+per100.fiber*KCAL.fiber};
@@ -1612,14 +1620,28 @@
     const mealKey=searchState.mealKey;
     if(q.length<2) return;
     renderSearchLoading(q);
-    const fields="code,product_name,product_name_fr,brands,nutriments,serving_quantity";
+    const enc=encodeURIComponent(q), lg=currentLang();
+    // Formes essayées dans l'ordre. Le paramètre "fields" est volontairement omis : envoyé
+    // sous forme de liste séparée par des virgules, l'API le rejette (erreur 422) et l'on croit à une panne.
     const attempts=[
-      "https://search.openfoodfacts.org/search?q="+encodeURIComponent(q)+"&page_size=20&fields="+encodeURIComponent(fields),
-      "https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&search_simple=1&action=process&json=1&page_size=20&fields="+encodeURIComponent(fields)
+      "https://search.openfoodfacts.org/search?q="+enc+"&langs="+lg+"&langs=en&page_size=20",
+      "https://search.openfoodfacts.org/search?q="+enc+"&langs="+lg+":en&page_size=20",
+      "https://search.openfoodfacts.org/search?q="+enc+"&page_size=20",
+      "https://world.openfoodfacts.org/cgi/search.pl?search_terms="+enc+"&search_simple=1&action=process&json=1&page_size=20",
+      "https://fr.openfoodfacts.org/cgi/search.pl?search_terms="+enc+"&search_simple=1&action=process&json=1&page_size=20"
     ];
-    let data=null;
-    for(const u of attempts){ try{ data=await fetchJson(u, 10000); if(data) break; }catch(e){} }
-    if(!data) return openSearchSheet(mealKey, q, null, "La recherche par nom est momentanément indisponible. Le scan de code-barres reste utilisable.");
+    let data=null; const errs=[];
+    for(const u of attempts){
+      try{ const j=await fetchJson(u, 9000);
+        if(j && (Array.isArray(j.hits) || Array.isArray(j.products))){ data=j; break; }
+        errs.push("réponse sans résultats"); }
+      catch(e){ errs.push(String(e && e.message || e)); }
+    }
+    if(!data){
+      // On affiche la cause réelle : c'est ce qui permet de corriger, pas un message générique.
+      const detail = errs.map((e,i)=>(i+1)+") "+e).join(" · ");
+      return openSearchSheet(mealKey, q, null, "La recherche par nom est momentanément indisponible. Le scan de code-barres reste utilisable. Détail technique : "+detail);
+    }
     const raw = data.hits || data.products || [];
     const list = raw.map(readProduct).filter(Boolean).slice(0,20);
     openSearchSheet(mealKey, q, list, null);
@@ -1752,9 +1774,11 @@
       const ctrl = ("AbortController" in window) ? new AbortController() : null;
       const timer=setTimeout(()=>{ if(!done){ done=true; if(ctrl) try{ctrl.abort();}catch(e){} reject(new Error("timeout")); } }, ms||12000);
       fetch(url, ctrl?{signal:ctrl.signal, cache:"no-store"}:{cache:"no-store"})
-        .then(r=>{ if(!r.ok) throw new Error("http "+r.status); return r.json(); })
+        .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
         .then(j=>{ if(!done){ done=true; clearTimeout(timer); resolve(j); } })
-        .catch(e=>{ if(!done){ done=true; clearTimeout(timer); reject(e); } });
+        .catch(e=>{ if(!done){ done=true; clearTimeout(timer);
+          // TypeError sur un fetch = requête bloquée avant réponse (réseau ou CORS)
+          reject(e && e.name==="TypeError" ? new Error("bloqué (réseau/CORS)") : e); } });
     });
   }
 
