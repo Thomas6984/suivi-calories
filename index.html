@@ -295,6 +295,8 @@
   .sheet-actions .btn{margin-top:0;}
 
   .bar-mark{opacity:.95;}
+  .chart svg, .mini svg, .hero-trend svg{touch-action:manipulation;}
+  .bar-val{pointer-events:none;}
   .meal-split{display:flex;align-items:center;gap:14px;margin-top:14px;padding:12px;background:var(--surface-2);
     border:1px solid var(--line);border-radius:14px;}
   .meal-split .ms-legend{flex:1;display:flex;flex-direction:column;gap:6px;}
@@ -345,6 +347,10 @@
     transition:transform .12s ease, background .2s ease;}
   .add-btn:active{transform:scale(.98);background:rgba(255,255,255,.09);}
   .add-btn svg{width:16px;height:16px;flex-shrink:0;}
+  .mode-seg{display:flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;padding:3px;margin-bottom:14px;}
+  .mode-seg button{flex:1;border:none;background:none;padding:10px 0;border-radius:10px;font-size:13px;font-weight:800;
+    color:var(--ink-soft);font-family:inherit;transition:background .2s,color .2s;}
+  .mode-seg button.active{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;}
   .per100-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
   .kcal-direct{background:var(--surface-2);border:1px dashed var(--line-strong);border-radius:13px;padding:12px 14px;margin-bottom:14px;}
   .kcal-direct .kd-lbl{font-size:11.5px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em;}
@@ -771,7 +777,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "31";                 // numéro affiché dans les réglages
+  const APP_VERSION = "32";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -792,7 +798,9 @@
   // Aucune donnée pré-chargée : chaque installation démarre vierge.
   const emptyMeal = () => ({items:[], note:""});
   const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal(), water:0});
-  const emptyItem = () => ({name:"", per100:{protein:0,carbs:0,fat:0,fiber:0,alcohol:0,kcal:0}, qty:100});
+  // unit:true -> les valeurs saisies concernent UNE portion entière (une banane, un verre),
+  // et qty est alors un nombre de portions et non des grammes.
+  const emptyItem = () => ({name:"", per100:{protein:0,carbs:0,fat:0,fiber:0,alcohol:0,kcal:0}, qty:100, unit:false});
   // Les anciennes saisies (macros cumulées par repas) deviennent un aliment unique de 100 g :
   // les totaux restent rigoureusement identiques.
   function migrateMeal(m){
@@ -887,7 +895,9 @@
   function num(v){ const n=Number(v); return isFinite(n)&&n>0?n:0; }
   // Un aliment : valeurs pour 100 g × quantité réellement mangée.
   function itemTotals(it){
-    const q=num(it&&it.qty)/100, p=(it&&it.per100)||{};
+    // à l'unité : le facteur est le nombre de portions ; au poids : la quantité rapportée à 100 g
+    const q = (it&&it.unit) ? num(it.qty) : num(it&&it.qty)/100;
+    const p=(it&&it.per100)||{};
     const o={protein:num(p.protein)*q, carbs:num(p.carbs)*q, fat:num(p.fat)*q,
              fiber:num(p.fiber)*q, alcohol:num(p.alcohol)*q};
     const fromMacros = o.protein*KCAL.protein + o.carbs*KCAL.carbs + o.fat*KCAL.fat
@@ -1049,6 +1059,9 @@
       else if(barRef2 && b.value<=barRef2) color=theme.mid||theme.bad;  // au-dessus de l'objectif, toujours en déficit
       else color=theme.bad;                                             // au-dessus du maintien : surplus réel
       s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="${Math.min(3,barW/3).toFixed(1)}" fill="${color}"/>`;
+      // zone tactile pleine hauteur : la valeur reste atteignable même sur une barre très basse
+      if(b.hasData) s+=`<rect class="bar-hit" x="${(x-gap/2).toFixed(1)}" y="${padTop}" width="${(barW+gap).toFixed(1)}" height="${(h-padTop-padBottom).toFixed(1)}" fill="transparent" `+
+        `data-val="${Math.round(b.value)}" data-lbl="${b.label}" data-cx="${(x+barW/2).toFixed(1)}" data-cy="${y.toFixed(1)}"/>`;
       if(b.override){ s+=`<circle class="bar-mark" cx="${(x+barW/2).toFixed(1)}" cy="${(y-5).toFixed(1)}" r="2" fill="${theme.ref}"/>`; }
       if(n<=10 || i%labelEvery===0){
         s+=`<text x="${(x+barW/2).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="${n<=10?'middle':(i===0?'start':'middle')}">${b.label}</text>`;
@@ -1062,7 +1075,7 @@
       refLine+=`<line x1="0" y1="${r2Y.toFixed(1)}" x2="${w}" y2="${r2Y.toFixed(1)}" stroke="${theme.mid||theme.ref}" stroke-width="1" stroke-dasharray="2,6" opacity=".9"/>`+
         `<text x="${w}" y="${(r2Y-4).toFixed(1)}" font-size="9" font-weight="700" fill="${theme.mid||theme.ref}" text-anchor="end">${Math.round(ref2)}</text>`;
     }
-    return `<svg viewBox="0 0 ${w} ${h}">${refLine}${s}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" data-tappable="1">${refLine}${s}</svg>`;
   }
 
   // ---------- SVG: cumulative line ----------
@@ -1266,9 +1279,11 @@
       const y=b.value<=0 ? mid : mid-hh;                    // perte : barre sous l'axe
       const color=b.value<=0?theme.good:theme.bad;
       s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${hh.toFixed(1)}" rx="${Math.min(3,barW/3).toFixed(1)}" fill="${color}"/>`;
+      s+=`<rect class="bar-hit" x="${(x-gap/2).toFixed(1)}" y="${padTop}" width="${(barW+gap).toFixed(1)}" height="${(h-padTop-padBottom).toFixed(1)}" fill="transparent" `+
+        `data-val="${fmtKg(b.value,true)} kg" data-lbl="${b.label}" data-cx="${(x+barW/2).toFixed(1)}" data-cy="${Math.min(y,mid).toFixed(1)}"/>`;
       if(n<=8) s+=`<text x="${(x+barW/2).toFixed(1)}" y="${h-6}" font-size="9" font-weight="600" fill="${theme.text}" text-anchor="middle">${b.label}</text>`;
     });
-    return `<svg viewBox="0 0 ${w} ${h}"><line x1="0" y1="${mid}" x2="${w}" y2="${mid}" stroke="${theme.zero}" stroke-width="1"/>${s}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" data-tappable="1"><line x1="0" y1="${mid}" x2="${w}" y2="${mid}" stroke="${theme.zero}" stroke-width="1"/>${s}</svg>`;
   }
 
   function renderWeightList(){
@@ -1296,6 +1311,29 @@
     document.getElementById("wSaveNote").textContent="";
     renderWeight();
   }
+
+  // ---------- valeur affichée au toucher d'une barre ----------
+  // Délégation sur le document : les graphiques sont redessinés en permanence,
+  // rattacher un écouteur à chaque rendu créerait des doublons.
+  document.addEventListener("click",(e)=>{
+    const hit = e.target.closest && e.target.closest(".bar-hit");
+    if(!hit) return;
+    const svg = hit.ownerSVGElement || hit.closest("svg"); if(!svg) return;
+    svg.querySelectorAll(".bar-val").forEach(n=>n.remove());
+    const cx=parseFloat(hit.getAttribute("data-cx")), cy=parseFloat(hit.getAttribute("data-cy"));
+    const txt = (hit.getAttribute("data-lbl")||"") + " · " + hit.getAttribute("data-val");
+    const vb = (svg.getAttribute("viewBox")||"0 0 320 140").split(" ").map(Number);
+    const wBox=Math.max(38, txt.length*5.2+14), hBox=16;
+    const bx=Math.max(1, Math.min(vb[2]-wBox-1, cx-wBox/2));
+    const by=Math.max(1, cy-hBox-5);
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","bar-val");
+    g.innerHTML=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${wBox.toFixed(1)}" height="${hBox}" rx="5" fill="rgba(0,0,0,.85)" stroke="rgba(255,255,255,.28)"/>`+
+      `<text x="${(bx+wBox/2).toFixed(1)}" y="${(by+hBox/2+3.7).toFixed(1)}" font-size="9.5" font-weight="800" fill="#fff" text-anchor="middle">${txt}</text>`;
+    svg.appendChild(g);
+    clearTimeout(svg.__tapTimer);
+    svg.__tapTimer=setTimeout(()=>{ g.remove(); }, 2800);
+  });
 
   // ---------- day view ----------
   function updateDayCards(day){
@@ -1361,7 +1399,7 @@
         const seg = ptot>0 ? parts.map(x=>`<span style="width:${(x.val/ptot*100).toFixed(1)}%;background:${x.color}"></span>`).join("") : "";
         const pcts = ptot>0 ? parts.map(x=>Math.round(x.val/ptot*100)+" % "+x.label.toLowerCase()).join(" · ") : "";
         return `<div class="food"><div class="fn"><div class="fname">${esc(it.name||"Aliment")}</div>`+
-          `<div class="fmeta">${d1(num(it.qty))} g · ${(o.protein||o.carbs||o.fat||o.fiber||o.alcohol) ? d1(o.protein)+" P / "+d1(o.carbs)+" G / "+d1(o.fat)+" L"+(o.fiber?" / "+d1(o.fiber)+" F":"")+(o.alcohol?" / "+d1(o.alcohol)+" A":"") : "calories seules"}</div>`+
+          `<div class="fmeta">${it.unit ? (d1(num(it.qty))+" "+(num(it.qty)>1?"portions":"portion")) : (d1(num(it.qty))+" g")} · ${(o.protein||o.carbs||o.fat||o.fiber||o.alcohol) ? d1(o.protein)+" P / "+d1(o.carbs)+" G / "+d1(o.fat)+" L"+(o.fiber?" / "+d1(o.fiber)+" F":"")+(o.alcohol?" / "+d1(o.alcohol)+" A":"") : "calories seules"}</div>`+
           (seg?`<div class="fbar">${seg}</div><div class="fshare">${pcts} — ${share} % du repas</div>`:"")+
           `<div class="fedit">Toucher pour modifier</div>`+
           `</div>`+
@@ -1373,9 +1411,10 @@
       const split = items.length ? splitBlock(mealTotals(meal), 92) : "";
       const favs = savedFoods();
       const chips = favs.length ? `<div class="chips-lbl">Mes aliments</div><div class="chips">`+
-        favs.map((f,fi)=>{ const o=itemTotals({per100:f.per100, qty:f.qty});
+        favs.map((f,fi)=>{ const o=itemTotals({per100:f.per100, qty:f.qty, unit:!!f.unit});
+          const q = f.unit ? ((Math.round(num(f.qty)*10)/10)+"×") : (Math.round(num(f.qty))+" g");
           return `<button class="chip" data-quick="${m.key}:${fi}"><span class="cp">+</span>${esc(f.name)}`+
-                 `<span class="cq">${Math.round(num(f.qty))} g · ${Math.round(o.cal)} kcal</span></button>`; }).join("")+`</div>` : "";
+                 `<span class="cq">${q} · ${Math.round(o.cal)} kcal</span></button>`; }).join("")+`</div>` : "";
       return `<div class="card meal-card" data-meal="${m.key}"><div class="meal-head"><div><div class="meal-title">${m.label}</div>${hint}</div><div class="meal-sub"></div></div>`+
         `<div class="food-list">${rows}</div>${split}${chips}${note}`+
         `<div class="add-row">`+
@@ -1393,7 +1432,7 @@
       const btn=el.querySelector("[data-del-item]"); if(!btn) return;
       const parts=btn.dataset.delItem.split(":");
       const dd=getDay(currentDate), it=(dd[parts[0]].items||[])[Number(parts[1])];
-      if(it) openItemSheet(parts[0], {name:it.name, per100:{...it.per100}, qty:it.qty}, Number(parts[1]));
+      if(it) openItemSheet(parts[0], {name:it.name, per100:{...it.per100}, qty:it.qty, unit:!!it.unit}, Number(parts[1]));
     }));
     container.querySelectorAll("[data-del-item]").forEach(b=>b.addEventListener("click",()=>{
       const parts=b.dataset.delItem.split(":"); const dd=getDay(currentDate);
@@ -1525,9 +1564,11 @@
     const list=savedFoods(), esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
     if(!list.length){ el.innerHTML=`<div class="food-empty">Aucun aliment enregistré</div>`; return; }
     const d1=v=>Math.round(v*10)/10;
-    el.innerHTML=list.map((f,i)=>{ const o=itemTotals({per100:f.per100, qty:f.qty});
+    el.innerHTML=list.map((f,i)=>{ const o=itemTotals({per100:f.per100, qty:f.qty, unit:!!f.unit});
+      const uTxt = f.unit ? (d1(num(f.qty))+" "+(num(f.qty)>1?"portions":"portion")) : (Math.round(num(f.qty))+" g");
+      const rTxt = f.unit ? "par portion" : "pour 100 g";
       return `<div class="sf"><div class="sfn"><div class="sfname">${esc(f.name)}</div>`+
-        `<div class="sfmeta">${Math.round(num(f.qty))} g · ${Math.round(o.cal)} kcal · pour 100 g : ${d1(num(f.per100.protein))} P / ${d1(num(f.per100.carbs))} G / ${d1(num(f.per100.fat))} L</div></div>`+
+        `<div class="sfmeta">${uTxt} · ${Math.round(o.cal)} kcal · ${rTxt} : ${d1(num(f.per100.protein))} P / ${d1(num(f.per100.carbs))} G / ${d1(num(f.per100.fat))} L</div></div>`+
         `<button class="sfx" data-editfood="${i}" style="background:rgba(var(--acc-rgb),.12);border-color:rgba(var(--acc-rgb),.28);color:var(--acc);font-size:14px">✎</button>`+
         `<button class="sfx" data-delfood="${i}" aria-label="Supprimer">×</button></div>`; }).join("");
     el.querySelectorAll("[data-delfood]").forEach(b=>b.addEventListener("click",()=>{
@@ -1540,6 +1581,16 @@
     }));
   }
   // Panneau de création/modification d'un aliment de la bibliothèque (sans l'ajouter à un repas).
+  let libUnit=false;
+  function setLibMode(isUnit, resetQty){
+    libUnit=!!isUnit;
+    sheetRoot.querySelectorAll("[data-lmode]").forEach(b=>b.classList.toggle("active",(b.dataset.lmode==="unit")===libUnit));
+    document.getElementById("lValsLbl").textContent = isUnit ? "Valeurs pour une portion entière" : "Valeurs pour 100 g";
+    document.getElementById("lQtyLbl").textContent  = isUnit ? "Nombre de portions par défaut" : "Quantité habituelle (g)";
+    document.getElementById("lKLbl").textContent    = isUnit ? "Ou calories seules (par portion)" : "Ou calories seules (pour 100 g)";
+    if(resetQty) document.getElementById("lQty").value = isUnit ? 1 : 100;
+    applyI18n(sheetRoot); refreshLibCalc();
+  }
   function openLibSheet(preset){
     const v=preset||{name:"",per100:{protein:"",carbs:"",fat:"",fiber:"",alcohol:"",kcal:""},qty:100};
     if(v.per100.alcohol===undefined) v.per100.alcohol="";
@@ -1550,7 +1601,11 @@
       <p class="sub">Valeurs pour 100 g et quantité habituelle. Il apparaîtra ensuite en raccourci sous chaque repas.</p>
       <label class="f">Nom de l'aliment</label>
       <input class="t" id="lName" type="text" placeholder="Ex. : banane" value="${esc(v.name)}">
-      <label class="f">Valeurs pour 100 g</label>
+      <div class="mode-seg" id="lMode">
+        <button data-lmode="weight">Au poids (100 g)</button>
+        <button data-lmode="unit">À la portion</button>
+      </div>
+      <label class="f" id="lValsLbl">Valeurs pour 100 g</label>
       <div class="per100-grid">
         <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lP" value="${esc(v.per100.protein)}"></div>
         <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lC" value="${esc(v.per100.carbs)}"></div>
@@ -1559,12 +1614,12 @@
         <div class="field alcohol"><label>Alcool</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lA" value="${esc(v.per100.alcohol)}"></div>
       </div>
       <div class="kcal-direct">
-        <div class="kd-lbl">Ou calories seules (pour 100 g)</div>
+        <div class="kd-lbl" id="lKLbl">Ou calories seules (pour 100 g)</div>
         <input type="number" inputmode="decimal" min="0" step="1" id="lK" placeholder="kcal / 100 g" value="${esc(v.per100.kcal)}">
         <div class="kd-hint">À utiliser si tu ne connais pas les macros. Ignoré dès qu'une macro est renseignée.</div>
       </div>
-      <label class="f">Quantité habituelle (g)</label>
-      <input class="t" id="lQty" type="number" inputmode="decimal" min="0" step="1" value="${esc(v.qty)}">
+      <label class="f" id="lQtyLbl">Quantité habituelle (g)</label>
+      <input class="t" id="lQty" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(v.qty)}">
       <div class="calc-box"><div class="ct">Par portion habituelle</div><div class="cv" id="lKcal">0 kcal</div><div class="cm" id="lMacros">0 P · 0 G · 0 L</div></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
@@ -1572,6 +1627,8 @@
       </div></div></div>`;
     bindSheet();
     ["lP","lC","lF","lFi","lA","lK","lQty"].forEach(id=>document.getElementById(id).addEventListener("input",refreshLibCalc));
+    setLibMode(!!(preset&&preset.unit), !preset);
+    sheetRoot.querySelectorAll("[data-lmode]").forEach(b=>b.addEventListener("click",()=>setLibMode(b.dataset.lmode==="unit", true)));
     refreshLibCalc();
   }
   function readLibSheet(){
@@ -1579,7 +1636,7 @@
       per100:{protein:num(document.getElementById("lP").value), carbs:num(document.getElementById("lC").value),
               fat:num(document.getElementById("lF").value), fiber:num(document.getElementById("lFi").value),
               alcohol:num(document.getElementById("lA").value), kcal:num(document.getElementById("lK").value)},
-      qty:num(document.getElementById("lQty").value)};
+      qty:num(document.getElementById("lQty").value), unit:libUnit};
   }
   function refreshLibCalc(){
     const f=readLibSheet(), o=itemTotals(f), d1=v=>Math.round(v*10)/10;
@@ -1635,7 +1692,7 @@
     const list=savedFoods(), k=foodKey(f.name);
     if(!k) return;
     const i=list.findIndex(x=>foodKey(x.name)===k);
-    const entry={name:f.name.trim().slice(0,60), per100:{...f.per100}, qty:num(f.qty)||100};
+    const entry={name:f.name.trim().slice(0,60), per100:{...f.per100}, qty:num(f.qty)||(f.unit?1:100), unit:!!f.unit};
     if(i>=0) list[i]=entry; else list.push(entry);
     list.sort((a,b)=>a.name.localeCompare(b.name,"fr"));
     persistNow();
@@ -1650,7 +1707,7 @@
   function quickAdd(mealKey, idx){
     const f=savedFoods()[idx]; if(!f) return;
     const day=getDay(currentDate);
-    day[mealKey].items.push({name:f.name, per100:{...f.per100}, qty:num(f.qty)||100});
+    day[mealKey].items.push({name:f.name, per100:{...f.per100}, qty:num(f.qty)||(f.unit?1:100), unit:!!f.unit});
     setDay(currentDate, day);
     renderDay();
   }
@@ -1674,7 +1731,7 @@
     return null;
   }
   function openItemSheet(mealKey, preset, editIndex){
-    itemState={mealKey, preset:preset||null, editIndex:(editIndex===undefined?null:editIndex)};
+    itemState={mealKey, preset:preset||null, editIndex:(editIndex===undefined?null:editIndex), unit:!!(preset&&preset.unit)};
     const v=preset||{name:"",per100:{protein:"",carbs:"",fat:"",fiber:"",alcohol:"",kcal:""},qty:100};
     if(v.per100.alcohol===undefined) v.per100.alcohol="";
     if(v.per100.kcal===undefined) v.per100.kcal="";
@@ -1686,7 +1743,11 @@
       <label class="f">Nom de l'aliment</label>
       <input class="t" id="iName" type="text" list="foodNames" autocomplete="off" placeholder="Ex. : steak haché 5 %" value="${esc(v.name)}">
       <datalist id="foodNames">${knownFoodNames().map(n=>`<option value="${esc(n)}"></option>`).join("")}</datalist>
-      <label class="f">Valeurs pour 100 g</label>
+      <div class="mode-seg" id="iMode">
+        <button data-imode="weight">Au poids (100 g)</button>
+        <button data-imode="unit">À la portion</button>
+      </div>
+      <label class="f" id="iValsLbl">Valeurs pour 100 g</label>
       <div class="per100-grid">
         <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iP" value="${esc(v.per100.protein)}"></div>
         <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iC" value="${esc(v.per100.carbs)}"></div>
@@ -1695,13 +1756,13 @@
         <div class="field alcohol"><label>Alcool</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iA" value="${esc(v.per100.alcohol)}"></div>
       </div>
       <div class="kcal-direct">
-        <div class="kd-lbl">Ou calories seules (pour 100 g)</div>
+        <div class="kd-lbl" id="iKLbl">Ou calories seules (pour 100 g)</div>
         <input type="number" inputmode="decimal" min="0" step="1" id="iK" placeholder="kcal / 100 g" value="${esc(v.per100.kcal)}">
         <div class="kd-hint">À utiliser si tu ne connais pas les macros. Ignoré dès qu'une macro est renseignée.</div>
       </div>
-      <label class="f">Quantité mangée (g)</label>
-      <input class="t" id="iQty" type="number" inputmode="decimal" min="0" step="1" value="${esc(v.qty)}">
-      <div class="qty-row"><button data-iqty="50">50 g</button><button data-iqty="100">100 g</button><button data-iqty="200">200 g</button></div>
+      <label class="f" id="iQtyLbl">Quantité mangée (g)</label>
+      <input class="t" id="iQty" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(v.qty)}">
+      <div class="qty-row" id="iQtyRow"></div>
       <div class="calc-box">
         <div class="ct">Ce qui sera ajouté</div>
         <div class="cv" id="iKcal">0 kcal</div>
@@ -1726,6 +1787,8 @@
     });
     sheetRoot.querySelectorAll("[data-iqty]").forEach(b=>b.addEventListener("click",()=>{
       document.getElementById("iQty").value=b.dataset.iqty; refreshItemCalc(); }));
+    setItemMode(itemState.unit, !preset);
+    sheetRoot.querySelectorAll("[data-imode]").forEach(b=>b.addEventListener("click",()=>setItemMode(b.dataset.imode==="unit", true)));
     refreshItemCalc();
     const chk0=document.getElementById("iSave");
     if(chk0 && v.name && isSaved(v.name)) chk0.checked=true;
@@ -1734,12 +1797,27 @@
     });
     setTimeout(()=>{ const n=document.getElementById("iName"); if(n && !v.name) n.focus(); },80);
   }
+  // Deux façons de saisir : au poids (valeurs pour 100 g) ou à la portion (valeurs d'une unité entière).
+  function setItemMode(isUnit, resetQty){
+    itemState.unit=!!isUnit;
+    sheetRoot.querySelectorAll("[data-imode]").forEach(b=>b.classList.toggle("active",(b.dataset.imode==="unit")===itemState.unit));
+    document.getElementById("iValsLbl").textContent = isUnit ? "Valeurs pour une portion entière" : "Valeurs pour 100 g";
+    document.getElementById("iQtyLbl").textContent  = isUnit ? "Nombre de portions" : "Quantité mangée (g)";
+    document.getElementById("iKLbl").textContent    = isUnit ? "Ou calories seules (par portion)" : "Ou calories seules (pour 100 g)";
+    document.getElementById("iQtyRow").innerHTML = isUnit
+      ? `<button data-iqty="0.5">½ portion</button><button data-iqty="1">1 portion</button><button data-iqty="2">2 portions</button>`
+      : `<button data-iqty="50">50 g</button><button data-iqty="100">100 g</button><button data-iqty="200">200 g</button>`;
+    sheetRoot.querySelectorAll("[data-iqty]").forEach(b=>b.addEventListener("click",()=>{
+      document.getElementById("iQty").value=b.dataset.iqty; refreshItemCalc(); }));
+    if(resetQty) document.getElementById("iQty").value = isUnit ? 1 : 100;
+    applyI18n(sheetRoot); refreshItemCalc();
+  }
   function readItemSheet(){
     return {name:(document.getElementById("iName").value||"").trim().slice(0,60),
       per100:{protein:num(document.getElementById("iP").value), carbs:num(document.getElementById("iC").value),
               fat:num(document.getElementById("iF").value), fiber:num(document.getElementById("iFi").value),
               alcohol:num(document.getElementById("iA").value), kcal:num(document.getElementById("iK").value)},
-      qty:num(document.getElementById("iQty").value)};
+      qty:num(document.getElementById("iQty").value), unit:!!(itemState&&itemState.unit)};
   }
   function refreshItemCalc(){
     const it=readItemSheet(), o=itemTotals(it), d1=v=>Math.round(v*10)/10;
@@ -2269,7 +2347,19 @@
     "7 derniers jours · objectif et maintien en pointillés":{en:"Last 7 days · goal and maintenance shown as dashed lines",zh:"最近 7 天 · 目标与维持量以虚线表示",es:"Últimos 7 días · objetivo y mantenimiento en líneas discontinuas",it:"Ultimi 7 giorni · obiettivo e mantenimento tratteggiati",de:"Letzte 7 Tage · Ziel und Erhaltung gestrichelt",pt:"Últimos 7 dias · objetivo e manutenção a tracejado",ar:"آخر 7 أيام · الهدف والحاجة اليومية بخطوط متقطعة",hi:"पिछले 7 दिन · लक्ष्य और मेंटेनेंस बिंदुदार रेखाओं में"},
     "Vert sous l'objectif, orange entre objectif et maintien, rouge au-dessus du maintien":{en:"Green below the goal, orange between goal and maintenance, red above maintenance",zh:"低于目标为绿色，目标与维持量之间为橙色，高于维持量为红色",es:"Verde por debajo del objetivo, naranja entre objetivo y mantenimiento, rojo por encima del mantenimiento",it:"Verde sotto l'obiettivo, arancione tra obiettivo e mantenimento, rosso sopra il mantenimento",de:"Grün unter dem Ziel, orange zwischen Ziel und Erhaltung, rot über der Erhaltung",pt:"Verde abaixo do objetivo, laranja entre objetivo e manutenção, vermelho acima da manutenção",ar:"أخضر تحت الهدف، برتقالي بين الهدف والحاجة اليومية، أحمر فوقها",hi:"लक्ष्य से नीचे हरा, लक्ष्य और मेंटेनेंस के बीच नारंगी, मेंटेनेंस से ऊपर लाल"},
     "Version":{en:"Version",zh:"版本",es:"Versión",it:"Versione",de:"Version",pt:"Versão",ar:"الإصدار",hi:"संस्करण"},
-    "L'application se met à jour toute seule à l'ouverture.":{en:"The app updates itself when you open it.",zh:"应用打开时会自动更新。",es:"La aplicación se actualiza sola al abrirla.",it:"L'app si aggiorna da sola all'apertura.",de:"Die App aktualisiert sich beim Öffnen von selbst.",pt:"A aplicação atualiza-se sozinha ao abrir.",ar:"يُحدَّث التطبيق تلقائيًا عند فتحه.",hi:"ऐप खोलने पर स्वयं अपडेट हो जाता है।"}
+    "L'application se met à jour toute seule à l'ouverture.":{en:"The app updates itself when you open it.",zh:"应用打开时会自动更新。",es:"La aplicación se actualiza sola al abrirla.",it:"L'app si aggiorna da sola all'apertura.",de:"Die App aktualisiert sich beim Öffnen von selbst.",pt:"A aplicação atualiza-se sozinha ao abrir.",ar:"يُحدَّث التطبيق تلقائيًا عند فتحه.",hi:"ऐप खोलने पर स्वयं अपडेट हो जाता है।"},
+    "Au poids (100 g)":{en:"By weight (100 g)",zh:"按重量（100 克）",es:"Por peso (100 g)",it:"A peso (100 g)",de:"Nach Gewicht (100 g)",pt:"Por peso (100 g)",ar:"بالوزن (100 غ)",hi:"वज़न से (100 ग्राम)"},
+    "À la portion":{en:"Per portion",zh:"按份",es:"Por porción",it:"A porzione",de:"Pro Portion",pt:"Por porção",ar:"بالحصة",hi:"प्रति हिस्सा"},
+    "Valeurs pour une portion entière":{en:"Values for one whole portion",zh:"一整份的数值",es:"Valores para una porción entera",it:"Valori per una porzione intera",de:"Werte für eine ganze Portion",pt:"Valores para uma porção inteira",ar:"القيم لحصة كاملة",hi:"एक पूरे हिस्से के मान"},
+    "Nombre de portions":{en:"Number of portions",zh:"份数",es:"Número de porciones",it:"Numero di porzioni",de:"Anzahl Portionen",pt:"Número de porções",ar:"عدد الحصص",hi:"हिस्सों की संख्या"},
+    "Nombre de portions par défaut":{en:"Default number of portions",zh:"默认份数",es:"Número de porciones por defecto",it:"Numero di porzioni predefinito",de:"Standardanzahl Portionen",pt:"Número de porções por omissão",ar:"عدد الحصص الافتراضي",hi:"डिफ़ॉल्ट हिस्सों की संख्या"},
+    "Ou calories seules (par portion)":{en:"Or calories only (per portion)",zh:"或仅填热量（每份）",es:"O solo calorías (por porción)",it:"Oppure solo calorie (per porzione)",de:"Oder nur Kalorien (pro Portion)",pt:"Ou apenas calorias (por porção)",ar:"أو السعرات فقط (لكل حصة)",hi:"या केवल कैलोरी (प्रति हिस्सा)"},
+    "portion":{en:"portion",zh:"份",es:"porción",it:"porzione",de:"Portion",pt:"porção",ar:"حصة",hi:"हिस्सा"},
+    "portions":{en:"portions",zh:"份",es:"porciones",it:"porzioni",de:"Portionen",pt:"porções",ar:"حصص",hi:"हिस्से"},
+    "par portion":{en:"per portion",zh:"每份",es:"por porción",it:"per porzione",de:"pro Portion",pt:"por porção",ar:"لكل حصة",hi:"प्रति हिस्सा"},
+    "½ portion":{en:"½ portion",zh:"半份",es:"½ porción",it:"½ porzione",de:"½ Portion",pt:"½ porção",ar:"نصف حصة",hi:"½ हिस्सा"},
+    "1 portion":{en:"1 portion",zh:"1 份",es:"1 porción",it:"1 porzione",de:"1 Portion",pt:"1 porção",ar:"حصة واحدة",hi:"1 हिस्सा"},
+    "2 portions":{en:"2 portions",zh:"2 份",es:"2 porciones",it:"2 porzioni",de:"2 Portionen",pt:"2 porções",ar:"حصتان",hi:"2 हिस्से"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2301,6 +2391,7 @@
     [/^\+(\d+) ml$/, {en:"+$1 ml", zh:"+$1 毫升", ar:"+$1 مل", hi:"+$1 मि.ली."}],
     [/^−(\d+) ml$/, {en:"−$1 ml", zh:"−$1 毫升", ar:"−$1 مل", hi:"−$1 मि.ली."}],
     [/^(\d+) g · (\d+) kcal$/, {en:"$1 g · $2 kcal", zh:"$1 克 · $2 千卡", ar:"$1 غ · $2 سعرة", hi:"$1 ग्राम · $2 kcal"}],
+    [/^(.+) portions?$/, {en:"$1 portion(s)", zh:"$1 份", es:"$1 porción(es)", it:"$1 porzione/i", de:"$1 Portion(en)", pt:"$1 porção(ões)", ar:"$1 حصة", hi:"$1 हिस्सा"}],
     [/^(\d+) g$/, {en:"$1 g", zh:"$1 克", ar:"$1 غ", hi:"$1 ग्राम"}],
     [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F", zh:"$1 克 · 蛋白 $2 / 碳水 $3 / 脂肪 $4"}],
     [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F", zh:"蛋白 $1 · 碳水 $2 · 脂肪 $3"}],
