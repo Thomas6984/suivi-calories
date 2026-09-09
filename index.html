@@ -288,6 +288,17 @@
   .sheet-actions .btn{margin-top:0;}
 
   .bar-mark{opacity:.95;}
+  .meal-split{display:flex;align-items:center;gap:14px;margin-top:14px;padding:12px;background:var(--surface-2);
+    border:1px solid var(--line);border-radius:14px;}
+  .meal-split .ms-legend{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .ms-row{display:flex;align-items:center;gap:7px;font-size:12.5px;}
+  .ms-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+  .ms-name{flex:1;color:var(--ink-soft);font-weight:700;}
+  .ms-pct{font-weight:900;font-variant-numeric:tabular-nums;}
+  .ms-g{font-size:11px;color:var(--ink-faint);font-weight:700;min-width:34px;text-align:right;}
+  .food .fbar{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:6px;background:var(--track);}
+  .food .fbar span{display:block;height:100%;}
+  .food .fshare{font-size:10.5px;color:var(--ink-faint);font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;}
   .food-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
   .food{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:11px 12px;}
   .food .fn{flex:1;min-width:0;}
@@ -911,6 +922,20 @@
       return `<div class="legend-row"><span class="legend-dot" style="background:${p.color}"></span><span class="legend-label">${p.label}</span>`+
         `<span class="legend-val">${pct}%</span><span class="legend-g${over?" over":""}">${Math.round(g)} g</span></div>`; }).join("");
   }
+  function splitParts(t){
+    const arr=[{key:"protein",label:"Protéines",color:"var(--protein)",val:num(t.protein)*KCAL.protein},
+               {key:"carbs",label:"Glucides",color:"var(--carbs)",val:num(t.carbs)*KCAL.carbs},
+               {key:"fat",label:"Lipides",color:"var(--fat)",val:num(t.fat)*KCAL.fat}];
+    if(num(t.fiber)>0) arr.push({key:"fiber",label:"Fibres",color:"var(--violet)",val:num(t.fiber)*KCAL.fiber});
+    return arr;
+  }
+  function splitBlock(t, size){
+    const parts=splitParts(t), total=parts.reduce((s,x)=>s+x.val,0), d1=v=>Math.round(v*10)/10;
+    const leg=parts.map(x=>{ const pct=total>0?Math.round(x.val/total*100):0;
+      return `<div class="ms-row"><span class="ms-dot" style="background:${x.color}"></span><span class="ms-name">${x.label}</span>`+
+             `<span class="ms-pct" style="color:${x.color}">${pct} %</span><span class="ms-g">${d1(num(t[x.key]))} g</span></div>`; }).join("");
+    return `<div class="meal-split">${donutChart(parts, size||92)}<div class="ms-legend">${leg}</div></div>`;
+  }
   function macroBarsHtml(totals){
     return MACROS.map(m=>{ const val=totals[m.key]||0, goal=db.settings[m.key+"Goal"]||0;
       const over = goal>0 && val>goal;
@@ -1229,15 +1254,23 @@
       const esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
       const d1=v=>Math.round(v*10)/10;
       const rows = items.length ? items.map((it,i)=>{ const o=itemTotals(it);
+        const mtot0=mealTotals(meal);
+        const share = mtot0.cal>0 ? Math.round(o.cal/mtot0.cal*100) : 0;
+        const parts=splitParts(o), ptot=parts.reduce((sm,x)=>sm+x.val,0);
+        const seg = ptot>0 ? parts.map(x=>`<span style="width:${(x.val/ptot*100).toFixed(1)}%;background:${x.color}"></span>`).join("") : "";
+        const pcts = ptot>0 ? parts.map(x=>Math.round(x.val/ptot*100)+" % "+x.label.toLowerCase()).join(" · ") : "";
         return `<div class="food"><div class="fn"><div class="fname">${esc(it.name||"Aliment")}</div>`+
-          `<div class="fmeta">${d1(num(it.qty))} g · ${d1(o.protein)} P / ${d1(o.carbs)} G / ${d1(o.fat)} L${o.fiber?" / "+d1(o.fiber)+" F":""}</div></div>`+
+          `<div class="fmeta">${d1(num(it.qty))} g · ${d1(o.protein)} P / ${d1(o.carbs)} G / ${d1(o.fat)} L${o.fiber?" / "+d1(o.fiber)+" F":""}</div>`+
+          (seg?`<div class="fbar">${seg}</div><div class="fshare">${pcts} — ${share} % du repas</div>`:"")+
+          `</div>`+
           `<div class="fk">${Math.round(o.cal)} kcal</div>`+
           `<button class="fx" data-del-item="${m.key}:${i}" aria-label="Supprimer">×</button></div>`; }).join("")
         : `<div class="food-empty">Aucun aliment</div>`;
       const note = m.hasNote ? `<textarea class="meal-note" data-field="note" rows="2" placeholder="Note libre">${esc(meal.note)}</textarea>` : "";
       const hint = m.hint ? `<div class="meal-hint">${m.hint}</div>` : "";
+      const split = items.length ? splitBlock(mealTotals(meal), 92) : "";
       return `<div class="card meal-card" data-meal="${m.key}"><div class="meal-head"><div><div class="meal-title">${m.label}</div>${hint}</div><div class="meal-sub"></div></div>`+
-        `<div class="food-list">${rows}</div>${note}`+
+        `<div class="food-list">${rows}</div>${split}${note}`+
         `<div class="add-row">`+
           `<button class="add-btn" data-additem="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter un aliment</button>`+
           `<button class="add-btn" data-scan="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scanner</button>`+
@@ -1398,6 +1431,21 @@
   // ================= AJOUT D'UN ALIMENT =================
   // On saisit les valeurs pour 100 g puis la quantité mangée : le calcul est automatique.
   let itemState=null;
+  function knownFoodNames(){
+    const set=new Map();
+    Object.keys(db.days).forEach(iso=>{ const d=migrateDay(db.days[iso]);
+      MEALS.forEach(m=>((d[m.key].items)||[]).forEach(it=>{ const n=(it.name||"").trim();
+        if(n && n!=="Aliment" && n!=="Saisie manuelle") set.set(n.toLowerCase(), n); })); });
+    return [...set.values()].sort((a,b)=>a.localeCompare(b,"fr")).slice(0,80);
+  }
+  function lastValuesFor(name){
+    const key=(name||"").trim().toLowerCase(); if(!key) return null;
+    const dates=Object.keys(db.days).sort().reverse();
+    for(const iso of dates){ const d=migrateDay(db.days[iso]);
+      for(const m of MEALS){ const items=(d[m.key].items)||[];
+        for(let i=items.length-1;i>=0;i--){ if((items[i].name||"").trim().toLowerCase()===key) return items[i].per100; } } }
+    return null;
+  }
   function openItemSheet(mealKey, preset){
     itemState={mealKey, preset:preset||null};
     const v=preset||{name:"",per100:{protein:"",carbs:"",fat:"",fiber:""},qty:100};
@@ -1407,7 +1455,8 @@
       <h3>Ajouter un aliment</h3>
       <p class="sub">Saisis les valeurs pour 100 g, puis la quantité mangée. Destination : ${esc(mealLbl)}.</p>
       <label class="f">Nom de l'aliment</label>
-      <input class="t" id="iName" type="text" placeholder="Ex. : steak haché 5 %" value="${esc(v.name)}">
+      <input class="t" id="iName" type="text" list="foodNames" autocomplete="off" placeholder="Ex. : steak haché 5 %" value="${esc(v.name)}">
+      <datalist id="foodNames">${knownFoodNames().map(n=>`<option value="${esc(n)}"></option>`).join("")}</datalist>
       <label class="f">Valeurs pour 100 g</label>
       <div class="per100-grid">
         <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iP" value="${esc(v.per100.protein)}"></div>
@@ -1423,12 +1472,20 @@
         <div class="cv" id="iKcal">0 kcal</div>
         <div class="cm" id="iMacros">0 P · 0 G · 0 L</div>
       </div>
+      <div id="iSplit"></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
         <button class="btn primary" data-act="saveItem">Ajouter au repas</button>
       </div></div></div>`;
     bindSheet();
     ["iP","iC","iF","iFi","iQty"].forEach(id=>document.getElementById(id).addEventListener("input",refreshItemCalc));
+    document.getElementById("iName").addEventListener("input",(e)=>{
+      const cur=readItemSheet().per100;
+      if(cur.protein||cur.carbs||cur.fat||cur.fiber) return;
+      const prev=lastValuesFor(e.target.value);
+      if(prev){ document.getElementById("iP").value=prev.protein||""; document.getElementById("iC").value=prev.carbs||"";
+                document.getElementById("iF").value=prev.fat||""; document.getElementById("iFi").value=prev.fiber||""; refreshItemCalc(); }
+    });
     sheetRoot.querySelectorAll("[data-iqty]").forEach(b=>b.addEventListener("click",()=>{
       document.getElementById("iQty").value=b.dataset.iqty; refreshItemCalc(); }));
     refreshItemCalc();
@@ -1444,6 +1501,7 @@
     const it=readItemSheet(), o=itemTotals(it), d1=v=>Math.round(v*10)/10;
     document.getElementById("iKcal").textContent=Math.round(o.cal)+" kcal";
     document.getElementById("iMacros").textContent=d1(o.protein)+" P · "+d1(o.carbs)+" G · "+d1(o.fat)+" L"+(o.fiber?" · "+d1(o.fiber)+" F":"");
+    document.getElementById("iSplit").innerHTML = o.cal>0 ? splitBlock(o, 84) : "";
     applyI18n(sheetRoot);
   }
   function saveItem(){
@@ -1913,7 +1971,8 @@
     "Ajouter au repas":["Add to meal","加入本餐"],
     "Modifier avant d'ajouter":["Edit before adding","添加前修改"],
     "Note libre":["Free note","备注"],
-    "Supprimer":["Delete","删除"]
+    "Supprimer":["Delete","删除"],
+    "du repas":["of the meal","占本餐"]
   };
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -1945,6 +2004,9 @@
     [/^(\d+) g$/, {en:"$1 g", zh:"$1 克"}],
     [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F", zh:"$1 克 · 蛋白 $2 / 碳水 $3 / 脂肪 $4"}],
     [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F", zh:"蛋白 $1 · 碳水 $2 · 脂肪 $3"}],
+    [/^(.+) % du repas$/, {en:"$1 % of the meal", zh:"占本餐 $1 %"}],
+    [/^(.+) — (.+) % du repas$/, {en:"$1 — $2 % of the meal", zh:"$1 — 占本餐 $2 %"}],
+    [/^(\d+) %$/, {en:"$1 %", zh:"$1 %"}],
     [/^Destination : (.+)\.$/, {en:"Goes to: $1.", zh:"归入：$1。"}]
   ];
   let translatedOnce=false;
