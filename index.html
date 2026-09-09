@@ -288,6 +288,36 @@
   .sheet-actions .btn{margin-top:0;}
 
   .bar-mark{opacity:.95;}
+  .food-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .food{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:11px 12px;}
+  .food .fn{flex:1;min-width:0;}
+  .food .fname{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .food .fmeta{font-size:11.5px;color:var(--ink-soft);font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .food .fk{font-size:14px;font-weight:900;color:var(--acc);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .food .fx{background:rgba(var(--bad-rgb),.12);border:1px solid rgba(var(--bad-rgb),.28);color:var(--bad);border-radius:9px;
+    width:28px;height:28px;font-size:17px;font-family:inherit;line-height:1;flex-shrink:0;}
+  .food-empty{font-size:13px;color:var(--ink-faint);font-weight:600;text-align:center;padding:14px 0;}
+  .add-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .add-btn{border:1px dashed var(--line-strong);background:rgba(255,255,255,.04);color:var(--ink-soft);border-radius:13px;
+    padding:12px 6px;font-size:13px;font-weight:800;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;
+    transition:transform .12s ease, background .2s ease;}
+  .add-btn:active{transform:scale(.98);background:rgba(255,255,255,.09);}
+  .add-btn svg{width:16px;height:16px;flex-shrink:0;}
+  .per100-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+  .calc-box{background:rgba(var(--acc-rgb),.10);border:1px solid rgba(var(--acc-rgb),.28);border-radius:14px;padding:13px 14px;margin-bottom:14px;}
+  .calc-box .ct{font-size:11.5px;font-weight:800;color:var(--acc);text-transform:uppercase;letter-spacing:.05em;}
+  .calc-box .cv{font-size:22px;font-weight:900;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .calc-box .cm{font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;}
+  .water-row{display:flex;align-items:baseline;gap:8px;margin-top:6px;}
+  .water-val{font-size:34px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--fat-c);}
+  .water-goal{font-size:14px;font-weight:700;color:var(--ink-soft);}
+  .water-track{height:12px;background:var(--track);border-radius:7px;overflow:hidden;margin-top:12px;box-shadow:inset 0 1px 3px rgba(0,0,0,.5);}
+  .water-track>div{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--fat-c),#9FD0FF);transition:width .5s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 14px rgba(var(--fat-rgb),.55);}
+  .water-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;}
+  .water-btns button{background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink);border-radius:12px;
+    padding:12px 2px;font-size:13px;font-weight:800;font-family:inherit;transition:transform .1s;}
+  .water-btns button:active{transform:scale(.95);}
+  .water-btns button.minus{color:var(--bad);}
   .lang-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .lang-btn{background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink-soft);border-radius:12px;
     padding:13px 4px;font-size:14px;font-weight:800;font-family:inherit;transition:transform .12s ease;}
@@ -412,6 +442,19 @@
         <div class="macro-bars" id="dayMacroBars"></div>
       </div>
 
+      <div class="card">
+        <div class="card-head"><div class="card-title">Hydratation</div><div class="right" id="waterPct">0 %</div></div>
+        <div class="card-sub">Ajoute au fur et à mesure de la journée</div>
+        <div class="water-row"><span class="water-val" id="waterVal">0</span><span class="water-goal" id="waterGoalLbl">/ 2500 ml</span></div>
+        <div class="water-track"><div id="waterFill" style="width:0%"></div></div>
+        <div class="water-btns">
+          <button data-water="250">+250 ml</button>
+          <button data-water="330">+330 ml</button>
+          <button data-water="500">+500 ml</button>
+          <button data-water="-250" class="minus">−250 ml</button>
+        </div>
+      </div>
+
       <section class="title">Repas · calories automatiques : 4 kcal/g protéines et glucides, 9 kcal/g lipides, 2 kcal/g fibres (via le scan)</section>
       <div id="mealsContainer"></div>
     </div>
@@ -457,6 +500,18 @@
         <div class="macro-bars" id="statsMacroBars"></div>
       </div>
 
+      <div class="card">
+        <div class="card-head"><div class="card-title">Hydratation</div><div class="right">ml / jour</div></div>
+        <div class="card-sub" id="wsSub"></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="num" id="wsAvg">—</div><div class="lbl">moyenne / jour</div></div>
+          <div class="stat"><div class="num" id="wsTotal">—</div><div class="lbl">total bu</div></div>
+          <div class="stat"><div class="num" id="wsDays">—</div><div class="lbl">jours à l'objectif</div></div>
+          <div class="stat"><div class="num" id="wsGoal">—</div><div class="lbl">objectif quotidien</div></div>
+        </div>
+        <div class="chart" id="waterChart"></div>
+      </div>
+
       <section class="title">Détail par jour</section>
       <div class="card day-list" id="statsDays"></div>
     </div>
@@ -479,6 +534,7 @@
         <div class="settings-field"><label>Protéines (g)</label><input type="number" inputmode="numeric" id="setProtein"></div>
         <div class="settings-field"><label>Glucides (g)</label><input type="number" inputmode="numeric" id="setCarbs"></div>
         <div class="settings-field"><label>Lipides (g)</label><input type="number" inputmode="numeric" id="setFat"></div>
+        <div class="settings-field"><label>Eau (ml)</label><input type="number" inputmode="numeric" id="setWater"><div class="hint">Objectif quotidien d'hydratation, en millilitres.</div></div>
         <button class="btn primary" id="saveSettings">Enregistrer</button>
         <div class="note" id="saveNote"></div>
       </div>
@@ -651,10 +707,28 @@
     {key:"fat", label:"Lipides", color:"var(--fat)", kcalPerG:9}
   ];
   const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65,
-                            weightGoal:78, height:1.91, lang:"fr"};
+                            weightGoal:78, height:1.91, waterGoal:2500, lang:"fr"};
   // Aucune donnée pré-chargée : chaque installation démarre vierge.
-  const emptyMeal = () => ({protein:0, carbs:0, fat:0, fiber:0, note:""});
-  const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal()});
+  const emptyMeal = () => ({items:[], note:""});
+  const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal(), water:0});
+  const emptyItem = () => ({name:"", per100:{protein:0,carbs:0,fat:0,fiber:0}, qty:100});
+  // Les anciennes saisies (macros cumulées par repas) deviennent un aliment unique de 100 g :
+  // les totaux restent rigoureusement identiques.
+  function migrateMeal(m){
+    if(!m || typeof m!=="object") return emptyMeal();
+    if(Array.isArray(m.items)) return {items:m.items, note:m.note||""};
+    const p=num(m.protein), c=num(m.carbs), f=num(m.fat), fi=num(m.fiber), cal=num(m.cal);
+    const out={items:[], note:m.note||""};
+    if(p||c||f||fi) out.items.push({name:"Saisie manuelle", per100:{protein:p,carbs:c,fat:f,fiber:fi}, qty:100});
+    else if(cal) out.items.push({name:"Saisie manuelle", per100:{protein:0,carbs:0,fat:0,fiber:0}, qty:100, kcal:cal});
+    return out;
+  }
+  function migrateDay(d){
+    const out={water:num(d&&d.water)};
+    if(d&&d.maint) out.maint=d.maint;
+    MEALS.forEach(m=>{ out[m.key]=migrateMeal(d?d[m.key]:null); });
+    return out;
+  }
 
   const LIGHT = {good:"var(--good)", bad:"var(--bad)", empty:"var(--track)", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line-strong)"};
   const DARK  = {good:"var(--mint)", bad:"var(--coral)", empty:"rgba(255,255,255,.12)", ref:"rgba(255,255,255,.5)", text:"rgba(255,255,255,.55)", zero:"rgba(255,255,255,.25)"};
@@ -704,11 +778,12 @@
     catch(e){ console.error("Écriture impossible", e); return false; }
   }
   function persistDebounced(){ clearTimeout(saveTimer); saveTimer=setTimeout(persistNow,300); }
-  function getDay(iso){ if(!db.days[iso]) return emptyDay(); return {...emptyDay(), ...db.days[iso]}; }
+  function getDay(iso){ return db.days[iso] ? migrateDay(db.days[iso]) : emptyDay(); }
   function setDay(iso,data){
     const t=totalsOf(data);
     const anyNote = MEALS.some(m=>mealHasNote(data[m.key]));
-    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && t.fiber===0 && !anyNote) delete db.days[iso]; else db.days[iso]=data;
+    const anyItem = MEALS.some(m=>((data[m.key]||{}).items||[]).length>0);
+    if(!anyItem && !anyNote && !num(data.water)) delete db.days[iso]; else db.days[iso]=data;
     persistDebounced();
   }
   function loggedDates(){ return Object.keys(db.days).sort(); }
@@ -718,29 +793,39 @@
   }
   function hasMaintOverride(iso){ return !!(db.days[iso] && Number(db.days[iso].maint)>0); }
   function setDayMaintenance(iso, val){
-    if(!db.days[iso]) db.days[iso]=emptyDay();
+    if(!db.days[iso]) db.days[iso]=emptyDay(); else db.days[iso]=migrateDay(db.days[iso]);
     if(val>0) db.days[iso].maint=Math.round(val); else delete db.days[iso].maint;
-    const day=db.days[iso], t=totalsOf(day), anyNote=MEALS.some(m=>mealHasNote(day[m.key]));
-    if(t.cal===0 && t.protein===0 && t.carbs===0 && t.fat===0 && t.fiber===0 && !anyNote && !day.maint) delete db.days[iso];
+    const day=db.days[iso], anyItem=MEALS.some(m=>((day[m.key]||{}).items||[]).length>0);
+    if(!anyItem && !MEALS.some(m=>mealHasNote(day[m.key])) && !num(day.water) && !day.maint) delete db.days[iso];
     persistNow();
   }
   function escHtml(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
   // ---------- computations ----------
   function num(v){ const n=Number(v); return isFinite(n)&&n>0?n:0; }
-  function mealCal(meal){
-    meal = meal||{};
-    const fromMacros = num(meal.protein)*KCAL.protein + num(meal.carbs)*KCAL.carbs + num(meal.fat)*KCAL.fat + num(meal.fiber)*KCAL.fiber;
-    // anciennes saisies (calories tapées à la main, sans macros) : on garde leur valeur
-    return fromMacros>0 ? fromMacros : num(meal.cal);
+  // Un aliment : valeurs pour 100 g × quantité réellement mangée.
+  function itemTotals(it){
+    const q=num(it&&it.qty)/100, p=(it&&it.per100)||{};
+    const o={protein:num(p.protein)*q, carbs:num(p.carbs)*q, fat:num(p.fat)*q, fiber:num(p.fiber)*q};
+    o.cal = (num(it&&it.kcal)>0) ? num(it.kcal)
+          : o.protein*KCAL.protein + o.carbs*KCAL.carbs + o.fat*KCAL.fat + o.fiber*KCAL.fiber;
+    return o;
   }
+  function mealTotals(meal){
+    const t={cal:0,protein:0,carbs:0,fat:0,fiber:0};
+    ((meal&&meal.items)||[]).forEach(it=>{ const o=itemTotals(it);
+      t.cal+=o.cal; t.protein+=o.protein; t.carbs+=o.carbs; t.fat+=o.fat; t.fiber+=o.fiber; });
+    return t;
+  }
+  function mealCal(meal){ return mealTotals(meal).cal; }
   function mealHasNote(meal){ return !!(meal && typeof meal.note==="string" && meal.note.trim()); }
   function totalsOf(day){
     const t={cal:0,protein:0,carbs:0,fat:0,fiber:0};
-    MEALS.forEach(m=>{ const meal=day[m.key]||emptyMeal();
-      t.cal+=mealCal(meal); t.protein+=num(meal.protein); t.carbs+=num(meal.carbs); t.fat+=num(meal.fat); t.fiber+=num(meal.fiber); });
+    MEALS.forEach(m=>{ const o=mealTotals(day[m.key]);
+      t.cal+=o.cal; t.protein+=o.protein; t.carbs+=o.carbs; t.fat+=o.fat; t.fiber+=o.fiber; });
     return t;
   }
+  function dayWater(iso){ return num((db.days[iso]||{}).water); }
   function macroCalorieSplit(totals){ return MACROS.map(m=>({...m, val:(totals[m.key]||0)*m.kcalPerG})); }
   function fmtSigned(v){ v=Math.round(v); return (v>0?"+":"")+v; }        // v = cal - maint (positif = surplus)
   function fmtBalance(balance){ const r=Math.round(balance); return r>=0 ? "-"+r : "+"+(-r); } // balance = maint - cal
@@ -1117,7 +1202,13 @@
     document.getElementById("dayDonut").innerHTML=donutChart(parts);
     document.getElementById("dayLegend").innerHTML=donutLegendHtml(parts, totals);
     document.getElementById("dayMacroBars").innerHTML=macroBarsHtml(totals);
-    MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const c=mealCal(day[m.key]), fi=num((day[m.key]||{}).fiber);
+    const wGoal=num(db.settings.waterGoal)||0, wVal=num(day.water);
+    document.getElementById("waterVal").textContent=Math.round(wVal);
+    document.getElementById("waterGoalLbl").textContent="/ "+Math.round(wGoal)+" ml";
+    const wPct=wGoal>0?Math.round(wVal/wGoal*100):0;
+    document.getElementById("waterPct").textContent=wPct+" %";
+    document.getElementById("waterFill").style.width=Math.min(100,wPct)+"%";
+    MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const mt=mealTotals(day[m.key]), c=mt.cal, fi=mt.fiber;
       el.textContent=c>0?Math.round(c)+" kcal"+(fi>0?" · "+(Math.round(fi*10)/10)+" g fibres":""):""; } });
     renderMiniTrend();
   }
@@ -1133,27 +1224,39 @@
     const picker=document.getElementById("datePicker"); picker.value=currentDate; picker.max=todayISO();
     const day=getDay(currentDate);
     const container=document.getElementById("mealsContainer");
-    container.innerHTML=MEALS.map(m=>{ const meal=day[m.key]||emptyMeal();
-      const f=(field,label)=>`<div class="field"><label>${label}</label><input type="number" inputmode="decimal" min="0" data-field="${field}" value="${num(meal[field])||""}"></div>`;
-      const esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
-      const note = m.hasNote ? `<textarea class="meal-note" data-field="note" rows="2" placeholder="Ex. : 1 banane + shaker protéiné l'après-midi">${esc(meal.note)}</textarea>` : "";
+    container.innerHTML=MEALS.map(m=>{
+      const meal=day[m.key]||emptyMeal(), items=meal.items||[];
+      const esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+      const d1=v=>Math.round(v*10)/10;
+      const rows = items.length ? items.map((it,i)=>{ const o=itemTotals(it);
+        return `<div class="food"><div class="fn"><div class="fname">${esc(it.name||"Aliment")}</div>`+
+          `<div class="fmeta">${d1(num(it.qty))} g · ${d1(o.protein)} P / ${d1(o.carbs)} G / ${d1(o.fat)} L${o.fiber?" / "+d1(o.fiber)+" F":""}</div></div>`+
+          `<div class="fk">${Math.round(o.cal)} kcal</div>`+
+          `<button class="fx" data-del-item="${m.key}:${i}" aria-label="Supprimer">×</button></div>`; }).join("")
+        : `<div class="food-empty">Aucun aliment</div>`;
+      const note = m.hasNote ? `<textarea class="meal-note" data-field="note" rows="2" placeholder="Note libre">${esc(meal.note)}</textarea>` : "";
       const hint = m.hint ? `<div class="meal-hint">${m.hint}</div>` : "";
-      const scan = `<button class="scan-btn" data-scan="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scanner un code-barres</button>`;
       return `<div class="card meal-card" data-meal="${m.key}"><div class="meal-head"><div><div class="meal-title">${m.label}</div>${hint}</div><div class="meal-sub"></div></div>`+
-        `<div class="meal-grid three">${f("protein","Protéines (g)")}${f("carbs","Glucides (g)")}${f("fat","Lipides (g)")}</div>${note}${scan}</div>`; }).join("");
-    container.querySelectorAll("input, textarea").forEach(inp=>inp.addEventListener("input", onMealInput));
+        `<div class="food-list">${rows}</div>${note}`+
+        `<div class="add-row">`+
+          `<button class="add-btn" data-additem="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter un aliment</button>`+
+          `<button class="add-btn" data-scan="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scanner</button>`+
+        `</div></div>`; }).join("");
+    container.querySelectorAll("textarea").forEach(inp=>inp.addEventListener("input", onNoteInput));
     container.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>openScanner(b.dataset.scan)));
+    container.querySelectorAll("[data-additem]").forEach(b=>b.addEventListener("click",()=>openItemSheet(b.dataset.additem)));
+    container.querySelectorAll("[data-del-item]").forEach(b=>b.addEventListener("click",()=>{
+      const parts=b.dataset.delItem.split(":"); const dd=getDay(currentDate);
+      (dd[parts[0]].items||[]).splice(Number(parts[1]),1); setDay(currentDate,dd); renderDay();
+    }));
     updateDayCards(day);
     applyI18n();
   }
-  function onMealInput(e){
-    const mealKey=e.target.closest(".meal-card").dataset.meal, field=e.target.dataset.field;
+  function onNoteInput(e){
+    const mealKey=e.target.closest(".meal-card").dataset.meal;
     const day=getDay(currentDate);
-    day[mealKey]={...emptyMeal(), ...(day[mealKey]||{})};
-    day[mealKey][field] = field==="note" ? String(e.target.value).slice(0,300) : num(e.target.value);
-    if(num(day[mealKey].protein)===0 && num(day[mealKey].carbs)===0 && num(day[mealKey].fat)===0) day[mealKey].fiber=0;
+    day[mealKey].note=String(e.target.value).slice(0,300);
     setDay(currentDate, day);
-    updateDayCards(day);
   }
 
   // ---------- stats view ----------
@@ -1170,7 +1273,8 @@
     document.getElementById("statsTitle").textContent=title;
     document.getElementById("statsRange").textContent = (currentPeriod==="all" && logged.length) ? "depuis le "+mediumLabel(start) : mediumLabel(start)+" → "+mediumLabel(today);
 
-    let cnt=0, sumCal=0, sumBal=0, sumP=0, sumC=0, sumF=0, defDays=0, cum=0;
+    let cnt=0, sumCal=0, sumBal=0, sumP=0, sumC=0, sumF=0, defDays=0, cum=0, sumWater=0, waterDays=0, waterOk=0;
+    const wGoalS=num(db.settings.waterGoal); const wBars=[];
     const bars=[], rows=[], cumPts=[];
     for(let i=0;i<nDays;i++){
       const iso=addDays(start,i);
@@ -1180,6 +1284,8 @@
       let diffTxt="—", color="var(--ink-faint)";
       if(has){ cnt++; sumCal+=t.cal; const bal=dayMaint-t.cal; sumBal+=bal; sumP+=t.protein; sumC+=t.carbs; sumF+=t.fat; if(bal>=0) defDays++;
         cum+=(t.cal-dayMaint); diffTxt=fmtBalance(bal); color=bal>=0?"var(--good)":"var(--bad)"; }
+      const wv=dayWater(iso); if(wv>0){ sumWater+=wv; waterDays++; if(wGoalS>0 && wv>=wGoalS) waterOk++; }
+      wBars.push({iso, label:shortLabel(iso), value:wv, hasData:wv>0, ref:wGoalS});
       bars.push({iso, label:shortLabel(iso), value:t.cal, hasData:has, ref:dayMaint, override:ov});
       cumPts.push({label:shortLabel(iso), value:cum});
       rows.push(`<div class="day-row"><div class="dname">${labelForDate(iso)}</div><div class="dcal">${has?Math.round(t.cal)+" kcal":"non renseigné"}</div><div class="ddiff" style="color:${color}">${diffTxt}</div></div>`);
@@ -1201,6 +1307,7 @@
     document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, maint, LIGHT);
     document.getElementById("cumChart").innerHTML=lineChartSvg(cnt?cumPts:[], LIGHT);
     document.getElementById("statsDays").innerHTML = rows.length ? rows.reverse().join("") : `<div class="empty-note">Aucune donnée</div>`;
+    renderWaterStats(sumWater, waterDays, waterOk, nDays, wBars, wGoalS);
 
     const bal=document.getElementById("statBalance"), avgBal=document.getElementById("statAvgBal"), avgCal=document.getElementById("statAvgCal"), dd=document.getElementById("statDeficitDays");
     const donutEl=document.getElementById("statsDonut"), legendEl=document.getElementById("statsLegend"), barsEl=document.getElementById("statsMacroBars");
@@ -1225,6 +1332,23 @@
     document.getElementById("macroSub").textContent="Moyenne par jour renseigné, comparée à tes objectifs";
   }
 
+  function renderWaterStats(sum, days, ok, nDays, wBars, goal){
+    const el=id=>document.getElementById(id), avg=days?sum/days:0, d1=v=>Math.round(v*10)/10;
+    el("wsGoal").innerHTML = goal ? Math.round(goal)+"<small>ml</small>" : "—";
+    el("wsAvg").innerHTML = days ? Math.round(avg)+"<small>ml</small>" : "—";
+    el("wsAvg").className = "num "+(days ? (goal>0 && avg>=goal ? "good":"bad") : "");
+    el("wsTotal").innerHTML = days ? String(d1(sum/1000)).replace(".",decSep())+"<small>L</small>" : "—";
+    el("wsTotal").className = "num";
+    el("wsDays").innerHTML = days ? ok+"<small>/ "+days+"</small>" : "—";
+    el("wsDays").className = "num "+(days ? (ok>=days/2?"good":"bad") : "");
+    el("wsSub").textContent = days ? `${days} jour${days>1?"s":""} renseigné${days>1?"s":""} sur ${nDays}` : "Aucun jour renseigné sur cette période";
+    let cb=wBars;
+    if(nDays>45){ const wk={}, order=[];
+      wBars.forEach(b=>{ const k=weekStart(b.iso); if(!wk[k]){wk[k]={s:0,n:0};order.push(k);} if(b.hasData){wk[k].s+=b.value;wk[k].n++;} });
+      cb=order.map(k=>({label:shortLabel(k), value:wk[k].n?wk[k].s/wk[k].n:0, hasData:wk[k].n>0, ref:goal})); }
+    el("waterChart").innerHTML=barChartSvg(cb, goal, {...LIGHT, good:"var(--fat-c)", bad:"var(--fat-c)"});
+  }
+
   // ---------- settings view ----------
   function renderSettings(){
     document.getElementById("setMaint").value=db.settings.maintenance;
@@ -1232,6 +1356,7 @@
     document.getElementById("setProtein").value=db.settings.proteinGoal;
     document.getElementById("setCarbs").value=db.settings.carbsGoal;
     document.getElementById("setFat").value=db.settings.fatGoal;
+    document.getElementById("setWater").value=db.settings.waterGoal;
     document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
     const keys=loggedDates(), n=keys.length;
     let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString(loc())}).`;
@@ -1268,6 +1393,69 @@
         flash("dataNote",`${added} jour${added>1?"s":""} restauré${added>1?"s":""}`+(wAdded?` et ${wAdded} pesée${wAdded>1?"s":""}`:""));
       }catch(e){ flash("dataNote","Fichier non reconnu",true); } };
     reader.readAsText(file);
+  }
+
+  // ================= AJOUT D'UN ALIMENT =================
+  // On saisit les valeurs pour 100 g puis la quantité mangée : le calcul est automatique.
+  let itemState=null;
+  function openItemSheet(mealKey, preset){
+    itemState={mealKey, preset:preset||null};
+    const v=preset||{name:"",per100:{protein:"",carbs:"",fat:"",fiber:""},qty:100};
+    const esc=(x)=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    const mealLbl=(MEALS.find(m=>m.key===mealKey)||{}).label||"";
+    sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet">
+      <h3>Ajouter un aliment</h3>
+      <p class="sub">Saisis les valeurs pour 100 g, puis la quantité mangée. Destination : ${esc(mealLbl)}.</p>
+      <label class="f">Nom de l'aliment</label>
+      <input class="t" id="iName" type="text" placeholder="Ex. : steak haché 5 %" value="${esc(v.name)}">
+      <label class="f">Valeurs pour 100 g</label>
+      <div class="per100-grid">
+        <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iP" value="${esc(v.per100.protein)}"></div>
+        <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iC" value="${esc(v.per100.carbs)}"></div>
+        <div class="field"><label>Lip.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iF" value="${esc(v.per100.fat)}"></div>
+        <div class="field"><label>Fibres</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iFi" value="${esc(v.per100.fiber)}"></div>
+      </div>
+      <label class="f">Quantité mangée (g)</label>
+      <input class="t" id="iQty" type="number" inputmode="decimal" min="0" step="1" value="${esc(v.qty)}">
+      <div class="qty-row"><button data-iqty="50">50 g</button><button data-iqty="100">100 g</button><button data-iqty="200">200 g</button></div>
+      <div class="calc-box">
+        <div class="ct">Ce qui sera ajouté</div>
+        <div class="cv" id="iKcal">0 kcal</div>
+        <div class="cm" id="iMacros">0 P · 0 G · 0 L</div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn secondary" data-act="close">Annuler</button>
+        <button class="btn primary" data-act="saveItem">Ajouter au repas</button>
+      </div></div></div>`;
+    bindSheet();
+    ["iP","iC","iF","iFi","iQty"].forEach(id=>document.getElementById(id).addEventListener("input",refreshItemCalc));
+    sheetRoot.querySelectorAll("[data-iqty]").forEach(b=>b.addEventListener("click",()=>{
+      document.getElementById("iQty").value=b.dataset.iqty; refreshItemCalc(); }));
+    refreshItemCalc();
+    setTimeout(()=>{ const n=document.getElementById("iName"); if(n && !v.name) n.focus(); },80);
+  }
+  function readItemSheet(){
+    return {name:(document.getElementById("iName").value||"").trim().slice(0,60),
+      per100:{protein:num(document.getElementById("iP").value), carbs:num(document.getElementById("iC").value),
+              fat:num(document.getElementById("iF").value), fiber:num(document.getElementById("iFi").value)},
+      qty:num(document.getElementById("iQty").value)};
+  }
+  function refreshItemCalc(){
+    const it=readItemSheet(), o=itemTotals(it), d1=v=>Math.round(v*10)/10;
+    document.getElementById("iKcal").textContent=Math.round(o.cal)+" kcal";
+    document.getElementById("iMacros").textContent=d1(o.protein)+" P · "+d1(o.carbs)+" G · "+d1(o.fat)+" L"+(o.fiber?" · "+d1(o.fiber)+" F":"");
+    applyI18n(sheetRoot);
+  }
+  function saveItem(){
+    const it=readItemSheet();
+    if(it.qty<=0) return;
+    const p=it.per100;
+    if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0) return;
+    if(!it.name) it.name="Aliment";
+    const day=getDay(currentDate);
+    day[itemState.mealKey].items.push(it);
+    setDay(currentDate, day);
+    closeSheet(); itemState=null; renderDay();
   }
 
   // ================= SCANNER DE CODE-BARRES (Open Food Facts) =================
@@ -1481,7 +1669,10 @@
         <button class="btn secondary" data-act="addScanMore">Ajouter + scanner</button>
         <button class="btn primary" data-act="addScan">Ajouter et fermer</button>
       </div>
-      <button class="btn secondary" style="margin-top:10px" data-act="rescan">Annuler ce produit</button>
+      <div class="sheet-actions" style="margin-top:10px">
+        <button class="btn secondary" data-act="editScan">Modifier avant d'ajouter</button>
+        <button class="btn secondary" data-act="rescan">Annuler ce produit</button>
+      </div>
       </div></div>`;
     bindSheet(); applyI18n(sheetRoot);
     const qi=document.getElementById("qtyInput");
@@ -1496,26 +1687,31 @@
     if(el) el.innerHTML='À ajouter · <b style="color:var(--acc)">'+Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat+fi*KCAL.fiber)+' kcal</b>';
   }
   // Enregistre le produit courant dans le repas. keepOpen : on repart sur le scanner pour enchaîner.
+  // Le produit scanné devient un aliment de la liste : nom + valeurs pour 100 g + quantité.
   function applyScan(keepOpen){
     const st=scanState; if(!st||!st.product) return;
-    const p=num(document.getElementById("rP").value), c=num(document.getElementById("rC").value), f=num(document.getElementById("rF").value), fi=num((document.getElementById("rFi")||{}).value);
-    if(p<=0 && c<=0 && f<=0 && fi<=0) return;
+    const p=st.product, qty=num(st.qty);
+    if(qty<=0) return;
+    // d'éventuelles corrections faites dans les champs sont converties en valeurs pour 100 g
+    const factor=qty/100;
+    const rp=num(document.getElementById("rP").value), rc=num(document.getElementById("rC").value),
+          rf=num(document.getElementById("rF").value), rfi=num((document.getElementById("rFi")||{}).value);
+    if(rp<=0 && rc<=0 && rf<=0 && rfi<=0) return;
+    const it={name:p.name, per100:{protein:rp/factor, carbs:rc/factor, fat:rf/factor, fiber:rfi/factor}, qty:qty};
     const day=getDay(currentDate);
-    const meal={...emptyMeal(), ...(day[st.mealKey]||{})};
-    meal.protein=num(meal.protein)+p; meal.carbs=num(meal.carbs)+c; meal.fat=num(meal.fat)+f; meal.fiber=num(meal.fiber)+fi;
-    const def=MEALS.find(m=>m.key===st.mealKey);
-    if(def && def.hasNote){
-      const line=st.product.name+(st.qty?" ("+Math.round(st.qty)+" g)":"");
-      meal.note=((meal.note||"").trim()?(meal.note.trim()+"\n"):"")+line;
-      meal.note=meal.note.slice(0,300);
-    }
-    day[st.mealKey]=meal;
+    day[st.mealKey].items.push(it);
     setDay(currentDate, day);
-    st.added.push({name:st.product.name, qty:st.qty, p:p, c:c, f:f, fi:fi, kcal:Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat+fi*KCAL.fiber)});
+    const o=itemTotals(it);
+    st.added.push({name:p.name, qty:qty, p:o.protein, c:o.carbs, f:o.fat, fi:o.fiber, kcal:Math.round(o.cal)});
     st.product=null; st.qty=100;
-    renderDay();                       // le total du repas se met à jour en arrière-plan
-    if(keepOpen) renderScanStage();    // on relance la caméra pour le produit suivant
-    else closeScanner();
+    renderDay();
+    if(keepOpen) renderScanStage(); else closeScanner();
+  }
+  function editScannedItem(){
+    const st=scanState; if(!st||!st.product) return;
+    const p=st.product, mealKey=st.mealKey;
+    closeScanner();
+    openItemSheet(mealKey, {name:p.name, per100:{protein:p.protein,carbs:p.carbs,fat:p.fat,fiber:p.fiber}, qty:st.qty||100});
   }
 
 
@@ -1694,7 +1890,30 @@
     "Lecture impossible":["Cannot read","无法读取"],
     "Quantité consommée (g)":["Amount eaten (g)","食用量 (克)"],
     "Total ajouté":["Total added","已添加合计"],
-    "Image illisible":["Unreadable image","图片无法读取"]
+    "Image illisible":["Unreadable image","图片无法读取"],
+    "Hydratation":["Hydration","饮水"],
+    "Ajoute au fur et à mesure de la journée":["Add as you go through the day","随时记录当天饮水"],
+    "Eau (ml)":["Water (ml)","饮水 (毫升)"],
+    "Objectif quotidien d'hydratation, en millilitres.":["Daily hydration goal, in millilitres.","每日饮水目标，单位毫升。"],
+    "ml / jour":["ml / day","毫升 / 天"],
+    "moyenne / jour":["average / day","日均"],
+    "total bu":["total drunk","累计饮水"],
+    "jours à l'objectif":["days at goal","达标天数"],
+    "objectif quotidien":["daily goal","每日目标"],
+    "Ajouter un aliment":["Add a food","添加食物"],
+    "Scanner":["Scan","扫描"],
+    "Aucun aliment":["No food yet","尚无食物"],
+    "Aliment":["Food","食物"],
+    "Saisie manuelle":["Manual entry","手动录入"],
+    "Nom de l'aliment":["Food name","食物名称"],
+    "Ex. : steak haché 5 %":["E.g. lean beef mince 5 %","例如：5% 牛肉糜"],
+    "Valeurs pour 100 g":["Values per 100 g","每 100 克数值"],
+    "Quantité mangée (g)":["Amount eaten (g)","食用量 (克)"],
+    "Ce qui sera ajouté":["What will be added","将要添加的量"],
+    "Ajouter au repas":["Add to meal","加入本餐"],
+    "Modifier avant d'ajouter":["Edit before adding","添加前修改"],
+    "Note libre":["Free note","备注"],
+    "Supprimer":["Delete","删除"]
   };
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -1719,7 +1938,14 @@
     [/^Maintien pour (.+) \(kcal\)$/, {en:"Maintenance for $1 (kcal)", zh:"$1 的维持量 (千卡)"}],
     [/^Maintien ajusté pour cette journée \(habituel : (\d+) kcal\)$/, {en:"Maintenance adjusted for this day (usual: $1 kcal)", zh:"当天维持量已调整（平时为 $1 千卡）"}],
     [/^Revenir au maintien habituel \((\d+) kcal\)$/, {en:"Back to usual maintenance ($1 kcal)", zh:"恢复平时维持量（$1 千卡）"}],
-    [/^objectif (\d+) g$/, {en:"goal $1 g", zh:"目标 $1 克"}]
+    [/^objectif (\d+) g$/, {en:"goal $1 g", zh:"目标 $1 克"}],
+    [/^\/ (\d+) ml$/, {en:"/ $1 ml", zh:"/ $1 毫升"}],
+    [/^\+(\d+) ml$/, {en:"+$1 ml", zh:"+$1 毫升"}],
+    [/^−(\d+) ml$/, {en:"−$1 ml", zh:"−$1 毫升"}],
+    [/^(\d+) g$/, {en:"$1 g", zh:"$1 克"}],
+    [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F", zh:"$1 克 · 蛋白 $2 / 碳水 $3 / 脂肪 $4"}],
+    [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F", zh:"蛋白 $1 · 碳水 $2 · 脂肪 $3"}],
+    [/^Destination : (.+)\.$/, {en:"Goes to: $1.", zh:"归入：$1。"}]
   ];
   let translatedOnce=false;
   function currentLang(){ return db.settings.lang || "fr"; }
@@ -1837,10 +2063,12 @@
       if(a==="close") closeSheet();
       else if(a==="saveMaint"){ setDayMaintenance(currentDate, num(document.getElementById("maintInput").value)); closeSheet(); renderDay(); }
       else if(a==="resetMaint"){ setDayMaintenance(currentDate, 0); closeSheet(); renderDay(); }
+      else if(a==="saveItem") saveItem();
       else if(a==="closeScan") closeScanner();
       else if(a==="rescan") renderScanStage();
       else if(a==="addScan") applyScan(false);
       else if(a==="addScanMore") applyScan(true);
+      else if(a==="editScan") editScannedItem();
       else if(a==="confirmClearW"){ db.weights={}; persistNow(); closeSheet(); renderSettings(); flash("dataNote","Pesées effacées"); }
       else if(a==="manualLookup"){ const v=(document.getElementById("manualCode")||{}).value||""; const code=v.replace(/[^0-9]/g,"");
         if(code.length<6) return; stopCamera(); lookupProduct(code); }
@@ -1873,9 +2101,16 @@
     db.settings.proteinGoal=num(document.getElementById("setProtein").value);
     db.settings.carbsGoal=num(document.getElementById("setCarbs").value);
     db.settings.fatGoal=num(document.getElementById("setFat").value);
-    const ok=persistNow(); flash("saveNote", ok?"Objectifs enregistrés ✓":"Erreur d'enregistrement", !ok);
+    db.settings.waterGoal=num(document.getElementById("setWater").value);
+    const ok=persistNow(); flash("saveNote", ok?"Objectifs enregistrés ✓":"Erreur d'enregistrement", !ok); renderDay();
   });
   document.getElementById("exportBtn").addEventListener("click",exportData);
+  document.querySelectorAll("[data-water]").forEach(b=>b.addEventListener("click",()=>{
+    const day=getDay(currentDate);
+    day.water=Math.max(0, num(day.water)+Number(b.dataset.water));
+    setDay(currentDate, day);
+    updateDayCards(day);
+  }));
   document.querySelectorAll("[data-lang]").forEach(b=>b.addEventListener("click",()=>setLang(b.dataset.lang)));
   document.getElementById("clearWeights").addEventListener("click",()=>{
     const n=weightEntries().length;
