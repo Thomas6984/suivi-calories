@@ -347,6 +347,24 @@
     transition:transform .12s ease, background .2s ease;}
   .add-btn:active{transform:scale(.98);background:rgba(255,255,255,.09);}
   .add-btn svg{width:16px;height:16px;flex-shrink:0;}
+  .carousel{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    padding:2px 0 6px 0;margin-top:12px;scrollbar-width:none;}
+  .carousel::-webkit-scrollbar{display:none;}
+  .slide{position:relative;flex:0 0 78%;scroll-snap-align:center;border-radius:16px;overflow:hidden;
+    background:var(--surface-2);border:1px solid var(--line);aspect-ratio:3/4;}
+  .slide img{width:100%;height:100%;object-fit:cover;display:block;}
+  .slide .sl-meta{position:absolute;left:0;right:0;bottom:0;padding:34px 12px 12px 12px;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.88));}
+  .slide .sl-w{font-size:26px;font-weight:900;color:#fff;line-height:1;font-variant-numeric:tabular-nums;
+    text-shadow:0 1px 6px rgba(0,0,0,.6);}
+  .slide .sl-w span{font-size:14px;font-weight:800;margin-left:3px;}
+  .slide .sl-d{font-size:12px;font-weight:700;color:rgba(255,255,255,.8);margin-top:4px;}
+  .slide .sl-delta{font-size:12.5px;font-weight:900;color:var(--acc);margin-top:3px;font-variant-numeric:tabular-nums;}
+  .slide .sl-a{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);
+    border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;color:#fff;}
+  .slide .sl-i{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);
+    border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;color:rgba(255,255,255,.85);}
+  .carousel-hint{font-size:11.5px;color:var(--ink-faint);font-weight:700;text-align:center;margin-top:2px;}
   .ph-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
   .ph{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line);aspect-ratio:3/4;}
   .ph img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -679,12 +697,19 @@
     <div class="view active" id="view-photos">
       <div class="card">
         <div class="card-head"><div class="card-title">Mes photos</div><div class="right" id="phCount">0</div></div>
-        <div class="card-sub">Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.</div>
+        <div class="card-sub" id="phStorage">Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.</div>
         <button class="btn primary" id="phAdd">Ajouter une photo</button>
         <button class="btn secondary" id="phCompare">Comparer deux photos</button>
         <input type="file" id="phFile" accept="image/*" style="display:none">
         <div class="note" id="phNote"></div>
       </div>
+      <div class="card" id="phTimelineCard">
+        <div class="card-head"><div class="card-title">Chronologie</div><div class="right" id="phTlRange">—</div></div>
+        <div class="card-sub">Fais défiler du plus ancien au plus récent</div>
+        <div class="carousel" id="phCarousel"></div>
+        <div class="carousel-hint" id="phTlHint"></div>
+      </div>
+
       <div id="phCompareBox"></div>
       <div class="card">
         <div class="card-head"><div class="card-title">Galerie</div><div class="right" id="phFilterLbl">tous les angles</div></div>
@@ -830,7 +855,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "33";                 // numéro affiché dans les réglages
+  const APP_VERSION = "34";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -2441,7 +2466,9 @@
     "Préparation de l'image…":{en:"Preparing the image…",zh:"正在处理图片…",es:"Preparando la imagen…",it:"Preparazione dell'immagine…",de:"Bild wird vorbereitet…",pt:"A preparar a imagem…",ar:"جارٍ تجهيز الصورة…",hi:"छवि तैयार की जा रही है…"},
     "Cette image n'a pas pu être lue":{en:"This image could not be read",zh:"无法读取此图片",es:"No se pudo leer esta imagen",it:"Impossibile leggere questa immagine",de:"Dieses Bild konnte nicht gelesen werden",pt:"Não foi possível ler esta imagem",ar:"تعذرت قراءة هذه الصورة",hi:"यह छवि पढ़ी नहीं जा सकी"},
     "Enregistrement impossible : espace insuffisant":{en:"Could not save: not enough space",zh:"保存失败：空间不足",es:"No se pudo guardar: espacio insuficiente",it:"Salvataggio impossibile: spazio insufficiente",de:"Speichern fehlgeschlagen: zu wenig Speicher",pt:"Não foi possível guardar: espaço insuficiente",ar:"تعذر الحفظ: المساحة غير كافية",hi:"सहेजा नहीं जा सका: पर्याप्त जगह नहीं"},
-    "Il faut au moins deux photos":{en:"You need at least two photos",zh:"至少需要两张照片",es:"Se necesitan al menos dos fotos",it:"Servono almeno due foto",de:"Mindestens zwei Fotos nötig",pt:"São necessárias pelo menos duas fotos",ar:"تحتاج إلى صورتين على الأقل",hi:"कम से कम दो तस्वीरें चाहिए"}
+    "Il faut au moins deux photos":{en:"You need at least two photos",zh:"至少需要两张照片",es:"Se necesitan al menos dos fotos",it:"Servono almeno due foto",de:"Mindestens zwei Fotos nötig",pt:"São necessárias pelo menos duas fotos",ar:"تحتاج إلى صورتين على الأقل",hi:"कम से कम दो तस्वीरें चाहिए"},
+    "Chronologie":{en:"Timeline",zh:"时间线",es:"Cronología",it:"Cronologia",de:"Zeitverlauf",pt:"Cronologia",ar:"التسلسل الزمني",hi:"समयरेखा"},
+    "Fais défiler du plus ancien au plus récent":{en:"Swipe from oldest to newest",zh:"从最早滑到最新",es:"Desliza del más antiguo al más reciente",it:"Scorri dal più vecchio al più recente",de:"Wische vom ältesten zum neuesten",pt:"Desliza do mais antigo para o mais recente",ar:"مرّر من الأقدم إلى الأحدث",hi:"सबसे पुराने से नए की ओर स्वाइप करें"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2474,6 +2501,8 @@
     [/^−(\d+) ml$/, {en:"−$1 ml", zh:"−$1 毫升", ar:"−$1 مل", hi:"−$1 मि.ली."}],
     [/^(\d+) g · (\d+) kcal$/, {en:"$1 g · $2 kcal", zh:"$1 克 · $2 千卡", ar:"$1 غ · $2 سعرة", hi:"$1 ग्राम · $2 kcal"}],
     [/^(.+) portions?$/, {en:"$1 portion(s)", zh:"$1 份", es:"$1 porción(es)", it:"$1 porzione/i", de:"$1 Portion(en)", pt:"$1 porção(ões)", ar:"$1 حصة", hi:"$1 हिस्सा"}],
+    [/^(.+) kg depuis la première$/, {en:"$1 kg since the first", zh:"自第一张以来 $1 公斤", es:"$1 kg desde la primera", it:"$1 kg dalla prima", de:"$1 kg seit dem ersten", pt:"$1 kg desde a primeira", ar:"$1 كغ منذ الأولى", hi:"पहली से $1 किग्रा"}],
+    [/^(.+) kg en (\d+) jours$/, {en:"$1 kg in $2 days", zh:"$1 公斤 / $2 天", es:"$1 kg en $2 días", it:"$1 kg in $2 giorni", de:"$1 kg in $2 Tagen", pt:"$1 kg em $2 dias", ar:"$1 كغ خلال $2 يومًا", hi:"$2 दिनों में $1 किग्रा"}],
     [/^en (\d+) jours$/, {en:"in $1 days", zh:"历时 $1 天", es:"en $1 días", it:"in $1 giorni", de:"in $1 Tagen", pt:"em $1 dias", ar:"خلال $1 يومًا", hi:"$1 दिनों में"}],
     [/^jours d'écart$/, {en:"days apart", zh:"天间隔", es:"días de diferencia", it:"giorni di distanza", de:"Tage Abstand", pt:"dias de diferença", ar:"يومًا فارقًا", hi:"दिन का अंतर"}],
     [/^Poids ce jour-là : (.+)\. Repris automatiquement de tes pesées\.$/, {en:"Weight that day: $1. Taken from your weigh-ins.", zh:"当天体重：$1，取自你的称重记录。", es:"Peso ese día: $1. Tomado de tus pesajes.", it:"Peso quel giorno: $1. Preso dalle tue pesate.", de:"Gewicht an dem Tag: $1. Aus deinen Wiegungen übernommen.", pt:"Peso nesse dia: $1. Retirado das tuas pesagens.", ar:"الوزن في ذلك اليوم: $1، مأخوذ من أوزانك.", hi:"उस दिन का वज़न: $1। आपके वज़न रिकॉर्ड से लिया गया।"}],
@@ -2602,11 +2631,61 @@
   }
   const ANGLES={front:"Face", side:"Profil", back:"Dos"};
 
+  // Chronologie : du plus ancien au plus récent, avec le poids inscrit sur l'image.
+  function renderCarousel(){
+    const card=document.getElementById("phTimelineCard");
+    const el=document.getElementById("phCarousel");
+    const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>a.date.localeCompare(b.date));
+    if(list.length<1){ card.style.display="none"; return; }
+    card.style.display="";
+    const first=list.find(p=>p.weight!=null);
+    el.innerHTML=list.map((p,i)=>{
+      const w=(p.weight!=null)?`<div class="sl-w">${fmtKg(p.weight)}<span>kg</span></div>`:`<div class="sl-w" style="font-size:16px;color:rgba(255,255,255,.6)">—</div>`;
+      let delta="";
+      if(first && p.weight!=null && p!==first){
+        const dv=p.weight-first.weight;
+        delta=`<div class="sl-delta">${fmtKg(dv,true)} kg depuis la première</div>`;
+      }
+      return `<div class="slide" data-slide="${p.id}"><img src="${p.img}" alt="" loading="lazy">`+
+        (p.angle?`<span class="sl-a">${ANGLES[p.angle]||""}</span>`:"")+
+        `<span class="sl-i">${i+1} / ${list.length}</span>`+
+        `<div class="sl-meta">${w}<div class="sl-d">${mediumLabel(p.date)}${p.note?" · "+String(p.note).replace(/</g,"&lt;"):""}</div>${delta}</div></div>`;
+    }).join("");
+    document.getElementById("phTlRange").textContent = list.length>1
+      ? mediumLabel(list[0].date)+" → "+mediumLabel(list[list.length-1].date) : mediumLabel(list[0].date);
+    const a=list[0], b=list[list.length-1];
+    document.getElementById("phTlHint").textContent = (list.length>1 && a.weight!=null && b.weight!=null)
+      ? fmtKg(b.weight-a.weight,true)+" kg en "+daysBetween(a.date,b.date)+" jours"
+      : "";
+    el.querySelectorAll("[data-slide]").forEach(n=>n.addEventListener("click",()=>{
+      const rec=phList.find(x=>x.id===n.dataset.slide); if(rec && !phCompare) openPhotoSheet(rec);
+    }));
+    // on se place d'emblée sur la photo la plus récente
+    requestAnimationFrame(()=>{ el.scrollLeft=el.scrollWidth; });
+    applyI18n(el); applyI18n(card);
+  }
+  // Espace réellement occupé, plutôt qu'une estimation théorique.
+  function updateStorageInfo(){
+    const el=document.getElementById("phStorage");
+    const base="Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.";
+    let bytes=0; phList.forEach(p=>{ bytes += (p.img?p.img.length:0)*0.75; });  // base64 : 4 caractères pour 3 octets
+    const mb=bytes/1048576;
+    const used = phList.length ? " Espace occupé : "+(mb<1 ? Math.round(bytes/1024)+" Ko" : (Math.round(mb*10)/10).toString().replace(".",decSep())+" Mo")+"." : "";
+    el.textContent=base+used;
+    if(navigator.storage && navigator.storage.estimate){
+      navigator.storage.estimate().then(est=>{
+        if(!est || !est.quota) return;
+        const qGb=est.quota/1073741824;
+        el.textContent = base+used+" Limite disponible : environ "+(qGb>=1 ? (Math.round(qGb*10)/10).toString().replace(".",decSep())+" Go" : Math.round(est.quota/1048576)+" Mo")+".";
+      }).catch(()=>{});
+    }
+  }
+
   function renderPhotos(){
     const el=document.getElementById("phGrid");
     document.getElementById("phCount").textContent = phList.length + (phList.length>1?" photos":" photo");
     const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>b.date.localeCompare(a.date));
-    if(!list.length){ el.innerHTML=`<div class="food-empty" style="grid-column:1/-1">Aucune photo pour le moment</div>`; return; }
+    if(!list.length){ el.innerHTML=`<div class="food-empty" style="grid-column:1/-1">Aucune photo pour le moment</div>`; renderCarousel(); updateStorageInfo(); return; }
     el.innerHTML=list.map(p=>{
       const w=(p.weight!=null)?fmtKg(p.weight)+" kg":"";
       const selIdx=phSel.indexOf(p.id);
@@ -2616,6 +2695,7 @@
         (selIdx>=0?`<span class="ph-num">${selIdx+1}</span>`:"")+
         `<div class="ph-meta"><div class="ph-d">${mediumLabel(p.date)}</div>${w?`<div class="ph-w">${w}</div>`:""}</div></div>`;
     }).join("");
+    renderCarousel(); updateStorageInfo();
     el.querySelectorAll("[data-ph]").forEach(node=>node.addEventListener("click",()=>{
       const id=node.dataset.ph;
       if(phCompare){                            // en mode comparaison, un appui sélectionne
