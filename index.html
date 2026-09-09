@@ -310,6 +310,27 @@
   .food .fx{background:rgba(var(--bad-rgb),.12);border:1px solid rgba(var(--bad-rgb),.28);color:var(--bad);border-radius:9px;
     width:28px;height:28px;font-size:17px;font-family:inherit;line-height:1;flex-shrink:0;}
   .food-empty{font-size:13px;color:var(--ink-faint);font-weight:600;text-align:center;padding:14px 0;}
+  .chips{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 4px 0;margin-top:12px;
+    scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{flex-shrink:0;background:rgba(var(--acc-rgb),.12);border:1px solid rgba(var(--acc-rgb),.32);color:var(--ink);
+    border-radius:999px;padding:9px 14px;font-family:inherit;font-size:13px;font-weight:800;white-space:nowrap;
+    display:flex;align-items:center;gap:7px;transition:transform .1s, background .2s;}
+  .chip:active{transform:scale(.95);background:rgba(var(--acc-rgb),.24);}
+  .chip .cq{font-size:11px;color:var(--ink-soft);font-weight:700;}
+  .chip .cp{color:var(--acc);font-weight:900;}
+  .chips-lbl{font-size:11px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:14px;}
+  .save-toggle{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line-strong);
+    border-radius:13px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;font-weight:700;}
+  .save-toggle input{width:20px;height:20px;accent-color:var(--acc);flex-shrink:0;}
+  .save-toggle label{flex:1;color:var(--ink-soft);}
+  .sf{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;
+    padding:11px 12px;margin-bottom:8px;}
+  .sf .sfn{flex:1;min-width:0;}
+  .sf .sfname{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sf .sfmeta{font-size:11.5px;color:var(--ink-soft);font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .sf .sfx{background:rgba(var(--bad-rgb),.12);border:1px solid rgba(var(--bad-rgb),.28);color:var(--bad);border-radius:9px;
+    width:28px;height:28px;font-size:17px;font-family:inherit;line-height:1;flex-shrink:0;}
   .add-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
   .food{cursor:pointer;}
   .food .fn{position:relative;}
@@ -567,6 +588,14 @@
       </div>
 
       <div class="card">
+        <div class="meal-title" style="margin-bottom:6px">Mes aliments</div>
+        <div class="hint" style="margin-bottom:12px">Les aliments enregistrés ici s'ajoutent en un geste depuis n'importe quel repas.</div>
+        <div id="foodLib"></div>
+        <button class="btn secondary" id="addLibFood">Enregistrer un nouvel aliment</button>
+        <div class="note" id="foodNote"></div>
+      </div>
+
+      <div class="card">
         <div class="meal-title" style="margin-bottom:10px">Langue</div>
         <div class="lang-row" id="langRow"></div>
         <div class="hint" style="margin-top:10px">Choisis la langue de l'application.</div>
@@ -756,7 +785,7 @@
   const LIGHT = {good:"var(--good)", bad:"var(--bad)", empty:"var(--track)", ref:"var(--ink-faint)", text:"var(--ink-faint)", zero:"var(--line-strong)"};
   const DARK  = {good:"var(--mint)", bad:"var(--coral)", empty:"rgba(255,255,255,.12)", ref:"rgba(255,255,255,.5)", text:"rgba(255,255,255,.55)", zero:"rgba(255,255,255,.25)"};
 
-  let db = {settings:{...DEFAULT_SETTINGS}, days:{}, weights:{}, seeded:false};
+  let db = {settings:{...DEFAULT_SETTINGS}, days:{}, weights:{}, foods:[], seeded:false};
   let currentSection = "nutrition";
   let currentWView = "wsuivi";
   let currentDate = todayISO();
@@ -791,6 +820,7 @@
           db.settings = {...DEFAULT_SETTINGS, ...(parsed.settings||{})};
           db.days = (parsed.days && typeof parsed.days==="object") ? parsed.days : {};
           db.weights = (parsed.weights && typeof parsed.weights==="object") ? parsed.weights : {};
+          db.foods = Array.isArray(parsed.foods) ? parsed.foods : [];
           db.seeded = parsed.seeded===true;
         }
       }
@@ -1282,8 +1312,13 @@
       const note = m.hasNote ? `<textarea class="meal-note" data-field="note" rows="2" placeholder="Note libre">${esc(meal.note)}</textarea>` : "";
       const hint = m.hint ? `<div class="meal-hint">${m.hint}</div>` : "";
       const split = items.length ? splitBlock(mealTotals(meal), 92) : "";
+      const favs = savedFoods();
+      const chips = favs.length ? `<div class="chips-lbl">Mes aliments</div><div class="chips">`+
+        favs.map((f,fi)=>{ const o=itemTotals({per100:f.per100, qty:f.qty});
+          return `<button class="chip" data-quick="${m.key}:${fi}"><span class="cp">+</span>${esc(f.name)}`+
+                 `<span class="cq">${Math.round(num(f.qty))} g · ${Math.round(o.cal)} kcal</span></button>`; }).join("")+`</div>` : "";
       return `<div class="card meal-card" data-meal="${m.key}"><div class="meal-head"><div><div class="meal-title">${m.label}</div>${hint}</div><div class="meal-sub"></div></div>`+
-        `<div class="food-list">${rows}</div>${split}${note}`+
+        `<div class="food-list">${rows}</div>${split}${chips}${note}`+
         `<div class="add-row">`+
           `<button class="add-btn" data-additem="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter un aliment</button>`+
           `<button class="add-btn" data-scan="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scanner</button>`+
@@ -1291,6 +1326,9 @@
     container.querySelectorAll("textarea").forEach(inp=>inp.addEventListener("input", onNoteInput));
     container.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>openScanner(b.dataset.scan)));
     container.querySelectorAll("[data-additem]").forEach(b=>b.addEventListener("click",()=>openItemSheet(b.dataset.additem)));
+    container.querySelectorAll("[data-quick]").forEach(b=>b.addEventListener("click",()=>{
+      const parts=b.dataset.quick.split(":"); quickAdd(parts[0], Number(parts[1]));
+    }));
     container.querySelectorAll(".food").forEach(el=>el.addEventListener("click",(e)=>{
       if(e.target.closest("[data-del-item]")) return;      // la croix reste une suppression
       const btn=el.querySelector("[data-del-item]"); if(!btn) return;
@@ -1417,14 +1455,81 @@
     if(nw) txt+=` ${nw} pesée${nw>1?"s":""} enregistrée${nw>1?"s":""}.`;
     txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
     document.getElementById("dataInfo").textContent=txt;
+    renderFoodLib();
   }
+  function renderFoodLib(){
+    const el=document.getElementById("foodLib"); if(!el) return;
+    const list=savedFoods(), esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    if(!list.length){ el.innerHTML=`<div class="food-empty">Aucun aliment enregistré</div>`; return; }
+    const d1=v=>Math.round(v*10)/10;
+    el.innerHTML=list.map((f,i)=>{ const o=itemTotals({per100:f.per100, qty:f.qty});
+      return `<div class="sf"><div class="sfn"><div class="sfname">${esc(f.name)}</div>`+
+        `<div class="sfmeta">${Math.round(num(f.qty))} g · ${Math.round(o.cal)} kcal · pour 100 g : ${d1(num(f.per100.protein))} P / ${d1(num(f.per100.carbs))} G / ${d1(num(f.per100.fat))} L</div></div>`+
+        `<button class="sfx" data-editfood="${i}" style="background:rgba(var(--acc-rgb),.12);border-color:rgba(var(--acc-rgb),.28);color:var(--acc);font-size:14px">✎</button>`+
+        `<button class="sfx" data-delfood="${i}" aria-label="Supprimer">×</button></div>`; }).join("");
+    el.querySelectorAll("[data-delfood]").forEach(b=>b.addEventListener("click",()=>{
+      const f=savedFoods()[Number(b.dataset.delfood)];
+      if(f){ removeFood(f.name); renderFoodLib(); flash("foodNote","Aliment supprimé"); }
+    }));
+    el.querySelectorAll("[data-editfood]").forEach(b=>b.addEventListener("click",()=>{
+      const f=savedFoods()[Number(b.dataset.editfood)];
+      if(f) openLibSheet(f);
+    }));
+  }
+  // Panneau de création/modification d'un aliment de la bibliothèque (sans l'ajouter à un repas).
+  function openLibSheet(preset){
+    const v=preset||{name:"",per100:{protein:"",carbs:"",fat:"",fiber:""},qty:100};
+    const esc=(x)=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet">
+      <h3>${preset?"Modifier l'aliment":"Enregistrer un aliment"}</h3>
+      <p class="sub">Valeurs pour 100 g et quantité habituelle. Il apparaîtra ensuite en raccourci sous chaque repas.</p>
+      <label class="f">Nom de l'aliment</label>
+      <input class="t" id="lName" type="text" placeholder="Ex. : banane" value="${esc(v.name)}">
+      <label class="f">Valeurs pour 100 g</label>
+      <div class="per100-grid">
+        <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lP" value="${esc(v.per100.protein)}"></div>
+        <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lC" value="${esc(v.per100.carbs)}"></div>
+        <div class="field"><label>Lip.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lF" value="${esc(v.per100.fat)}"></div>
+        <div class="field"><label>Fibres</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lFi" value="${esc(v.per100.fiber)}"></div>
+      </div>
+      <label class="f">Quantité habituelle (g)</label>
+      <input class="t" id="lQty" type="number" inputmode="decimal" min="0" step="1" value="${esc(v.qty)}">
+      <div class="calc-box"><div class="ct">Par portion habituelle</div><div class="cv" id="lKcal">0 kcal</div><div class="cm" id="lMacros">0 P · 0 G · 0 L</div></div>
+      <div class="sheet-actions">
+        <button class="btn secondary" data-act="close">Annuler</button>
+        <button class="btn primary" data-act="saveLib">Enregistrer</button>
+      </div></div></div>`;
+    bindSheet();
+    ["lP","lC","lF","lFi","lQty"].forEach(id=>document.getElementById(id).addEventListener("input",refreshLibCalc));
+    refreshLibCalc();
+  }
+  function readLibSheet(){
+    return {name:(document.getElementById("lName").value||"").trim().slice(0,60),
+      per100:{protein:num(document.getElementById("lP").value), carbs:num(document.getElementById("lC").value),
+              fat:num(document.getElementById("lF").value), fiber:num(document.getElementById("lFi").value)},
+      qty:num(document.getElementById("lQty").value)};
+  }
+  function refreshLibCalc(){
+    const f=readLibSheet(), o=itemTotals(f), d1=v=>Math.round(v*10)/10;
+    document.getElementById("lKcal").textContent=Math.round(o.cal)+" kcal";
+    document.getElementById("lMacros").textContent=d1(o.protein)+" P · "+d1(o.carbs)+" G · "+d1(o.fat)+" L"+(o.fiber?" · "+d1(o.fiber)+" F":"");
+    applyI18n(sheetRoot);
+  }
+  function saveLibFood(){
+    const f=readLibSheet(), p=f.per100;
+    if(!f.name) return flash("foodNote","Donne un nom à l'aliment", true);
+    if(f.qty<=0) return;
+    if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0) return;
+    saveFood(f); closeSheet(); renderFoodLib(); renderDay(); flash("foodNote","Aliment enregistré ✓");
+  }
+
   function flash(id,msg,isErr){ const el=document.getElementById(id); el.textContent=msg; el.className="note"+(isErr?" err":""); setTimeout(()=>{el.textContent="";},2500); }
 
   // ---------- export / import ----------
   function exportData(){
     persistNow();
     const payload={app:"suivi-calories", version:6, exportedAt:new Date().toISOString(),
-                   settings:db.settings, days:db.days, weights:db.weights};
+                   settings:db.settings, days:db.days, weights:db.weights, foods:db.foods};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob); const a=document.createElement("a");
     a.href=url; a.download="suivi-calories-"+todayISO()+".json"; document.body.appendChild(a); a.click(); a.remove();
@@ -1441,11 +1546,39 @@
           Object.keys(parsed.weights).forEach(iso=>{ const v=Number(parsed.weights[iso]);
             if(/^\d{4}-\d{2}-\d{2}$/.test(iso) && v>0){ db.weights[iso]=v; wAdded++; } });
         }
+        if(Array.isArray(parsed.foods)) db.foods=parsed.foods;
         if(parsed.settings) db.settings={...DEFAULT_SETTINGS, ...parsed.settings};
         persistNow(); renderSettings();
         flash("dataNote",`${added} jour${added>1?"s":""} restauré${added>1?"s":""}`+(wAdded?` et ${wAdded} pesée${wAdded>1?"s":""}`:""));
       }catch(e){ flash("dataNote","Fichier non reconnu",true); } };
     reader.readAsText(file);
+  }
+
+  // ================= MES ALIMENTS (bibliothèque personnelle) =================
+  function foodKey(n){ return String(n||"").trim().toLowerCase(); }
+  function savedFoods(){ return Array.isArray(db.foods) ? db.foods : (db.foods=[]); }
+  function saveFood(f){
+    const list=savedFoods(), k=foodKey(f.name);
+    if(!k) return;
+    const i=list.findIndex(x=>foodKey(x.name)===k);
+    const entry={name:f.name.trim().slice(0,60), per100:{...f.per100}, qty:num(f.qty)||100};
+    if(i>=0) list[i]=entry; else list.push(entry);
+    list.sort((a,b)=>a.name.localeCompare(b.name,"fr"));
+    persistNow();
+  }
+  function removeFood(name){
+    const k=foodKey(name);
+    db.foods=savedFoods().filter(x=>foodKey(x.name)!==k);
+    persistNow();
+  }
+  function isSaved(name){ return savedFoods().some(x=>foodKey(x.name)===foodKey(name)); }
+  // Ajout en un geste depuis un raccourci : l'aliment part directement dans le repas.
+  function quickAdd(mealKey, idx){
+    const f=savedFoods()[idx]; if(!f) return;
+    const day=getDay(currentDate);
+    day[mealKey].items.push({name:f.name, per100:{...f.per100}, qty:num(f.qty)||100});
+    setDay(currentDate, day);
+    renderDay();
   }
 
   // ================= AJOUT D'UN ALIMENT =================
@@ -1493,6 +1626,7 @@
         <div class="cm" id="iMacros">0 P · 0 G · 0 L</div>
       </div>
       <div id="iSplit"></div>
+      <div class="save-toggle"><input type="checkbox" id="iSave"><label for="iSave">Enregistrer dans mes aliments (ajout en un geste ensuite)</label></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
         <button class="btn primary" data-act="saveItem">${itemState.editIndex!==null ? "Enregistrer les modifications" : "Ajouter au repas"}</button>
@@ -1511,6 +1645,11 @@
     sheetRoot.querySelectorAll("[data-iqty]").forEach(b=>b.addEventListener("click",()=>{
       document.getElementById("iQty").value=b.dataset.iqty; refreshItemCalc(); }));
     refreshItemCalc();
+    const chk0=document.getElementById("iSave");
+    if(chk0 && v.name && isSaved(v.name)) chk0.checked=true;
+    document.getElementById("iName").addEventListener("input",(e)=>{
+      const c=document.getElementById("iSave"); if(c && isSaved(e.target.value)) c.checked=true;
+    });
     setTimeout(()=>{ const n=document.getElementById("iName"); if(n && !v.name) n.focus(); },80);
   }
   function readItemSheet(){
@@ -1532,6 +1671,8 @@
     const p=it.per100;
     if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0) return;
     if(!it.name) it.name="Aliment";
+    const chk=document.getElementById("iSave");
+    if(chk && chk.checked) saveFood(it);
     const day=getDay(currentDate);
     if(itemState.editIndex!==null) day[itemState.mealKey].items[itemState.editIndex]=it;
     else day[itemState.mealKey].items.push(it);
@@ -2012,7 +2153,20 @@
     "Modifier l'aliment":{en:"Edit the food",zh:"修改食物",es:"Editar el alimento",it:"Modifica l'alimento",de:"Lebensmittel bearbeiten",pt:"Editar o alimento",ar:"تعديل الطعام",hi:"खाद्य बदलें"},
     "Enregistrer les modifications":{en:"Save changes",zh:"保存修改",es:"Guardar los cambios",it:"Salva le modifiche",de:"Änderungen speichern",pt:"Guardar alterações",ar:"حفظ التعديلات",hi:"बदलाव सहेजें"},
     "Supprimer cet aliment":{en:"Delete this food",zh:"删除此食物",es:"Eliminar este alimento",it:"Elimina questo alimento",de:"Dieses Lebensmittel löschen",pt:"Eliminar este alimento",ar:"حذف هذا الطعام",hi:"यह खाद्य हटाएँ"},
-    "Toucher pour modifier":{en:"Tap to edit",zh:"点击修改",es:"Toca para editar",it:"Tocca per modificare",de:"Zum Bearbeiten tippen",pt:"Toque para editar",ar:"اضغط للتعديل",hi:"बदलने के लिए टैप करें"}
+    "Toucher pour modifier":{en:"Tap to edit",zh:"点击修改",es:"Toca para editar",it:"Tocca per modificare",de:"Zum Bearbeiten tippen",pt:"Toque para editar",ar:"اضغط للتعديل",hi:"बदलने के लिए टैप करें"},
+    "Mes aliments":{en:"My foods",zh:"我的食物",es:"Mis alimentos",it:"I miei alimenti",de:"Meine Lebensmittel",pt:"Os meus alimentos",ar:"أطعمتي",hi:"मेरे खाद्य"},
+    "Les aliments enregistrés ici s'ajoutent en un geste depuis n'importe quel repas.":{en:"Foods saved here can be added to any meal in one tap.",zh:"此处保存的食物可一键加入任意一餐。",es:"Los alimentos guardados aquí se añaden a cualquier comida con un toque.",it:"Gli alimenti salvati qui si aggiungono a qualsiasi pasto con un tocco.",de:"Hier gespeicherte Lebensmittel lassen sich mit einem Tippen zu jeder Mahlzeit hinzufügen.",pt:"Os alimentos guardados aqui adicionam-se a qualquer refeição com um toque.",ar:"الأطعمة المحفوظة هنا تُضاف إلى أي وجبة بضغطة واحدة.",hi:"यहाँ सहेजे गए खाद्य किसी भी भोजन में एक टैप से जुड़ते हैं।"},
+    "Enregistrer un nouvel aliment":{en:"Save a new food",zh:"保存新食物",es:"Guardar un nuevo alimento",it:"Salva un nuovo alimento",de:"Neues Lebensmittel speichern",pt:"Guardar um novo alimento",ar:"حفظ طعام جديد",hi:"नया खाद्य सहेजें"},
+    "Enregistrer un aliment":{en:"Save a food",zh:"保存食物",es:"Guardar un alimento",it:"Salva un alimento",de:"Lebensmittel speichern",pt:"Guardar um alimento",ar:"حفظ طعام",hi:"खाद्य सहेजें"},
+    "Aucun aliment enregistré":{en:"No food saved yet",zh:"尚未保存食物",es:"Ningún alimento guardado",it:"Nessun alimento salvato",de:"Noch kein Lebensmittel gespeichert",pt:"Nenhum alimento guardado",ar:"لا يوجد طعام محفوظ",hi:"कोई खाद्य सहेजा नहीं गया"},
+    "Enregistrer dans mes aliments (ajout en un geste ensuite)":{en:"Save to my foods (one-tap add later)",zh:"保存到我的食物（之后可一键添加）",es:"Guardar en mis alimentos (añadir con un toque después)",it:"Salva nei miei alimenti (poi aggiunta con un tocco)",de:"In meinen Lebensmitteln speichern (später mit einem Tippen)",pt:"Guardar nos meus alimentos (depois adiciona com um toque)",ar:"احفظ في أطعمتي (إضافة بضغطة لاحقًا)",hi:"मेरे खाद्य में सहेजें (बाद में एक टैप से जोड़ें)"},
+    "Valeurs pour 100 g et quantité habituelle. Il apparaîtra ensuite en raccourci sous chaque repas.":{en:"Values per 100 g and usual amount. It will then appear as a shortcut under every meal.",zh:"每 100 克数值与常用份量。之后会作为快捷方式出现在每餐下方。",es:"Valores por 100 g y cantidad habitual. Aparecerá como acceso directo bajo cada comida.",it:"Valori per 100 g e quantità abituale. Apparirà come scorciatoia sotto ogni pasto.",de:"Werte je 100 g und übliche Menge. Erscheint danach als Verknüpfung unter jeder Mahlzeit.",pt:"Valores por 100 g e quantidade habitual. Aparecerá como atalho sob cada refeição.",ar:"القيم لكل 100 غ والكمية المعتادة. سيظهر كاختصار تحت كل وجبة.",hi:"प्रति 100 ग्राम मान और सामान्य मात्रा। यह हर भोजन के नीचे शॉर्टकट के रूप में दिखेगा।"},
+    "Quantité habituelle (g)":{en:"Usual amount (g)",zh:"常用份量 (克)",es:"Cantidad habitual (g)",it:"Quantità abituale (g)",de:"Übliche Menge (g)",pt:"Quantidade habitual (g)",ar:"الكمية المعتادة (غ)",hi:"सामान्य मात्रा (ग्राम)"},
+    "Par portion habituelle":{en:"Per usual portion",zh:"按常用份量",es:"Por porción habitual",it:"Per porzione abituale",de:"Pro übliche Portion",pt:"Por porção habitual",ar:"لكل حصة معتادة",hi:"सामान्य हिस्से के अनुसार"},
+    "Ex. : banane":{en:"E.g. banana",zh:"例如：香蕉",es:"Ej.: plátano",it:"Es.: banana",de:"Z. B. Banane",pt:"Ex.: banana",ar:"مثال: موزة",hi:"उदा.: केला"},
+    "Aliment enregistré ✓":{en:"Food saved ✓",zh:"食物已保存 ✓",es:"Alimento guardado ✓",it:"Alimento salvato ✓",de:"Lebensmittel gespeichert ✓",pt:"Alimento guardado ✓",ar:"تم حفظ الطعام ✓",hi:"खाद्य सहेजा गया ✓"},
+    "Aliment supprimé":{en:"Food deleted",zh:"食物已删除",es:"Alimento eliminado",it:"Alimento eliminato",de:"Lebensmittel gelöscht",pt:"Alimento eliminado",ar:"تم حذف الطعام",hi:"खाद्य हटाया गया"},
+    "Donne un nom à l'aliment":{en:"Give the food a name",zh:"请为食物命名",es:"Ponle un nombre al alimento",it:"Dai un nome all'alimento",de:"Gib dem Lebensmittel einen Namen",pt:"Dá um nome ao alimento",ar:"أعطِ الطعام اسمًا",hi:"खाद्य को नाम दें"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2041,6 +2195,7 @@
     [/^\/ (\d+) ml$/, {en:"/ $1 ml", zh:"/ $1 毫升", ar:"/ $1 مل", hi:"/ $1 मि.ली."}],
     [/^\+(\d+) ml$/, {en:"+$1 ml", zh:"+$1 毫升", ar:"+$1 مل", hi:"+$1 मि.ली."}],
     [/^−(\d+) ml$/, {en:"−$1 ml", zh:"−$1 毫升", ar:"−$1 مل", hi:"−$1 मि.ली."}],
+    [/^(\d+) g · (\d+) kcal$/, {en:"$1 g · $2 kcal", zh:"$1 克 · $2 千卡", ar:"$1 غ · $2 سعرة", hi:"$1 ग्राम · $2 kcal"}],
     [/^(\d+) g$/, {en:"$1 g", zh:"$1 克", ar:"$1 غ", hi:"$1 ग्राम"}],
     [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F", zh:"$1 克 · 蛋白 $2 / 碳水 $3 / 脂肪 $4"}],
     [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F", zh:"蛋白 $1 · 碳水 $2 · 脂肪 $3"}],
@@ -2172,6 +2327,7 @@
       else if(a==="resetMaint"){ setDayMaintenance(currentDate, 0); closeSheet(); renderDay(); }
       else if(a==="saveItem") saveItem();
       else if(a==="deleteItem") deleteCurrentItem();
+      else if(a==="saveLib") saveLibFood();
 
       else if(a==="closeScan") closeScanner();
       else if(a==="rescan") renderScanStage();
@@ -2214,6 +2370,7 @@
     const ok=persistNow(); flash("saveNote", ok?"Objectifs enregistrés ✓":"Erreur d'enregistrement", !ok); renderDay();
   });
   document.getElementById("exportBtn").addEventListener("click",exportData);
+  document.getElementById("addLibFood").addEventListener("click",()=>openLibSheet(null));
   document.querySelectorAll("[data-water]").forEach(b=>b.addEventListener("click",()=>{
     const day=getDay(currentDate);
     day.water=Math.max(0, num(day.water)+Number(b.dataset.water));
