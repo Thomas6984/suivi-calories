@@ -367,6 +367,10 @@
     padding:12px 2px;font-size:13px;font-weight:800;font-family:inherit;transition:transform .1s;}
   .water-btns button:active{transform:scale(.95);}
   .water-btns button.minus{color:var(--bad);}
+  .version-box{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;}
+  .version-box .vv{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--acc);}
+  .version-box .vd{font-size:12px;color:var(--ink-soft);font-weight:700;text-align:right;}
+  .version-note{font-size:12px;color:var(--ink-faint);font-weight:600;margin-top:10px;line-height:1.45;}
   .lang-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   /* Arabe : le texte passe à droite, mais graphiques et champs numériques restent en sens normal */
   body.rtl .card-head, body.rtl .meal-head, body.rtl .hero-meta, body.rtl .kv{direction:rtl;}
@@ -601,6 +605,15 @@
       </div>
 
       <div class="card">
+        <div class="meal-title" style="margin-bottom:6px">Version</div>
+        <div class="version-box">
+          <span class="vv" id="appVersion">—</span>
+          <span class="vd" id="appVersionDate">—</span>
+        </div>
+        <div class="version-note" id="versionNote"></div>
+      </div>
+
+      <div class="card">
         <div class="meal-title" style="margin-bottom:6px">Mes aliments</div>
         <div class="hint" style="margin-bottom:12px">Les aliments enregistrés ici s'ajoutent en un geste depuis n'importe quel repas.</div>
         <div id="foodLib"></div>
@@ -758,6 +771,8 @@
 (function(){
   "use strict";
 
+  const APP_VERSION = "31";                 // numéro affiché dans les réglages
+  const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
     {key:"breakfast", label:"Petit-déjeuner"},
@@ -1500,6 +1515,10 @@
     txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
     document.getElementById("dataInfo").textContent=txt;
     renderFoodLib();
+    document.getElementById("appVersion").textContent="v"+APP_VERSION;
+    document.getElementById("appVersionDate").textContent=fromISO(APP_DATE).toLocaleDateString(loc(),{day:"numeric",month:"long",year:"numeric"});
+    // Permet de vérifier d'un coup d'œil que la version affichée est bien celle qui tourne.
+    document.getElementById("versionNote").textContent="L'application se met à jour toute seule à l'ouverture.";
   }
   function renderFoodLib(){
     const el=document.getElementById("foodLib"); if(!el) return;
@@ -2248,7 +2267,9 @@
     "7 derniers jours · pointillé = objectif":{en:"Last 7 days · dashed line = goal",zh:"最近 7 天 · 虚线 = 目标",es:"Últimos 7 días · línea discontinua = objetivo",it:"Ultimi 7 giorni · linea tratteggiata = obiettivo",de:"Letzte 7 Tage · gestrichelt = Ziel",pt:"Últimos 7 dias · linha tracejada = objetivo",ar:"آخر 7 أيام · الخط المتقطع = الهدف",hi:"पिछले 7 दिन · बिंदुदार रेखा = लक्ष्य"},
     "Bilan vs maintien":{en:"Balance vs maintenance",zh:"相对维持量的结余",es:"Balance vs mantenimiento",it:"Bilancio vs mantenimento",de:"Bilanz vs. Erhaltung",pt:"Balanço vs manutenção",ar:"الميزان مقابل الحاجة اليومية",hi:"मेंटेनेंस की तुलना में संतुलन"},
     "7 derniers jours · objectif et maintien en pointillés":{en:"Last 7 days · goal and maintenance shown as dashed lines",zh:"最近 7 天 · 目标与维持量以虚线表示",es:"Últimos 7 días · objetivo y mantenimiento en líneas discontinuas",it:"Ultimi 7 giorni · obiettivo e mantenimento tratteggiati",de:"Letzte 7 Tage · Ziel und Erhaltung gestrichelt",pt:"Últimos 7 dias · objetivo e manutenção a tracejado",ar:"آخر 7 أيام · الهدف والحاجة اليومية بخطوط متقطعة",hi:"पिछले 7 दिन · लक्ष्य और मेंटेनेंस बिंदुदार रेखाओं में"},
-    "Vert sous l'objectif, orange entre objectif et maintien, rouge au-dessus du maintien":{en:"Green below the goal, orange between goal and maintenance, red above maintenance",zh:"低于目标为绿色，目标与维持量之间为橙色，高于维持量为红色",es:"Verde por debajo del objetivo, naranja entre objetivo y mantenimiento, rojo por encima del mantenimiento",it:"Verde sotto l'obiettivo, arancione tra obiettivo e mantenimento, rosso sopra il mantenimento",de:"Grün unter dem Ziel, orange zwischen Ziel und Erhaltung, rot über der Erhaltung",pt:"Verde abaixo do objetivo, laranja entre objetivo e manutenção, vermelho acima da manutenção",ar:"أخضر تحت الهدف، برتقالي بين الهدف والحاجة اليومية، أحمر فوقها",hi:"लक्ष्य से नीचे हरा, लक्ष्य और मेंटेनेंस के बीच नारंगी, मेंटेनेंस से ऊपर लाल"}
+    "Vert sous l'objectif, orange entre objectif et maintien, rouge au-dessus du maintien":{en:"Green below the goal, orange between goal and maintenance, red above maintenance",zh:"低于目标为绿色，目标与维持量之间为橙色，高于维持量为红色",es:"Verde por debajo del objetivo, naranja entre objetivo y mantenimiento, rojo por encima del mantenimiento",it:"Verde sotto l'obiettivo, arancione tra obiettivo e mantenimento, rosso sopra il mantenimento",de:"Grün unter dem Ziel, orange zwischen Ziel und Erhaltung, rot über der Erhaltung",pt:"Verde abaixo do objetivo, laranja entre objetivo e manutenção, vermelho acima da manutenção",ar:"أخضر تحت الهدف، برتقالي بين الهدف والحاجة اليومية، أحمر فوقها",hi:"लक्ष्य से नीचे हरा, लक्ष्य और मेंटेनेंस के बीच नारंगी, मेंटेनेंस से ऊपर लाल"},
+    "Version":{en:"Version",zh:"版本",es:"Versión",it:"Versione",de:"Version",pt:"Versão",ar:"الإصدار",hi:"संस्करण"},
+    "L'application se met à jour toute seule à l'ouverture.":{en:"The app updates itself when you open it.",zh:"应用打开时会自动更新。",es:"La aplicación se actualiza sola al abrirla.",it:"L'app si aggiorna da sola all'apertura.",de:"Die App aktualisiert sich beim Öffnen von selbst.",pt:"A aplicação atualiza-se sozinha ao abrir.",ar:"يُحدَّث التطبيق تلقائيًا عند فتحه.",hi:"ऐप खोलने पर स्वयं अपडेट हो जाता है।"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
