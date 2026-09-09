@@ -365,8 +365,6 @@
   .vslide .vs-w span{font-size:16px;font-weight:800;margin-left:4px;}
   .vslide .vs-d{font-size:13px;font-weight:700;color:rgba(255,255,255,.82);margin-top:5px;}
   .vslide .vs-delta{font-size:14px;font-weight:900;color:var(--acc);margin-top:4px;font-variant-numeric:tabular-nums;}
-  .vslide .vs-a{position:absolute;top:calc(64px + env(safe-area-inset-top));left:14px;background:rgba(0,0,0,.55);
-    border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:800;color:#fff;}
   .viewer-dots{position:absolute;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom));z-index:3;
     display:flex;justify-content:center;gap:6px;pointer-events:none;}
   .viewer-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.32);}
@@ -384,8 +382,6 @@
   .slide .sl-w span{font-size:14px;font-weight:800;margin-left:3px;}
   .slide .sl-d{font-size:12px;font-weight:700;color:rgba(255,255,255,.8);margin-top:4px;}
   .slide .sl-delta{font-size:12.5px;font-weight:900;color:var(--acc);margin-top:3px;font-variant-numeric:tabular-nums;}
-  .slide .sl-a{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);
-    border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;color:#fff;}
   .slide .sl-i{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);
     border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;color:rgba(255,255,255,.85);}
   .carousel-hint{font-size:11.5px;color:var(--ink-faint);font-weight:700;text-align:center;margin-top:2px;}
@@ -396,8 +392,6 @@
     background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));}
   .ph .ph-d{font-size:12px;font-weight:800;color:#fff;}
   .ph .ph-w{font-size:11.5px;font-weight:800;color:var(--acc);margin-top:1px;font-variant-numeric:tabular-nums;}
-  .ph .ph-a{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);
-    border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;color:#fff;}
   .ph.sel{outline:3px solid var(--acc);outline-offset:-3px;}
   .ph .ph-num{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--acc);
     color:#08120D;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;}
@@ -410,10 +404,6 @@
     padding:13px 14px;margin-top:12px;text-align:center;}
   .cmp-sum .cs-v{font-size:24px;font-weight:900;color:var(--acc);font-variant-numeric:tabular-nums;}
   .cmp-sum .cs-k{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:3px;}
-  .angle-seg{display:flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;padding:3px;margin-bottom:14px;}
-  .angle-seg button{flex:1;border:none;background:none;padding:10px 0;border-radius:10px;font-size:13px;font-weight:800;
-    color:var(--ink-soft);font-family:inherit;}
-  .angle-seg button.active{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;}
   .ph-full{width:100%;border-radius:14px;display:block;margin-bottom:14px;border:1px solid var(--line);}
   .mode-seg{display:flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;padding:3px;margin-bottom:14px;}
   .mode-seg button{flex:1;border:none;background:none;padding:10px 0;border-radius:10px;font-size:13px;font-weight:800;
@@ -736,13 +726,7 @@
 
       <div id="phCompareBox"></div>
       <div class="card">
-        <div class="card-head"><div class="card-title">Galerie</div><div class="right" id="phFilterLbl">tous les angles</div></div>
-        <div class="angle-seg" id="phFilter" style="margin-top:12px">
-          <button data-angle="all" class="active">Tous</button>
-          <button data-angle="front">Face</button>
-          <button data-angle="side">Profil</button>
-          <button data-angle="back">Dos</button>
-        </div>
+        <div class="card-head"><div class="card-title">Galerie</div><div class="right" id="phFilterLbl"></div></div>
         <div class="ph-grid" id="phGrid"></div>
       </div>
     </div>
@@ -880,7 +864,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "35";                 // numéro affiché dans les réglages
+  const APP_VERSION = "36";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -2469,11 +2453,6 @@
     "Ajouter une photo":{en:"Add a photo",zh:"添加照片",es:"Añadir una foto",it:"Aggiungi una foto",de:"Foto hinzufügen",pt:"Adicionar uma foto",ar:"إضافة صورة",hi:"तस्वीर जोड़ें"},
     "Comparer deux photos":{en:"Compare two photos",zh:"对比两张照片",es:"Comparar dos fotos",it:"Confronta due foto",de:"Zwei Fotos vergleichen",pt:"Comparar duas fotos",ar:"قارن صورتين",hi:"दो तस्वीरों की तुलना करें"},
     "Galerie":{en:"Gallery",zh:"相册",es:"Galería",it:"Galleria",de:"Galerie",pt:"Galeria",ar:"المعرض",hi:"गैलरी"},
-    "Tous":{en:"All",zh:"全部",es:"Todos",it:"Tutti",de:"Alle",pt:"Todos",ar:"الكل",hi:"सभी"},
-    "Face":{en:"Front",zh:"正面",es:"Frente",it:"Fronte",de:"Vorne",pt:"Frente",ar:"أمام",hi:"सामने"},
-    "Profil":{en:"Side",zh:"侧面",es:"Perfil",it:"Profilo",de:"Seite",pt:"Perfil",ar:"جانب",hi:"बगल"},
-    "Dos":{en:"Back",zh:"背面",es:"Espalda",it:"Schiena",de:"Rücken",pt:"Costas",ar:"خلف",hi:"पीठ"},
-    "tous les angles":{en:"all angles",zh:"所有角度",es:"todos los ángulos",it:"tutti gli angoli",de:"alle Ansichten",pt:"todos os ângulos",ar:"كل الزوايا",hi:"सभी कोण"},
     "Aucune photo pour le moment":{en:"No photos yet",zh:"暂无照片",es:"Todavía no hay fotos",it:"Nessuna foto per ora",de:"Noch keine Fotos",pt:"Ainda sem fotos",ar:"لا توجد صور بعد",hi:"अभी कोई तस्वीर नहीं"},
     "Comparer":{en:"Compare",zh:"对比",es:"Comparar",it:"Confronta",de:"Vergleichen",pt:"Comparar",ar:"قارن",hi:"तुलना करें"},
     "Comparaison":{en:"Comparison",zh:"对比",es:"Comparación",it:"Confronto",de:"Vergleich",pt:"Comparação",ar:"المقارنة",hi:"तुलना"},
@@ -2482,7 +2461,6 @@
     "Quitter la comparaison":{en:"Exit comparison",zh:"退出对比",es:"Salir de la comparación",it:"Esci dal confronto",de:"Vergleich beenden",pt:"Sair da comparação",ar:"إنهاء المقارنة",hi:"तुलना बंद करें"},
     "Nouvelle photo":{en:"New photo",zh:"新照片",es:"Nueva foto",it:"Nuova foto",de:"Neues Foto",pt:"Nova foto",ar:"صورة جديدة",hi:"नई तस्वीर"},
     "Photo":{en:"Photo",zh:"照片",es:"Foto",it:"Foto",de:"Foto",pt:"Foto",ar:"صورة",hi:"तस्वीर"},
-    "Angle":{en:"Angle",zh:"角度",es:"Ángulo",it:"Angolo",de:"Ansicht",pt:"Ângulo",ar:"الزاوية",hi:"कोण"},
     "Note":{en:"Note",zh:"备注",es:"Nota",it:"Nota",de:"Notiz",pt:"Nota",ar:"ملاحظة",hi:"टिप्पणी"},
     "Ex. : après 3 mois":{en:"E.g. after 3 months",zh:"例如：三个月后",es:"Ej.: después de 3 meses",it:"Es.: dopo 3 mesi",de:"Z. B. nach 3 Monaten",pt:"Ex.: após 3 meses",ar:"مثال: بعد 3 أشهر",hi:"उदा.: 3 महीने बाद"},
     "Supprimer cette photo":{en:"Delete this photo",zh:"删除此照片",es:"Eliminar esta foto",it:"Elimina questa foto",de:"Dieses Foto löschen",pt:"Eliminar esta foto",ar:"حذف هذه الصورة",hi:"यह तस्वीर हटाएँ"},
@@ -2603,7 +2581,7 @@
   // Les images vivent dans IndexedDB : le stockage local (localStorage) est plafonné
   // à environ 5 Mo et serait saturé par quelques clichés, ce qui ferait perdre TOUTES les données.
   const PH_DB="suivi-photos", PH_STORE="photos";
-  let phDb=null, phList=[], phFilter="all", phSel=[], phCompare=false;
+  let phDb=null, phList=[], phSel=[], phCompare=false;
   function openPhDb(){
     return new Promise((resolve,reject)=>{
       if(phDb) return resolve(phDb);
@@ -2656,13 +2634,12 @@
     if(db.weights[iso]!=null) return num(db.weights[iso]);
     return weightAt(list, fromISO(iso).getTime());
   }
-  const ANGLES={front:"Face", side:"Profil", back:"Dos"};
 
   // Chronologie : du plus ancien au plus récent, avec le poids inscrit sur l'image.
   function renderCarousel(){
     const card=document.getElementById("phTimelineCard");
     const el=document.getElementById("phCarousel");
-    const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>a.date.localeCompare(b.date));
+    const list=phList.slice().sort((a,b)=>a.date.localeCompare(b.date));
     if(list.length<1){ card.style.display="none"; return; }
     card.style.display="";
     const first=list.find(p=>p.weight!=null);
@@ -2674,7 +2651,6 @@
         delta=`<div class="sl-delta">${fmtKg(dv,true)} kg depuis la première</div>`;
       }
       return `<div class="slide" data-slide="${p.id}"><img src="${p.img}" alt="" loading="lazy">`+
-        (p.angle?`<span class="sl-a">${ANGLES[p.angle]||""}</span>`:"")+
         `<span class="sl-i">${i+1} / ${list.length}</span>`+
         `<div class="sl-meta">${w}<div class="sl-d">${mediumLabel(p.date)}${p.note?" · "+String(p.note).replace(/</g,"&lt;"):""}</div>${delta}</div></div>`;
     }).join("");
@@ -2711,14 +2687,13 @@
   function renderPhotos(){
     const el=document.getElementById("phGrid");
     document.getElementById("phCount").textContent = phList.length + (phList.length>1?" photos":" photo");
-    const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>b.date.localeCompare(a.date));
+    const list=phList.slice().sort((a,b)=>b.date.localeCompare(a.date));
     if(!list.length){ el.innerHTML=`<div class="food-empty" style="grid-column:1/-1">Aucune photo pour le moment</div>`; renderCarousel(); updateStorageInfo(); return; }
     el.innerHTML=list.map(p=>{
       const w=(p.weight!=null)?fmtKg(p.weight)+" kg":"";
       const selIdx=phSel.indexOf(p.id);
       return `<div class="ph${selIdx>=0?" sel":""}" data-ph="${p.id}">`+
         `<img src="${p.img}" alt="">`+
-        (p.angle?`<span class="ph-a">${ANGLES[p.angle]||""}</span>`:"")+
         (selIdx>=0?`<span class="ph-num">${selIdx+1}</span>`:"")+
         `<div class="ph-meta"><div class="ph-d">${mediumLabel(p.date)}</div>${w?`<div class="ph-w">${w}</div>`:""}</div></div>`;
     }).join("");
@@ -2766,7 +2741,7 @@
   const viewerRoot=document.getElementById("viewerRoot");
   function closeViewer(){ viewerRoot.innerHTML=""; document.body.style.overflow=""; }
   function openViewer(startId){
-    const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>a.date.localeCompare(b.date));
+    const list=phList.slice().sort((a,b)=>a.date.localeCompare(b.date));
     if(!list.length) return;
     const start=Math.max(0, list.findIndex(p=>p.id===startId));
     const first=list.find(p=>p.weight!=null);
@@ -2782,7 +2757,6 @@
         let delta="";
         if(first && p.weight!=null && p.id!==first.id) delta=`<div class="vs-delta">${fmtKg(p.weight-first.weight,true)} kg depuis la première</div>`;
         return `<div class="vslide" data-id="${p.id}"><img src="${p.img}" alt="">`+
-          (p.angle?`<span class="vs-a">${ANGLES[p.angle]||""}</span>`:"")+
           `<div class="vs-meta">${w}<div class="vs-d">${mediumLabel(p.date)}${p.note?" · "+String(p.note).replace(/</g,"&lt;"):""}</div>${delta}</div></div>`;
       }).join("")}</div>
       <div class="viewer-dots" id="vDots">${list.map((p,i)=>`<i class="${i===start?"on":""}"></i>`).join("")}</div>
@@ -2815,10 +2789,6 @@
       <img class="ph-full" src="${rec.img}" alt="">
       <label class="f">Date</label>
       <input class="t" id="phDate" type="date" value="${esc(rec.date)}">
-      <label class="f">Angle</label>
-      <div class="angle-seg" id="phAngle">
-        <button data-a="front">Face</button><button data-a="side">Profil</button><button data-a="back">Dos</button>
-      </div>
       <label class="f">Note</label>
       <input class="t" id="phNoteTxt" type="text" placeholder="Ex. : après 3 mois" value="${esc(rec.note||"")}">
       <div class="sheet-actions">
@@ -2829,10 +2799,6 @@
       </div></div>`;
     bindSheet();
     phDraft=rec;
-    const setA=(a)=>{ phDraft.angle=a;
-      sheetRoot.querySelectorAll("[data-a]").forEach(b=>b.classList.toggle("active", b.dataset.a===a)); };
-    setA(rec.angle||"front");
-    sheetRoot.querySelectorAll("[data-a]").forEach(b=>b.addEventListener("click",()=>setA(b.dataset.a)));
     document.getElementById("phDate").addEventListener("change",(e)=>{
       if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){
         phDraft.date=e.target.value;
@@ -2992,7 +2958,7 @@
       const img=await preparePhoto(f);
       const iso=todayISO(), w=weightForDate(iso);
       openPhotoSheet({id:"p"+Date.now()+Math.random().toString(36).slice(2,7), date:iso, img:img,
-                      angle:"front", note:"", weight:(w!=null)?Math.round(w*10)/10:null}, true);
+                      note:"", weight:(w!=null)?Math.round(w*10)/10:null}, true);
     }catch(err){ flash("phNote","Cette image n'a pas pu être lue", true); }
   });
   document.getElementById("phCompare").addEventListener("click",()=>{
@@ -3000,12 +2966,6 @@
     phCompare = !phCompare; phSel=[];
     renderPhotos(); renderCompare();
   });
-  document.querySelectorAll("#phFilter [data-angle]").forEach(b=>b.addEventListener("click",()=>{
-    phFilter=b.dataset.angle;
-    document.querySelectorAll("#phFilter [data-angle]").forEach(x=>x.classList.toggle("active", x===b));
-    document.getElementById("phFilterLbl").textContent = phFilter==="all" ? "tous les angles" : (ANGLES[phFilter]||"");
-    renderPhotos();
-  }));
   document.querySelectorAll("[data-water]").forEach(b=>b.addEventListener("click",()=>{
     const day=getDay(currentDate);
     day.water=Math.max(0, num(day.water)+Number(b.dataset.water));
