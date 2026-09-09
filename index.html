@@ -2554,7 +2554,30 @@
   document.querySelectorAll("[data-lang]").forEach(b=>b.addEventListener("click",()=>setLang(b.dataset.lang)));
   setHeaderDate();
   if(navigator.storage&&navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
-  if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }
+  // Mise à jour automatique : iOS garde longtemps l'ancienne version en cache.
+  // On force une vérification à chaque ouverture, et on recharge dès qu'une nouvelle version est prête.
+  if("serviceWorker" in navigator){
+    let reloaded=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(reloaded) return; reloaded=true; window.location.reload();
+    });
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.register("./sw.js").then(reg=>{
+        reg.update().catch(()=>{});
+        reg.addEventListener("updatefound",()=>{
+          const nw=reg.installing; if(!nw) return;
+          nw.addEventListener("statechange",()=>{
+            // nouvelle version installée alors qu'une ancienne tourne : on bascule tout de suite
+            if(nw.state==="installed" && navigator.serviceWorker.controller) nw.postMessage({type:"SKIP_WAITING"});
+          });
+        });
+      }).catch(()=>{});
+      // Nouvelle vérification quand l'app revient au premier plan
+      document.addEventListener("visibilitychange",()=>{
+        if(!document.hidden) navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update().catch(()=>{}); }).catch(()=>{});
+      });
+    });
+  }
   document.getElementById("wDate").value=todayISO();
   document.getElementById("wDate").max=todayISO();
   renderDay();
