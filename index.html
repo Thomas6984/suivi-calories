@@ -347,6 +347,30 @@
     transition:transform .12s ease, background .2s ease;}
   .add-btn:active{transform:scale(.98);background:rgba(255,255,255,.09);}
   .add-btn svg{width:16px;height:16px;flex-shrink:0;}
+  .viewer{position:fixed;inset:0;z-index:90;background:#000;display:flex;flex-direction:column;}
+  .viewer-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top)) 14px 12px 14px;
+    background:linear-gradient(180deg,rgba(0,0,0,.75),transparent);}
+  .viewer-top .vt-i{font-size:13px;font-weight:800;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;}
+  .viewer-top button{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;
+    width:36px;height:36px;border-radius:50%;font-size:19px;font-family:inherit;line-height:1;}
+  .viewer-track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;}
+  .viewer-track::-webkit-scrollbar{display:none;}
+  .vslide{flex:0 0 100%;scroll-snap-align:center;position:relative;display:flex;align-items:center;justify-content:center;}
+  .vslide img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
+  .vslide .vs-meta{position:absolute;left:0;right:0;bottom:0;padding:60px 18px calc(22px + env(safe-area-inset-bottom)) 18px;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.9));}
+  .vslide .vs-w{font-size:34px;font-weight:900;color:#fff;line-height:1;font-variant-numeric:tabular-nums;}
+  .vslide .vs-w span{font-size:16px;font-weight:800;margin-left:4px;}
+  .vslide .vs-d{font-size:13px;font-weight:700;color:rgba(255,255,255,.82);margin-top:5px;}
+  .vslide .vs-delta{font-size:14px;font-weight:900;color:var(--acc);margin-top:4px;font-variant-numeric:tabular-nums;}
+  .vslide .vs-a{position:absolute;top:calc(64px + env(safe-area-inset-top));left:14px;background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:800;color:#fff;}
+  .viewer-dots{position:absolute;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom));z-index:3;
+    display:flex;justify-content:center;gap:6px;pointer-events:none;}
+  .viewer-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.32);}
+  .viewer-dots i.on{background:var(--acc);width:18px;border-radius:3px;}
   .carousel{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
     padding:2px 0 6px 0;margin-top:12px;scrollbar-width:none;}
   .carousel::-webkit-scrollbar{display:none;}
@@ -705,7 +729,7 @@
       </div>
       <div class="card" id="phTimelineCard">
         <div class="card-head"><div class="card-title">Chronologie</div><div class="right" id="phTlRange">—</div></div>
-        <div class="card-sub">Fais défiler du plus ancien au plus récent</div>
+        <div class="card-sub">Touche une photo pour l'ouvrir en plein écran et faire défiler</div>
         <div class="carousel" id="phCarousel"></div>
         <div class="carousel-hint" id="phTlHint"></div>
       </div>
@@ -819,6 +843,7 @@
   </main>
 
   <div id="sheetRoot"></div>
+  <div id="viewerRoot"></div>
 
   <nav class="tabbar" id="tabsPoids" style="display:none">
     <button class="tab-btn active" data-view="wsuivi">
@@ -855,7 +880,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "34";                 // numéro affiché dans les réglages
+  const APP_VERSION = "35";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -2468,7 +2493,9 @@
     "Enregistrement impossible : espace insuffisant":{en:"Could not save: not enough space",zh:"保存失败：空间不足",es:"No se pudo guardar: espacio insuficiente",it:"Salvataggio impossibile: spazio insufficiente",de:"Speichern fehlgeschlagen: zu wenig Speicher",pt:"Não foi possível guardar: espaço insuficiente",ar:"تعذر الحفظ: المساحة غير كافية",hi:"सहेजा नहीं जा सका: पर्याप्त जगह नहीं"},
     "Il faut au moins deux photos":{en:"You need at least two photos",zh:"至少需要两张照片",es:"Se necesitan al menos dos fotos",it:"Servono almeno due foto",de:"Mindestens zwei Fotos nötig",pt:"São necessárias pelo menos duas fotos",ar:"تحتاج إلى صورتين على الأقل",hi:"कम से कम दो तस्वीरें चाहिए"},
     "Chronologie":{en:"Timeline",zh:"时间线",es:"Cronología",it:"Cronologia",de:"Zeitverlauf",pt:"Cronologia",ar:"التسلسل الزمني",hi:"समयरेखा"},
-    "Fais défiler du plus ancien au plus récent":{en:"Swipe from oldest to newest",zh:"从最早滑到最新",es:"Desliza del más antiguo al más reciente",it:"Scorri dal più vecchio al più recente",de:"Wische vom ältesten zum neuesten",pt:"Desliza do mais antigo para o mais recente",ar:"مرّر من الأقدم إلى الأحدث",hi:"सबसे पुराने से नए की ओर स्वाइप करें"}
+    "Fais défiler du plus ancien au plus récent":{en:"Swipe from oldest to newest",zh:"从最早滑到最新",es:"Desliza del más antiguo al más reciente",it:"Scorri dal più vecchio al più recente",de:"Wische vom ältesten zum neuesten",pt:"Desliza do mais antigo para o mais recente",ar:"مرّر من الأقدم إلى الأحدث",hi:"सबसे पुराने से नए की ओर स्वाइप करें"},
+    "Touche une photo pour l'ouvrir en plein écran et faire défiler":{en:"Tap a photo to open it full screen and swipe through",zh:"点按照片可全屏查看并滑动浏览",es:"Toca una foto para abrirla a pantalla completa y deslizar",it:"Tocca una foto per aprirla a schermo intero e scorrere",de:"Tippe ein Foto an, um es im Vollbild zu öffnen und zu wischen",pt:"Toca numa foto para abrir em ecrã inteiro e deslizar",ar:"اضغط على صورة لفتحها بملء الشاشة والتمرير",hi:"पूर्ण स्क्रीन में खोलने और स्वाइप करने के लिए तस्वीर पर टैप करें"},
+    "Modifier":{en:"Edit",zh:"修改",es:"Editar",it:"Modifica",de:"Bearbeiten",pt:"Editar",ar:"تعديل",hi:"बदलें"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2658,7 +2685,7 @@
       ? fmtKg(b.weight-a.weight,true)+" kg en "+daysBetween(a.date,b.date)+" jours"
       : "";
     el.querySelectorAll("[data-slide]").forEach(n=>n.addEventListener("click",()=>{
-      const rec=phList.find(x=>x.id===n.dataset.slide); if(rec && !phCompare) openPhotoSheet(rec);
+      if(!phCompare) openViewer(n.dataset.slide);
     }));
     // on se place d'emblée sur la photo la plus récente
     requestAnimationFrame(()=>{ el.scrollLeft=el.scrollWidth; });
@@ -2702,7 +2729,7 @@
         const i=phSel.indexOf(id);
         if(i>=0) phSel.splice(i,1); else if(phSel.length<2) phSel.push(id);
         renderPhotos(); renderCompare();
-      } else openPhotoSheet(phList.find(p=>p.id===id));
+      } else openViewer(id);
     }));
     applyI18n(el);
   }
@@ -2733,6 +2760,49 @@
       phCompare=false; phSel=[]; renderPhotos(); renderCompare();
     }));
     applyI18n(box);
+  }
+
+  // Visionneuse plein écran : on ouvre sur la photo touchée et on fait défiler d'un doigt.
+  const viewerRoot=document.getElementById("viewerRoot");
+  function closeViewer(){ viewerRoot.innerHTML=""; document.body.style.overflow=""; }
+  function openViewer(startId){
+    const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>a.date.localeCompare(b.date));
+    if(!list.length) return;
+    const start=Math.max(0, list.findIndex(p=>p.id===startId));
+    const first=list.find(p=>p.weight!=null);
+    viewerRoot.innerHTML=`<div class="viewer">
+      <div class="viewer-top">
+        <span class="vt-i" id="vIdx">${start+1} / ${list.length}</span>
+        <button data-vact="edit" aria-label="Modifier">✎</button>
+        <button data-vact="close" aria-label="Fermer">×</button>
+      </div>
+      <div class="viewer-track" id="vTrack">${list.map(p=>{
+        const w=(p.weight!=null)?`<div class="vs-w">${fmtKg(p.weight)}<span>kg</span></div>`
+                                :`<div class="vs-w" style="font-size:18px;color:rgba(255,255,255,.6)">—</div>`;
+        let delta="";
+        if(first && p.weight!=null && p.id!==first.id) delta=`<div class="vs-delta">${fmtKg(p.weight-first.weight,true)} kg depuis la première</div>`;
+        return `<div class="vslide" data-id="${p.id}"><img src="${p.img}" alt="">`+
+          (p.angle?`<span class="vs-a">${ANGLES[p.angle]||""}</span>`:"")+
+          `<div class="vs-meta">${w}<div class="vs-d">${mediumLabel(p.date)}${p.note?" · "+String(p.note).replace(/</g,"&lt;"):""}</div>${delta}</div></div>`;
+      }).join("")}</div>
+      <div class="viewer-dots" id="vDots">${list.map((p,i)=>`<i class="${i===start?"on":""}"></i>`).join("")}</div>
+    </div>`;
+    document.body.style.overflow="hidden";
+    const track=document.getElementById("vTrack");
+    const goTo=(i)=>{ track.scrollLeft=i*track.clientWidth; };
+    requestAnimationFrame(()=>goTo(start));
+    let cur=start;
+    track.addEventListener("scroll",()=>{
+      const i=Math.round(track.scrollLeft/Math.max(1,track.clientWidth));
+      if(i===cur) return; cur=Math.max(0,Math.min(list.length-1,i));
+      document.getElementById("vIdx").textContent=(cur+1)+" / "+list.length;
+      document.querySelectorAll("#vDots i").forEach((n,k)=>n.classList.toggle("on",k===cur));
+    },{passive:true});
+    viewerRoot.querySelectorAll("[data-vact]").forEach(b=>b.addEventListener("click",()=>{
+      if(b.dataset.vact==="close") closeViewer();
+      else { const rec=list[cur]; closeViewer(); if(rec) openPhotoSheet(rec); }
+    }));
+    applyI18n(viewerRoot);
   }
 
   // Panneau de détail : date, angle, note, suppression.
@@ -2791,6 +2861,7 @@
     try{ await phDelete(phDraft.id); }catch(e){}
     phList=phList.filter(p=>p.id!==phDraft.id);
     phSel=phSel.filter(id=>id!==phDraft.id);
+    closeViewer();
     closeSheet(); phDraft=null; renderPhotos(); renderCompare(); flash("phNote","Photo supprimée");
   }
   async function loadPhotos(){
