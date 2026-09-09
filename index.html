@@ -347,6 +347,32 @@
     transition:transform .12s ease, background .2s ease;}
   .add-btn:active{transform:scale(.98);background:rgba(255,255,255,.09);}
   .add-btn svg{width:16px;height:16px;flex-shrink:0;}
+  .ph-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .ph{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line);aspect-ratio:3/4;}
+  .ph img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ph .ph-meta{position:absolute;left:0;right:0;bottom:0;padding:22px 9px 8px 9px;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));}
+  .ph .ph-d{font-size:12px;font-weight:800;color:#fff;}
+  .ph .ph-w{font-size:11.5px;font-weight:800;color:var(--acc);margin-top:1px;font-variant-numeric:tabular-nums;}
+  .ph .ph-a{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);
+    border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;color:#fff;}
+  .ph.sel{outline:3px solid var(--acc);outline-offset:-3px;}
+  .ph .ph-num{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--acc);
+    color:#08120D;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .cmp figure{margin:0;}
+  .cmp img{width:100%;border-radius:14px;display:block;border:1px solid var(--line);}
+  .cmp figcaption{font-size:12px;font-weight:800;margin-top:7px;text-align:center;}
+  .cmp figcaption .c2{display:block;font-size:14px;color:var(--acc);font-variant-numeric:tabular-nums;margin-top:2px;}
+  .cmp-sum{background:rgba(var(--acc-rgb),.10);border:1px solid rgba(var(--acc-rgb),.28);border-radius:14px;
+    padding:13px 14px;margin-top:12px;text-align:center;}
+  .cmp-sum .cs-v{font-size:24px;font-weight:900;color:var(--acc);font-variant-numeric:tabular-nums;}
+  .cmp-sum .cs-k{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:3px;}
+  .angle-seg{display:flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;padding:3px;margin-bottom:14px;}
+  .angle-seg button{flex:1;border:none;background:none;padding:10px 0;border-radius:10px;font-size:13px;font-weight:800;
+    color:var(--ink-soft);font-family:inherit;}
+  .angle-seg button.active{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;}
+  .ph-full{width:100%;border-radius:14px;display:block;margin-bottom:14px;border:1px solid var(--line);}
   .mode-seg{display:flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;padding:3px;margin-bottom:14px;}
   .mode-seg button{flex:1;border:none;background:none;padding:10px 0;border-radius:10px;font-size:13px;font-weight:800;
     color:var(--ink-soft);font-family:inherit;transition:background .2s,color .2s;}
@@ -461,6 +487,8 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 3v7a3 3 0 003 3v8M7 3v6M10 3v6M17 3c-1.5 2-2 4-2 7 0 2 .7 3 2 3v8"/></svg>Nutrition</button>
     <button class="sec-btn" data-section="poids">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 21h16l-2.5-12H6.5L4 21z"/><circle cx="12" cy="5" r="2.5"/></svg>Poids</button>
+    <button class="sec-btn" data-section="photos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Évolution</button>
   </div>
  </div>
 
@@ -646,6 +674,31 @@
     </div>
    </div>
 
+   <!-- ============ SECTION ÉVOLUTION ============ -->
+   <div class="section" id="section-photos">
+    <div class="view active" id="view-photos">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Mes photos</div><div class="right" id="phCount">0</div></div>
+        <div class="card-sub">Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.</div>
+        <button class="btn primary" id="phAdd">Ajouter une photo</button>
+        <button class="btn secondary" id="phCompare">Comparer deux photos</button>
+        <input type="file" id="phFile" accept="image/*" style="display:none">
+        <div class="note" id="phNote"></div>
+      </div>
+      <div id="phCompareBox"></div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Galerie</div><div class="right" id="phFilterLbl">tous les angles</div></div>
+        <div class="angle-seg" id="phFilter" style="margin-top:12px">
+          <button data-angle="all" class="active">Tous</button>
+          <button data-angle="front">Face</button>
+          <button data-angle="side">Profil</button>
+          <button data-angle="back">Dos</button>
+        </div>
+        <div class="ph-grid" id="phGrid"></div>
+      </div>
+    </div>
+   </div>
+
    <!-- ============ SECTION POIDS ============ -->
    <div class="section" id="section-poids">
 
@@ -777,7 +830,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "32";                 // numéro affiché dans les réglages
+  const APP_VERSION = "33";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1551,7 +1604,7 @@
     let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString(loc())}).`;
     const nw=weightEntries().length;
     if(nw) txt+=` ${nw} pesée${nw>1?"s":""} enregistrée${nw>1?"s":""}.`;
-    txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.";
+    txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps. Les photos d'évolution ne sont pas incluses dans la sauvegarde : elles resteraient trop lourdes pour un fichier.";
     document.getElementById("dataInfo").textContent=txt;
     renderFoodLib();
     document.getElementById("appVersion").textContent="v"+APP_VERSION;
@@ -2359,7 +2412,36 @@
     "par portion":{en:"per portion",zh:"每份",es:"por porción",it:"per porzione",de:"pro Portion",pt:"por porção",ar:"لكل حصة",hi:"प्रति हिस्सा"},
     "½ portion":{en:"½ portion",zh:"半份",es:"½ porción",it:"½ porzione",de:"½ Portion",pt:"½ porção",ar:"نصف حصة",hi:"½ हिस्सा"},
     "1 portion":{en:"1 portion",zh:"1 份",es:"1 porción",it:"1 porzione",de:"1 Portion",pt:"1 porção",ar:"حصة واحدة",hi:"1 हिस्सा"},
-    "2 portions":{en:"2 portions",zh:"2 份",es:"2 porciones",it:"2 porzioni",de:"2 Portionen",pt:"2 porções",ar:"حصتان",hi:"2 हिस्से"}
+    "2 portions":{en:"2 portions",zh:"2 份",es:"2 porciones",it:"2 porzioni",de:"2 Portionen",pt:"2 porções",ar:"حصتان",hi:"2 हिस्से"},
+    "Évolution":{en:"Progress",zh:"进度",es:"Evolución",it:"Evoluzione",de:"Fortschritt",pt:"Evolução",ar:"التطور",hi:"प्रगति"},
+    "Mes photos":{en:"My photos",zh:"我的照片",es:"Mis fotos",it:"Le mie foto",de:"Meine Fotos",pt:"As minhas fotos",ar:"صوري",hi:"मेरी तस्वीरें"},
+    "Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.":{en:"Photos stay on this phone and are never sent anywhere.",zh:"照片仅保存在本机，不会上传到任何地方。",es:"Las fotos se quedan en este teléfono y nunca se envían a ningún sitio.",it:"Le foto restano su questo telefono e non vengono mai inviate altrove.",de:"Die Fotos bleiben auf diesem Telefon und werden nirgendwohin gesendet.",pt:"As fotos ficam neste telefone e nunca são enviadas para lado nenhum.",ar:"تبقى الصور على هذا الهاتف ولا تُرسل إلى أي مكان.",hi:"तस्वीरें इसी फ़ोन में रहती हैं और कहीं नहीं भेजी जातीं।"},
+    "Ajouter une photo":{en:"Add a photo",zh:"添加照片",es:"Añadir una foto",it:"Aggiungi una foto",de:"Foto hinzufügen",pt:"Adicionar uma foto",ar:"إضافة صورة",hi:"तस्वीर जोड़ें"},
+    "Comparer deux photos":{en:"Compare two photos",zh:"对比两张照片",es:"Comparar dos fotos",it:"Confronta due foto",de:"Zwei Fotos vergleichen",pt:"Comparar duas fotos",ar:"قارن صورتين",hi:"दो तस्वीरों की तुलना करें"},
+    "Galerie":{en:"Gallery",zh:"相册",es:"Galería",it:"Galleria",de:"Galerie",pt:"Galeria",ar:"المعرض",hi:"गैलरी"},
+    "Tous":{en:"All",zh:"全部",es:"Todos",it:"Tutti",de:"Alle",pt:"Todos",ar:"الكل",hi:"सभी"},
+    "Face":{en:"Front",zh:"正面",es:"Frente",it:"Fronte",de:"Vorne",pt:"Frente",ar:"أمام",hi:"सामने"},
+    "Profil":{en:"Side",zh:"侧面",es:"Perfil",it:"Profilo",de:"Seite",pt:"Perfil",ar:"جانب",hi:"बगल"},
+    "Dos":{en:"Back",zh:"背面",es:"Espalda",it:"Schiena",de:"Rücken",pt:"Costas",ar:"خلف",hi:"पीठ"},
+    "tous les angles":{en:"all angles",zh:"所有角度",es:"todos los ángulos",it:"tutti gli angoli",de:"alle Ansichten",pt:"todos os ângulos",ar:"كل الزوايا",hi:"सभी कोण"},
+    "Aucune photo pour le moment":{en:"No photos yet",zh:"暂无照片",es:"Todavía no hay fotos",it:"Nessuna foto per ora",de:"Noch keine Fotos",pt:"Ainda sem fotos",ar:"لا توجد صور بعد",hi:"अभी कोई तस्वीर नहीं"},
+    "Comparer":{en:"Compare",zh:"对比",es:"Comparar",it:"Confronta",de:"Vergleichen",pt:"Comparar",ar:"قارن",hi:"तुलना करें"},
+    "Comparaison":{en:"Comparison",zh:"对比",es:"Comparación",it:"Confronto",de:"Vergleich",pt:"Comparação",ar:"المقارنة",hi:"तुलना"},
+    "Touche deux photos dans la galerie ci-dessous.":{en:"Tap two photos in the gallery below.",zh:"请在下方相册中点选两张照片。",es:"Toca dos fotos en la galería de abajo.",it:"Tocca due foto nella galleria qui sotto.",de:"Tippe unten zwei Fotos an.",pt:"Toca em duas fotos na galeria abaixo.",ar:"اضغط على صورتين في المعرض أدناه.",hi:"नीचे गैलरी में दो तस्वीरें चुनें।"},
+    "Touche une seconde photo dans la galerie ci-dessous.":{en:"Tap a second photo in the gallery below.",zh:"请在下方相册中再选一张照片。",es:"Toca una segunda foto en la galería de abajo.",it:"Tocca una seconda foto nella galleria qui sotto.",de:"Tippe unten ein zweites Foto an.",pt:"Toca numa segunda foto na galeria abaixo.",ar:"اضغط على صورة ثانية في المعرض أدناه.",hi:"नीचे गैलरी में दूसरी तस्वीर चुनें।"},
+    "Quitter la comparaison":{en:"Exit comparison",zh:"退出对比",es:"Salir de la comparación",it:"Esci dal confronto",de:"Vergleich beenden",pt:"Sair da comparação",ar:"إنهاء المقارنة",hi:"तुलना बंद करें"},
+    "Nouvelle photo":{en:"New photo",zh:"新照片",es:"Nueva foto",it:"Nuova foto",de:"Neues Foto",pt:"Nova foto",ar:"صورة جديدة",hi:"नई तस्वीर"},
+    "Photo":{en:"Photo",zh:"照片",es:"Foto",it:"Foto",de:"Foto",pt:"Foto",ar:"صورة",hi:"तस्वीर"},
+    "Angle":{en:"Angle",zh:"角度",es:"Ángulo",it:"Angolo",de:"Ansicht",pt:"Ângulo",ar:"الزاوية",hi:"कोण"},
+    "Note":{en:"Note",zh:"备注",es:"Nota",it:"Nota",de:"Notiz",pt:"Nota",ar:"ملاحظة",hi:"टिप्पणी"},
+    "Ex. : après 3 mois":{en:"E.g. after 3 months",zh:"例如：三个月后",es:"Ej.: después de 3 meses",it:"Es.: dopo 3 mesi",de:"Z. B. nach 3 Monaten",pt:"Ex.: após 3 meses",ar:"مثال: بعد 3 أشهر",hi:"उदा.: 3 महीने बाद"},
+    "Supprimer cette photo":{en:"Delete this photo",zh:"删除此照片",es:"Eliminar esta foto",it:"Elimina questa foto",de:"Dieses Foto löschen",pt:"Eliminar esta foto",ar:"حذف هذه الصورة",hi:"यह तस्वीर हटाएँ"},
+    "Photo enregistrée ✓":{en:"Photo saved ✓",zh:"照片已保存 ✓",es:"Foto guardada ✓",it:"Foto salvata ✓",de:"Foto gespeichert ✓",pt:"Foto guardada ✓",ar:"تم حفظ الصورة ✓",hi:"तस्वीर सहेजी गई ✓"},
+    "Photo supprimée":{en:"Photo deleted",zh:"照片已删除",es:"Foto eliminada",it:"Foto eliminata",de:"Foto gelöscht",pt:"Foto eliminada",ar:"تم حذف الصورة",hi:"तस्वीर हटाई गई"},
+    "Préparation de l'image…":{en:"Preparing the image…",zh:"正在处理图片…",es:"Preparando la imagen…",it:"Preparazione dell'immagine…",de:"Bild wird vorbereitet…",pt:"A preparar a imagem…",ar:"جارٍ تجهيز الصورة…",hi:"छवि तैयार की जा रही है…"},
+    "Cette image n'a pas pu être lue":{en:"This image could not be read",zh:"无法读取此图片",es:"No se pudo leer esta imagen",it:"Impossibile leggere questa immagine",de:"Dieses Bild konnte nicht gelesen werden",pt:"Não foi possível ler esta imagem",ar:"تعذرت قراءة هذه الصورة",hi:"यह छवि पढ़ी नहीं जा सकी"},
+    "Enregistrement impossible : espace insuffisant":{en:"Could not save: not enough space",zh:"保存失败：空间不足",es:"No se pudo guardar: espacio insuficiente",it:"Salvataggio impossibile: spazio insufficiente",de:"Speichern fehlgeschlagen: zu wenig Speicher",pt:"Não foi possível guardar: espaço insuficiente",ar:"تعذر الحفظ: المساحة غير كافية",hi:"सहेजा नहीं जा सका: पर्याप्त जगह नहीं"},
+    "Il faut au moins deux photos":{en:"You need at least two photos",zh:"至少需要两张照片",es:"Se necesitan al menos dos fotos",it:"Servono almeno due foto",de:"Mindestens zwei Fotos nötig",pt:"São necessárias pelo menos duas fotos",ar:"تحتاج إلى صورتين على الأقل",hi:"कम से कम दो तस्वीरें चाहिए"}
   };;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2392,6 +2474,10 @@
     [/^−(\d+) ml$/, {en:"−$1 ml", zh:"−$1 毫升", ar:"−$1 مل", hi:"−$1 मि.ली."}],
     [/^(\d+) g · (\d+) kcal$/, {en:"$1 g · $2 kcal", zh:"$1 克 · $2 千卡", ar:"$1 غ · $2 سعرة", hi:"$1 ग्राम · $2 kcal"}],
     [/^(.+) portions?$/, {en:"$1 portion(s)", zh:"$1 份", es:"$1 porción(es)", it:"$1 porzione/i", de:"$1 Portion(en)", pt:"$1 porção(ões)", ar:"$1 حصة", hi:"$1 हिस्सा"}],
+    [/^en (\d+) jours$/, {en:"in $1 days", zh:"历时 $1 天", es:"en $1 días", it:"in $1 giorni", de:"in $1 Tagen", pt:"em $1 dias", ar:"خلال $1 يومًا", hi:"$1 दिनों में"}],
+    [/^jours d'écart$/, {en:"days apart", zh:"天间隔", es:"días de diferencia", it:"giorni di distanza", de:"Tage Abstand", pt:"dias de diferença", ar:"يومًا فارقًا", hi:"दिन का अंतर"}],
+    [/^Poids ce jour-là : (.+)\. Repris automatiquement de tes pesées\.$/, {en:"Weight that day: $1. Taken from your weigh-ins.", zh:"当天体重：$1，取自你的称重记录。", es:"Peso ese día: $1. Tomado de tus pesajes.", it:"Peso quel giorno: $1. Preso dalle tue pesate.", de:"Gewicht an dem Tag: $1. Aus deinen Wiegungen übernommen.", pt:"Peso nesse dia: $1. Retirado das tuas pesagens.", ar:"الوزن في ذلك اليوم: $1، مأخوذ من أوزانك.", hi:"उस दिन का वज़न: $1। आपके वज़न रिकॉर्ड से लिया गया।"}],
+    [/^(\d+) photos?$/, {en:"$1 photo(s)", zh:"$1 张照片", es:"$1 foto(s)", it:"$1 foto", de:"$1 Foto(s)", pt:"$1 foto(s)", ar:"$1 صورة", hi:"$1 तस्वीरें"}],
     [/^(\d+) g$/, {en:"$1 g", zh:"$1 克", ar:"$1 غ", hi:"$1 ग्राम"}],
     [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F", zh:"$1 克 · 蛋白 $2 / 碳水 $3 / 脂肪 $4"}],
     [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F", zh:"蛋白 $1 · 碳水 $2 · 脂肪 $3"}],
@@ -2457,6 +2543,181 @@
     flash("langNote","Langue enregistrée ✓");
   }
 
+  // ================= ÉVOLUTION EN PHOTOS =================
+  // Les images vivent dans IndexedDB : le stockage local (localStorage) est plafonné
+  // à environ 5 Mo et serait saturé par quelques clichés, ce qui ferait perdre TOUTES les données.
+  const PH_DB="suivi-photos", PH_STORE="photos";
+  let phDb=null, phList=[], phFilter="all", phSel=[], phCompare=false;
+  function openPhDb(){
+    return new Promise((resolve,reject)=>{
+      if(phDb) return resolve(phDb);
+      if(!("indexedDB" in window)) return reject(new Error("indexedDB indisponible"));
+      const rq=indexedDB.open(PH_DB,1);
+      rq.onupgradeneeded=()=>{ const db=rq.result;
+        if(!db.objectStoreNames.contains(PH_STORE)) db.createObjectStore(PH_STORE,{keyPath:"id"}); };
+      rq.onsuccess=()=>{ phDb=rq.result; resolve(phDb); };
+      rq.onerror=()=>reject(rq.error||new Error("ouverture impossible"));
+    });
+  }
+  function phTx(mode){ return openPhDb().then(db=>db.transaction(PH_STORE,mode).objectStore(PH_STORE)); }
+  function phGetAll(){
+    return phTx("readonly").then(st=>new Promise((res,rej)=>{
+      const rq=st.getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error);
+    }));
+  }
+  function phPut(rec){ return phTx("readwrite").then(st=>new Promise((res,rej)=>{
+      const rq=st.put(rec); rq.onsuccess=()=>res(); rq.onerror=()=>rej(rq.error); })); }
+  function phDelete(id){ return phTx("readwrite").then(st=>new Promise((res,rej)=>{
+      const rq=st.delete(id); rq.onsuccess=()=>res(); rq.onerror=()=>rej(rq.error); })); }
+
+  // Réduction et redressement : une photo iPhone fait 3 à 5 Mo et peut être couchée.
+  function preparePhoto(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onerror=()=>reject(new Error("lecture"));
+      reader.onload=()=>{
+        const img=new Image();
+        img.onerror=()=>reject(new Error("décodage"));
+        img.onload=()=>{
+          const max=1080;
+          let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+          if(!w||!h) return reject(new Error("dimensions"));
+          if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+          const c=document.createElement("canvas"); c.width=w; c.height=h;
+          const ctx=c.getContext("2d");
+          if(ctx.imageSmoothingQuality) ctx.imageSmoothingQuality="high";
+          ctx.drawImage(img,0,0,w,h);   // les navigateurs modernes appliquent déjà l'orientation EXIF
+          resolve(c.toDataURL("image/jpeg",0.82));
+        };
+        img.src=reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  // Poids enregistré ce jour-là, sinon interpolé entre deux pesées.
+  function weightForDate(iso){
+    const list=weightEntries(); if(!list.length) return null;
+    if(db.weights[iso]!=null) return num(db.weights[iso]);
+    return weightAt(list, fromISO(iso).getTime());
+  }
+  const ANGLES={front:"Face", side:"Profil", back:"Dos"};
+
+  function renderPhotos(){
+    const el=document.getElementById("phGrid");
+    document.getElementById("phCount").textContent = phList.length + (phList.length>1?" photos":" photo");
+    const list=phList.filter(p=>phFilter==="all"||p.angle===phFilter).sort((a,b)=>b.date.localeCompare(a.date));
+    if(!list.length){ el.innerHTML=`<div class="food-empty" style="grid-column:1/-1">Aucune photo pour le moment</div>`; return; }
+    el.innerHTML=list.map(p=>{
+      const w=(p.weight!=null)?fmtKg(p.weight)+" kg":"";
+      const selIdx=phSel.indexOf(p.id);
+      return `<div class="ph${selIdx>=0?" sel":""}" data-ph="${p.id}">`+
+        `<img src="${p.img}" alt="">`+
+        (p.angle?`<span class="ph-a">${ANGLES[p.angle]||""}</span>`:"")+
+        (selIdx>=0?`<span class="ph-num">${selIdx+1}</span>`:"")+
+        `<div class="ph-meta"><div class="ph-d">${mediumLabel(p.date)}</div>${w?`<div class="ph-w">${w}</div>`:""}</div></div>`;
+    }).join("");
+    el.querySelectorAll("[data-ph]").forEach(node=>node.addEventListener("click",()=>{
+      const id=node.dataset.ph;
+      if(phCompare){                            // en mode comparaison, un appui sélectionne
+        const i=phSel.indexOf(id);
+        if(i>=0) phSel.splice(i,1); else if(phSel.length<2) phSel.push(id);
+        renderPhotos(); renderCompare();
+      } else openPhotoSheet(phList.find(p=>p.id===id));
+    }));
+    applyI18n(el);
+  }
+
+  function renderCompare(){
+    const box=document.getElementById("phCompareBox");
+    if(!phCompare){ box.innerHTML=""; return; }
+    const a=phList.find(p=>p.id===phSel[0]), b=phList.find(p=>p.id===phSel[1]);
+    if(!a || !b){
+      const n=2-phSel.length;
+      box.innerHTML=`<div class="card"><div class="card-title">Comparer</div>
+        <div class="card-sub">Touche ${n===2?"deux photos":"une seconde photo"} dans la galerie ci-dessous.</div>
+        <button class="btn secondary" data-act="cmpCancel">Annuler</button></div>`;
+    } else {
+      const [x,y]=[a,b].sort((p,q)=>p.date.localeCompare(q.date));
+      const days=daysBetween(x.date,y.date);
+      const dw=(x.weight!=null&&y.weight!=null)?(y.weight-x.weight):null;
+      box.innerHTML=`<div class="card"><div class="card-title">Comparaison</div>
+        <div class="cmp">
+          <figure><img src="${x.img}" alt=""><figcaption>${mediumLabel(x.date)}${x.weight!=null?`<span class="c2">${fmtKg(x.weight)} kg</span>`:""}</figcaption></figure>
+          <figure><img src="${y.img}" alt=""><figcaption>${mediumLabel(y.date)}${y.weight!=null?`<span class="c2">${fmtKg(y.weight)} kg</span>`:""}</figcaption></figure>
+        </div>
+        ${dw!=null?`<div class="cmp-sum"><div class="cs-v">${fmtKg(dw,true)} kg</div><div class="cs-k">en ${days} jours</div></div>`:
+          `<div class="cmp-sum"><div class="cs-v">${days}</div><div class="cs-k">jours d'écart</div></div>`}
+        <button class="btn secondary" data-act="cmpCancel">Quitter la comparaison</button></div>`;
+    }
+    box.querySelectorAll("[data-act=cmpCancel]").forEach(x=>x.addEventListener("click",()=>{
+      phCompare=false; phSel=[]; renderPhotos(); renderCompare();
+    }));
+    applyI18n(box);
+  }
+
+  // Panneau de détail : date, angle, note, suppression.
+  function openPhotoSheet(rec, isNew){
+    const esc=(x)=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    const w=(rec.weight!=null)?fmtKg(rec.weight)+" kg":"—";
+    sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet">
+      <h3>${isNew?"Nouvelle photo":"Photo"}</h3>
+      <p class="sub">Poids ce jour-là : ${w}. Repris automatiquement de tes pesées.</p>
+      <img class="ph-full" src="${rec.img}" alt="">
+      <label class="f">Date</label>
+      <input class="t" id="phDate" type="date" value="${esc(rec.date)}">
+      <label class="f">Angle</label>
+      <div class="angle-seg" id="phAngle">
+        <button data-a="front">Face</button><button data-a="side">Profil</button><button data-a="back">Dos</button>
+      </div>
+      <label class="f">Note</label>
+      <input class="t" id="phNoteTxt" type="text" placeholder="Ex. : après 3 mois" value="${esc(rec.note||"")}">
+      <div class="sheet-actions">
+        <button class="btn secondary" data-act="close">Annuler</button>
+        <button class="btn primary" data-act="phSave">Enregistrer</button>
+      </div>
+      ${isNew?"":`<button class="btn secondary" style="margin-top:10px;color:var(--bad)" data-act="phDel">Supprimer cette photo</button>`}
+      </div></div>`;
+    bindSheet();
+    phDraft=rec;
+    const setA=(a)=>{ phDraft.angle=a;
+      sheetRoot.querySelectorAll("[data-a]").forEach(b=>b.classList.toggle("active", b.dataset.a===a)); };
+    setA(rec.angle||"front");
+    sheetRoot.querySelectorAll("[data-a]").forEach(b=>b.addEventListener("click",()=>setA(b.dataset.a)));
+    document.getElementById("phDate").addEventListener("change",(e)=>{
+      if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){
+        phDraft.date=e.target.value;
+        const nw=weightForDate(phDraft.date);
+        phDraft.weight=(nw!=null)?Math.round(nw*10)/10:null;
+        sheetRoot.querySelector(".sub").textContent="Poids ce jour-là : "+(phDraft.weight!=null?fmtKg(phDraft.weight)+" kg":"—")+". Repris automatiquement de tes pesées.";
+      }
+    });
+  }
+  let phDraft=null;
+  async function savePhotoDraft(){
+    if(!phDraft) return;
+    phDraft.note=(document.getElementById("phNoteTxt").value||"").trim().slice(0,120);
+    const d=document.getElementById("phDate").value;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(d)) phDraft.date=d;
+    const nw=weightForDate(phDraft.date);
+    phDraft.weight=(nw!=null)?Math.round(nw*10)/10:null;
+    try{
+      await phPut(phDraft);
+      phList=phList.filter(p=>p.id!==phDraft.id); phList.push(phDraft);
+      closeSheet(); phDraft=null; renderPhotos(); renderCompare(); flash("phNote","Photo enregistrée ✓");
+    }catch(e){ flash("phNote","Enregistrement impossible : espace insuffisant", true); }
+  }
+  async function deletePhotoDraft(){
+    if(!phDraft) return;
+    try{ await phDelete(phDraft.id); }catch(e){}
+    phList=phList.filter(p=>p.id!==phDraft.id);
+    phSel=phSel.filter(id=>id!==phDraft.id);
+    closeSheet(); phDraft=null; renderPhotos(); renderCompare(); flash("phNote","Photo supprimée");
+  }
+  async function loadPhotos(){
+    try{ phList=await phGetAll(); }catch(e){ phList=[]; }
+    renderPhotos();
+  }
+
   // ---------- navigation ----------
   const WEIGHT_VIEWS=["wsuivi","wsaisie","wreglages"];
   function showView(name){
@@ -2482,8 +2743,10 @@
     document.querySelectorAll(".sec-btn").forEach(b=>b.classList.toggle("active", b.dataset.section===sec));
     document.getElementById("tabsNutrition").style.display = sec==="nutrition" ? "flex" : "none";
     document.getElementById("tabsPoids").style.display = sec==="poids" ? "flex" : "none";
-    document.querySelector("header.top h1").textContent = sec==="poids" ? "Suivi du poids" : "Suivi calories";
+    document.getElementById("app").style.paddingBottom = sec==="photos" ? "24px" : "";
+    document.querySelector("header.top h1").textContent = sec==="poids" ? "Suivi du poids" : (sec==="photos" ? "Évolution" : "Suivi calories");
     if(sec==="poids") showView(currentWView);
+    else if(sec==="photos"){ loadPhotos(); renderCompare(); }
     else showView(document.querySelector("#section-nutrition .view.active").id.replace("view-",""));
     applyI18n();
   }
@@ -2524,6 +2787,8 @@
       else if(a==="saveItem") saveItem();
       else if(a==="deleteItem") deleteCurrentItem();
       else if(a==="saveLib") saveLibFood();
+      else if(a==="phSave") savePhotoDraft();
+      else if(a==="phDel") deletePhotoDraft();
 
       else if(a==="closeScan") closeScanner();
       else if(a==="rescan") renderScanStage();
@@ -2567,6 +2832,29 @@
   });
   document.getElementById("exportBtn").addEventListener("click",exportData);
   document.getElementById("addLibFood").addEventListener("click",()=>openLibSheet(null));
+  document.getElementById("phAdd").addEventListener("click",()=>document.getElementById("phFile").click());
+  document.getElementById("phFile").addEventListener("change", async (e)=>{
+    const f=e.target.files && e.target.files[0]; e.target.value="";
+    if(!f) return;
+    flash("phNote","Préparation de l'image…");
+    try{
+      const img=await preparePhoto(f);
+      const iso=todayISO(), w=weightForDate(iso);
+      openPhotoSheet({id:"p"+Date.now()+Math.random().toString(36).slice(2,7), date:iso, img:img,
+                      angle:"front", note:"", weight:(w!=null)?Math.round(w*10)/10:null}, true);
+    }catch(err){ flash("phNote","Cette image n'a pas pu être lue", true); }
+  });
+  document.getElementById("phCompare").addEventListener("click",()=>{
+    if(phList.length<2) return flash("phNote","Il faut au moins deux photos", true);
+    phCompare = !phCompare; phSel=[];
+    renderPhotos(); renderCompare();
+  });
+  document.querySelectorAll("#phFilter [data-angle]").forEach(b=>b.addEventListener("click",()=>{
+    phFilter=b.dataset.angle;
+    document.querySelectorAll("#phFilter [data-angle]").forEach(x=>x.classList.toggle("active", x===b));
+    document.getElementById("phFilterLbl").textContent = phFilter==="all" ? "tous les angles" : (ANGLES[phFilter]||"");
+    renderPhotos();
+  }));
   document.querySelectorAll("[data-water]").forEach(b=>b.addEventListener("click",()=>{
     const day=getDay(currentDate);
     day.water=Math.max(0, num(day.water)+Number(b.dataset.water));
