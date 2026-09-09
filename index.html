@@ -310,18 +310,10 @@
   .food .fx{background:rgba(var(--bad-rgb),.12);border:1px solid rgba(var(--bad-rgb),.28);color:var(--bad);border-radius:9px;
     width:28px;height:28px;font-size:17px;font-family:inherit;line-height:1;flex-shrink:0;}
   .food-empty{font-size:13px;color:var(--ink-faint);font-weight:600;text-align:center;padding:14px 0;}
-  .add-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;}
-  .add-btn{font-size:12px;padding:12px 4px;}
+  .add-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
   .food{cursor:pointer;}
   .food .fn{position:relative;}
   .food .fedit{font-size:10.5px;color:var(--acc);font-weight:800;margin-top:3px;opacity:.85;}
-  .res-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px;}
-  .res{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:11px 12px;text-align:left;font-family:inherit;color:var(--ink);width:100%;}
-  .res .rn{flex:1;min-width:0;}
-  .res .rname{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .res .rbrand{font-size:11.5px;color:var(--ink-soft);font-weight:700;margin-top:2px;}
-  .res .rk{font-size:13px;font-weight:900;color:var(--acc);white-space:nowrap;font-variant-numeric:tabular-nums;}
-  .res:active{background:var(--surface-3);}
   .add-btn{border:1px dashed var(--line-strong);background:rgba(255,255,255,.04);color:var(--ink-soft);border-radius:13px;
     padding:12px 6px;font-size:13px;font-weight:800;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;
     transition:transform .12s ease, background .2s ease;}
@@ -1295,12 +1287,10 @@
         `<div class="add-row">`+
           `<button class="add-btn" data-additem="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter un aliment</button>`+
           `<button class="add-btn" data-scan="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scanner</button>`+
-          `<button class="add-btn" data-search="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Rechercher</button>`+
         `</div></div>`; }).join("");
     container.querySelectorAll("textarea").forEach(inp=>inp.addEventListener("input", onNoteInput));
     container.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>openScanner(b.dataset.scan)));
     container.querySelectorAll("[data-additem]").forEach(b=>b.addEventListener("click",()=>openItemSheet(b.dataset.additem)));
-    container.querySelectorAll("[data-search]").forEach(b=>b.addEventListener("click",()=>openSearchSheet(b.dataset.search)));
     container.querySelectorAll(".food").forEach(el=>el.addEventListener("click",(e)=>{
       if(e.target.closest("[data-del-item]")) return;      // la croix reste une suppression
       const btn=el.querySelector("[data-del-item]"); if(!btn) return;
@@ -1554,97 +1544,6 @@
     (day[itemState.mealKey].items||[]).splice(itemState.editIndex,1);
     setDay(currentDate, day);
     closeSheet(); itemState=null; renderDay();
-  }
-
-  // ================= RECHERCHE PAR NOM (Open Food Facts) =================
-  // L'ancien moteur (/cgi/search.pl) renvoie des erreurs depuis des mois : on interroge
-  // d'abord Search-a-licious, le nouveau moteur, avec repli sur l'ancien.
-  let searchState=null;
-  function openSearchSheet(mealKey, query, results, error){
-    searchState={mealKey, query:query||"", results:results||null};
-    const esc=(x)=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
-    const mealLbl=(MEALS.find(m=>m.key===mealKey)||{}).label||"";
-    let body="";
-    if(error) body=`<div class="sheet-err">${esc(error)}</div>`;
-    else if(results && results.length===0) body=`<div class="food-empty">Aucun produit trouvé</div>`;
-    else if(results) body=`<div class="res-list">`+results.map((r,i)=>
-        `<button class="res" data-pick="${i}"><div class="rn"><div class="rname">${esc(r.name)}</div>`+
-        `${r.brand?`<div class="rbrand">${esc(r.brand)}</div>`:""}</div>`+
-        `<div class="rk">${Math.round(r.kcal100)} kcal<br><span style="font-size:10px;color:var(--ink-faint)">/ 100 g</span></div></button>`).join("")+`</div>`;
-    sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet">
-      <h3>Rechercher un aliment</h3>
-      <p class="sub">Recherche par nom dans Open Food Facts. Destination : ${esc(mealLbl)}.</p>
-      <input class="t" id="qInput" type="text" placeholder="Ex. : skyr nature" value="${esc(searchState.query)}">
-      ${body}
-      <div class="sheet-actions">
-        <button class="btn secondary" data-act="closeSearch">Fermer</button>
-        <button class="btn primary" data-act="runSearch">Rechercher</button>
-      </div></div></div>`;
-    bindSheet();
-    sheetRoot.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{
-      const r=searchState.results[Number(b.dataset.pick)], mk=searchState.mealKey;
-      closeSheet(); searchState=null;
-      openItemSheet(mk, {name:r.name, per100:r.per100, qty:r.serving>0?r.serving:100});
-    }));
-    const qi=document.getElementById("qInput");
-    if(qi) qi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); runSearch(); } });
-  }
-  function renderSearchLoading(q){
-    sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Rechercher un aliment</h3>
-      <p class="sub">${escHtml(q)}</p><div class="spin"><i></i> Interrogation d'Open Food Facts…</div>
-      <button class="btn secondary" data-act="closeSearch">Annuler</button></div></div>`;
-    bindSheet();
-  }
-  function pickLang(v){
-    if(v==null) return "";
-    if(typeof v==="string") return v;
-    if(typeof v==="object"){ const l=currentLang(); return v[l]||v.fr||v.en||v.main||Object.values(v).find(x=>typeof x==="string")||""; }
-    return String(v);
-  }
-  function readProduct(p){
-    if(!p||typeof p!=="object") return null;
-    const n=p.nutriments||{};
-    const per100={protein:Number(n["proteins_100g"])||0, carbs:Number(n["carbohydrates_100g"])||0,
-                  fat:Number(n["fat_100g"])||0, fiber:Number(n["fiber_100g"])||0};
-    if(per100.protein<=0 && per100.carbs<=0 && per100.fat<=0) return null;
-    const nm=pickLang(p.product_name_fr)||pickLang(p.product_name)||"Produit";
-    return {name:String(nm).slice(0,70),
-            brand:(pickLang(p.brands).split(",")[0]||"").trim().slice(0,40),
-            per100, serving:Number(p.serving_quantity)||0,
-            kcal100: Number(n["energy-kcal_100g"])>0 ? Number(n["energy-kcal_100g"])
-              : per100.protein*KCAL.protein+per100.carbs*KCAL.carbs+per100.fat*KCAL.fat+per100.fiber*KCAL.fiber};
-  }
-  async function runSearch(){
-    const qi=document.getElementById("qInput");
-    const q=((qi?qi.value:searchState&&searchState.query)||"").trim();
-    const mealKey=searchState.mealKey;
-    if(q.length<2) return;
-    renderSearchLoading(q);
-    const enc=encodeURIComponent(q), lg=currentLang();
-    // Formes essayées dans l'ordre. Le paramètre "fields" est volontairement omis : envoyé
-    // sous forme de liste séparée par des virgules, l'API le rejette (erreur 422) et l'on croit à une panne.
-    const attempts=[
-      "https://search.openfoodfacts.org/search?q="+enc+"&langs="+lg+"&langs=en&page_size=20",
-      "https://search.openfoodfacts.org/search?q="+enc+"&langs="+lg+":en&page_size=20",
-      "https://search.openfoodfacts.org/search?q="+enc+"&page_size=20",
-      "https://world.openfoodfacts.org/cgi/search.pl?search_terms="+enc+"&search_simple=1&action=process&json=1&page_size=20",
-      "https://fr.openfoodfacts.org/cgi/search.pl?search_terms="+enc+"&search_simple=1&action=process&json=1&page_size=20"
-    ];
-    let data=null; const errs=[];
-    for(const u of attempts){
-      try{ const j=await fetchJson(u, 9000);
-        if(j && (Array.isArray(j.hits) || Array.isArray(j.products))){ data=j; break; }
-        errs.push("réponse sans résultats"); }
-      catch(e){ errs.push(String(e && e.message || e)); }
-    }
-    if(!data){
-      // On affiche la cause réelle : c'est ce qui permet de corriger, pas un message générique.
-      const detail = errs.map((e,i)=>(i+1)+") "+e).join(" · ");
-      return openSearchSheet(mealKey, q, null, "La recherche par nom est momentanément indisponible. Le scan de code-barres reste utilisable. Détail technique : "+detail);
-    }
-    const raw = data.hits || data.products || [];
-    const list = raw.map(readProduct).filter(Boolean).slice(0,20);
-    openSearchSheet(mealKey, q, list, null);
   }
 
   // ================= SCANNER DE CODE-BARRES (Open Food Facts) =================
@@ -2110,11 +2009,6 @@
     "Supprimer":{en:"Delete",zh:"删除",es:"Eliminar",it:"Elimina",de:"Löschen",pt:"Eliminar",ar:"حذف",hi:"हटाएँ"},
     "du repas":{en:"of the meal",zh:"占本餐",es:"de la comida",it:"del pasto",de:"der Mahlzeit",pt:"da refeição",ar:"من الوجبة",hi:"भोजन का"},
     "Rechercher":{en:"Search",zh:"搜索",es:"Buscar",it:"Cerca",de:"Suchen",pt:"Procurar",ar:"بحث",hi:"खोजें"},
-    "Rechercher un aliment":{en:"Search for a food",zh:"搜索食物",es:"Buscar un alimento",it:"Cerca un alimento",de:"Lebensmittel suchen",pt:"Procurar um alimento",ar:"ابحث عن طعام",hi:"खाद्य खोजें"},
-    "Recherche par nom dans Open Food Facts.":{en:"Search by name in Open Food Facts.",zh:"按名称在 Open Food Facts 中搜索。",es:"Búsqueda por nombre en Open Food Facts.",it:"Ricerca per nome in Open Food Facts.",de:"Suche nach Namen in Open Food Facts.",pt:"Pesquisa por nome no Open Food Facts.",ar:"بحث بالاسم في Open Food Facts.",hi:"Open Food Facts में नाम से खोजें।"},
-    "Ex. : skyr nature":{en:"E.g. plain skyr",zh:"例如：原味 skyr",es:"Ej.: skyr natural",it:"Es.: skyr naturale",de:"Z. B. Skyr natur",pt:"Ex.: skyr natural",ar:"مثال: سكير سادة",hi:"उदा.: सादा स्किर"},
-    "Aucun produit trouvé":{en:"No product found",zh:"未找到商品",es:"No se encontró ningún producto",it:"Nessun prodotto trovato",de:"Kein Produkt gefunden",pt:"Nenhum produto encontrado",ar:"لم يُعثر على منتج",hi:"कोई उत्पाद नहीं मिला"},
-    "La recherche par nom est momentanément indisponible. Le scan de code-barres reste utilisable.":{en:"Search by name is temporarily unavailable. Barcode scanning still works.",zh:"按名称搜索暂时不可用，条形码扫描仍可使用。",es:"La búsqueda por nombre no está disponible temporalmente. El escaneo de códigos sigue funcionando.",it:"La ricerca per nome è temporaneamente non disponibile. La scansione dei codici funziona ancora.",de:"Die Suche nach Namen ist vorübergehend nicht verfügbar. Das Scannen funktioniert weiterhin.",pt:"A pesquisa por nome está temporariamente indisponível. A leitura de códigos continua a funcionar.",ar:"البحث بالاسم غير متاح مؤقتًا. مسح الباركود ما زال يعمل.",hi:"नाम से खोज अस्थायी रूप से अनुपलब्ध है। बारकोड स्कैन अब भी काम करता है।"},
     "Modifier l'aliment":{en:"Edit the food",zh:"修改食物",es:"Editar el alimento",it:"Modifica l'alimento",de:"Lebensmittel bearbeiten",pt:"Editar o alimento",ar:"تعديل الطعام",hi:"खाद्य बदलें"},
     "Enregistrer les modifications":{en:"Save changes",zh:"保存修改",es:"Guardar los cambios",it:"Salva le modifiche",de:"Änderungen speichern",pt:"Guardar alterações",ar:"حفظ التعديلات",hi:"बदलाव सहेजें"},
     "Supprimer cet aliment":{en:"Delete this food",zh:"删除此食物",es:"Eliminar este alimento",it:"Elimina questo alimento",de:"Dieses Lebensmittel löschen",pt:"Eliminar este alimento",ar:"حذف هذا الطعام",hi:"यह खाद्य हटाएँ"},
@@ -2278,8 +2172,7 @@
       else if(a==="resetMaint"){ setDayMaintenance(currentDate, 0); closeSheet(); renderDay(); }
       else if(a==="saveItem") saveItem();
       else if(a==="deleteItem") deleteCurrentItem();
-      else if(a==="runSearch") runSearch();
-      else if(a==="closeSearch"){ closeSheet(); searchState=null; }
+
       else if(a==="closeScan") closeScanner();
       else if(a==="rescan") renderScanStage();
       else if(a==="addScan") applyScan(false);
