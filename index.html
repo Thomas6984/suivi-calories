@@ -885,7 +885,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "41";                 // numéro affiché dans les réglages
+  const APP_VERSION = "42";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1030,6 +1030,13 @@
     return t;
   }
   function dayWater(iso){ return num((db.days[iso]||{}).water); }
+  // L'objectif calorique se déduit des macros enregistrées. On ne lit plus une valeur
+  // stockée à part, qui pourrait être en contradiction avec elles.
+  function calGoal(){
+    const st=db.settings;
+    const cal = num(st.proteinGoal)*KCAL.protein + num(st.carbsGoal)*KCAL.carbs + num(st.fatGoal)*KCAL.fat;
+    return cal>0 ? Math.round(cal) : num(st.calGoal);
+  }
   function macroCalorieSplit(totals){ return MACROS.map(m=>({...m, val:(totals[m.key]||0)*m.kcalPerG})); }
   function fmtSigned(v){ v=Math.round(v); return (v>0?"+":"")+v; }        // v = cal - maint (positif = surplus)
   function fmtBalance(balance){ const r=Math.round(balance); return r>=0 ? "-"+r : "+"+(-r); } // balance = maint - cal
@@ -1489,7 +1496,7 @@
 
   // ---------- day view ----------
   function updateDayCards(day){
-    const totals=totalsOf(day), maint=effectiveMaintenance(currentDate), goal=db.settings.calGoal;
+    const totals=totalsOf(day), maint=effectiveMaintenance(currentDate), goal=calGoal();
     const has=totals.cal>0, balance=maint-totals.cal;
     const numEl=document.getElementById("gaugeNum"), lblEl=document.getElementById("gaugeLbl");
     // Au centre : ce qu'il reste avant d'atteindre l'objectif — l'information que l'on cherche.
@@ -1529,9 +1536,9 @@
   }
   function renderMiniTrend(){
     const arr=[]; for(let i=6;i>=0;i--){ const iso=addDays(currentDate,-i); const t=totalsOf(getDay(iso));
-      arr.push({label:shortLabel(iso), value:t.cal, hasData:t.cal>0, ref:db.settings.calGoal,
+      arr.push({label:shortLabel(iso), value:t.cal, hasData:t.cal>0, ref:calGoal(),
                 ref2:effectiveMaintenance(iso), override:hasMaintOverride(iso)}); }
-    document.getElementById("miniTrend").innerHTML=barChartSvg(arr, db.settings.calGoal, DARK, db.settings.maintenance);
+    document.getElementById("miniTrend").innerHTML=barChartSvg(arr, calGoal(), DARK, db.settings.maintenance);
   }
   function renderDay(){
     if(currentDate>todayISO()) currentDate=todayISO();
@@ -1627,7 +1634,7 @@
         cum+=(t.cal-dayMaint); diffTxt=fmtBalance(bal); color=bal>=0?"var(--good)":"var(--bad)"; }
       const wv=dayWater(iso); if(wv>0){ sumWater+=wv; waterDays++; if(wGoalS>0 && wv>=wGoalS) waterOk++; }
       wBars.push({iso, label:shortLabel(iso), value:wv, hasData:wv>0, ref:wGoalS});
-      bars.push({iso, label:shortLabel(iso), value:t.cal, hasData:has, ref:db.settings.calGoal, ref2:dayMaint, override:ov});
+      bars.push({iso, label:shortLabel(iso), value:t.cal, hasData:has, ref:calGoal(), ref2:dayMaint, override:ov});
       cumPts.push({label:shortLabel(iso), value:cum});
       rows.push(`<div class="day-row"><div class="dname">${labelForDate(iso)}</div><div class="dcal">${has?Math.round(t.cal)+" kcal":"non renseigné"}</div><div class="ddiff" style="color:${color}">${diffTxt}</div></div>`);
     }
@@ -1639,13 +1646,13 @@
         if(b.hasData){ weeks[wk].sum+=b.value; weeks[wk].n++; weeks[wk].refSum+=b.ref; weeks[wk].refN++; }
         if(b.override) weeks[wk].ov=true; });
       chartBars=order.map(wk=>({label:shortLabel(wk), value:weeks[wk].n?weeks[wk].sum/weeks[wk].n:0, hasData:weeks[wk].n>0,
-        ref:db.settings.calGoal, ref2:weeks[wk].refN?weeks[wk].refSum/weeks[wk].refN:maint, override:weeks[wk].ov}));
+        ref:calGoal(), ref2:weeks[wk].refN?weeks[wk].refSum/weeks[wk].refN:maint, override:weeks[wk].ov}));
       barsTitle="Apport moyen par semaine"; barsSub="Moyenne des jours renseignés de chaque semaine (à partir du lundi)";
     }
     document.getElementById("barsTitle").textContent=barsTitle;
     document.getElementById("barsSub").textContent=barsSub;
     document.getElementById("barsSub").textContent = tr(barsSub) + (overrideDays ? " · "+tr("N jours avec un maintien ajusté").replace("N", overrideDays) : "");
-    document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, db.settings.calGoal, LIGHT, maint);
+    document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, calGoal(), LIGHT, maint);
     document.getElementById("cumChart").innerHTML=lineChartSvg(cnt?cumPts:[], LIGHT);
     document.getElementById("statsDays").innerHTML = rows.length ? rows.reverse().join("") : `<div class="empty-note">Aucune donnée</div>`;
     renderWaterStats(sumWater, waterDays, waterOk, nDays, wBars, wGoalS);
@@ -1722,7 +1729,7 @@
   // ---------- settings view ----------
   function renderSettings(){
     document.getElementById("setMaint").value=db.settings.maintenance;
-    document.getElementById("setCal").value=db.settings.calGoal;
+    document.getElementById("setCal").value=calGoal();
     document.getElementById("setProtein").value=db.settings.proteinGoal;
     document.getElementById("setCarbs").value=db.settings.carbsGoal;
     document.getElementById("setFat").value=db.settings.fatGoal;
@@ -3160,7 +3167,7 @@
   document.querySelectorAll(".period-toggle button").forEach(btn=>btn.addEventListener("click",()=>{ currentPeriod=btn.dataset.period; renderStats(); }));
   document.getElementById("saveSettings").addEventListener("click",()=>{
     db.settings.maintenance=num(document.getElementById("setMaint").value);
-    db.settings.calGoal=Math.round(goalCaloriesFromMacros().cal);   // toujours cohérent avec les macros
+    db.settings.calGoal=Math.round(goalCaloriesFromMacros().cal);   // trace de la valeur, mais calGoal() reste la référence
     db.settings.proteinGoal=num(document.getElementById("setProtein").value);
     db.settings.carbsGoal=num(document.getElementById("setCarbs").value);
     db.settings.fatGoal=num(document.getElementById("setFat").value);
@@ -3170,6 +3177,18 @@
   document.getElementById("exportBtn").addEventListener("click",exportData);
   ["setProtein","setCarbs","setFat","setMaint"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.addEventListener("input", refreshGoalCalc);
+  });
+  // Les objectifs de macros sont enregistrés à la volée : l'objectif calorique affiché
+  // sur l'écran Jour reste ainsi toujours cohérent avec ce qui est saisi ici.
+  ["setProtein","setCarbs","setFat"].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.addEventListener("change",()=>{
+      db.settings.proteinGoal=num(document.getElementById("setProtein").value);
+      db.settings.carbsGoal=num(document.getElementById("setCarbs").value);
+      db.settings.fatGoal=num(document.getElementById("setFat").value);
+      db.settings.calGoal=calGoal();
+      persistNow(); renderDay();
+    });
   });
   document.getElementById("addLibFood").addEventListener("click",()=>openLibSheet(null));
   document.getElementById("phAdd").addEventListener("click",()=>document.getElementById("phFile").click());
