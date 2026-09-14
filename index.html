@@ -470,6 +470,13 @@
   .prod .b{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:2px;}
   .prod .per{font-size:11.5px;color:var(--ink-faint);font-weight:700;margin-top:10px;}
   .prod .k{font-size:14px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .step-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 8px 0;}
+  .step-row button{background:var(--surface-2);border:1px solid var(--line-strong);border-radius:11px;
+    padding:12px 2px;font-size:14px;font-weight:900;font-family:inherit;font-variant-numeric:tabular-nums;
+    transition:transform .1s ease, background .2s ease;}
+  .step-row button:active{transform:scale(.94);background:var(--surface-3);}
+  .step-row button.minus{color:var(--coral);border-color:rgba(var(--bad-rgb),.3);}
+  .step-row button.plus{color:var(--acc);border-color:rgba(var(--acc-rgb),.32);}
   .qty-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:6px 0 14px 0;}
   .qty-row button{background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink);border-radius:11px;padding:10px 4px;
     font-size:13px;font-weight:800;font-family:inherit;transition:transform .1s;}
@@ -588,7 +595,7 @@
         </div>
       </div>
 
-      <section class="title">Repas · calories automatiques : 4 kcal/g protéines et glucides, 9 kcal/g lipides, 2 kcal/g fibres (via le scan)</section>
+      <section class="title">Repas</section>
       <div id="mealsContainer"></div>
     </div>
 
@@ -866,7 +873,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "38";                 // numéro affiché dans les réglages
+  const APP_VERSION = "40";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1325,7 +1332,7 @@
       if(ratio<0.75) note="Ton rythme récent est plus lent que ta moyenne : la date réaliste se situe plutôt vers la seconde projection.";
       else if(ratio>1.25) note="Ton rythme récent est plus rapide que ta moyenne : tu es en avance sur ta trajectoire.";
       else note="Ton rythme récent est conforme à ta moyenne : la trajectoire est régulière.";
-      if(dAll!=null && d30!=null && Math.abs(d30-dAll)>14) note+=" L'écart entre les deux dates est de "+Math.round(Math.abs(d30-dAll))+" jours.";
+      if(dAll!=null && d30!=null && Math.abs(d30-dAll)>14) note+=" "+tr("L'écart entre les deux dates est de N jours.").replace("N", Math.round(Math.abs(d30-dAll)));
     }
     el("wTrendNote").textContent=note;
 
@@ -1625,7 +1632,7 @@
     }
     document.getElementById("barsTitle").textContent=barsTitle;
     document.getElementById("barsSub").textContent=barsSub;
-    document.getElementById("barsSub").textContent = barsSub + (overrideDays ? ` · ${overrideDays} jour${overrideDays>1?"s":""} avec un maintien ajusté (point marqué sur la barre)` : "");
+    document.getElementById("barsSub").textContent = tr(barsSub) + (overrideDays ? " · "+tr("N jours avec un maintien ajusté").replace("N", overrideDays) : "");
     document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, db.settings.calGoal, LIGHT, maint);
     document.getElementById("cumChart").innerHTML=lineChartSvg(cnt?cumPts:[], LIGHT);
     document.getElementById("statsDays").innerHTML = rows.length ? rows.reverse().join("") : `<div class="empty-note">Aucune donnée</div>`;
@@ -1681,9 +1688,10 @@
     document.getElementById("setWater").value=db.settings.waterGoal;
     document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
     const keys=loggedDates(), n=keys.length;
-    let txt = n===0 ? "Aucune donnée enregistrée pour le moment." : `${n} jour${n>1?"s":""} enregistré${n>1?"s":""} (depuis le ${fromISO(keys[0]).toLocaleDateString(loc())}).`;
+    let txt = n===0 ? tr("Aucune donnée enregistrée pour le moment.")
+      : tr("N journées enregistrées, depuis le D.").replace("N", n).replace("D", fromISO(keys[0]).toLocaleDateString(loc()));
     const nw=weightEntries().length;
-    if(nw) txt+=` ${nw} pesée${nw>1?"s":""} enregistrée${nw>1?"s":""}.`;
+    if(nw) txt+=" "+tr("N pesées enregistrées.").replace("N", nw);
     txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps. Les photos d'évolution ne sont pas incluses dans la sauvegarde : elles resteraient trop lourdes pour un fichier.";
     document.getElementById("dataInfo").textContent=txt;
     renderFoodLib();
@@ -1721,6 +1729,8 @@
     document.getElementById("lValsLbl").textContent = isUnit ? "Valeurs pour une portion entière" : "Valeurs pour 100 g";
     document.getElementById("lQtyLbl").textContent  = isUnit ? "Nombre de portions par défaut" : "Quantité habituelle (g)";
     document.getElementById("lKLbl").textContent    = isUnit ? "Ou calories seules (par portion)" : "Ou calories seules (pour 100 g)";
+    document.getElementById("lStepRow").innerHTML = stepRowHtml(isUnit);
+    bindSteps(sheetRoot, "lQty", ()=>refreshLibCalc());
     if(resetQty) document.getElementById("lQty").value = isUnit ? 1 : 100;
     applyI18n(sheetRoot); refreshLibCalc();
   }
@@ -1753,6 +1763,7 @@
       </div>
       <label class="f" id="lQtyLbl">Quantité habituelle (g)</label>
       <input class="t" id="lQty" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(v.qty)}">
+      <div class="step-row" id="lStepRow"></div>
       <div class="calc-box"><div class="ct">Par portion habituelle</div><div class="cv" id="lKcal">0 kcal</div><div class="cm" id="lMacros">0 P · 0 G · 0 L</div></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
@@ -1813,7 +1824,7 @@
         if(Array.isArray(parsed.foods)) db.foods=parsed.foods;
         if(parsed.settings) db.settings={...DEFAULT_SETTINGS, ...parsed.settings};
         persistNow(); renderSettings();
-        flash("dataNote",`${added} jour${added>1?"s":""} restauré${added>1?"s":""}`+(wAdded?` et ${wAdded} pesée${wAdded>1?"s":""}`:""));
+        flash("dataNote", tr("N journées restaurées").replace("N", added) + (wAdded ? " "+tr("et N pesées").replace("N", wAdded) : ""));
       }catch(e){ flash("dataNote","Fichier non reconnu",true); } };
     reader.readAsText(file);
   }
@@ -1843,6 +1854,23 @@
     day[mealKey].items.push({name:f.name, per100:{...f.per100}, qty:num(f.qty)||(f.unit?1:100), unit:!!f.unit});
     setDay(currentDate, day);
     renderDay();
+  }
+
+  // Rangée d'incréments : on ajuste la quantité sans repasser par le clavier.
+  function stepRowHtml(isUnit){
+    const steps = isUnit ? [[-1,"−1"],[-0.5,"−½"],[0.5,"+½"],[1,"+1"]]
+                         : [[-50,"−50"],[-5,"−5"],[5,"+5"],[50,"+50"]];
+    return steps.map(([v,l])=>
+      `<button class="${v<0?"minus":"plus"}" data-step="${v}">${l}</button>`).join("");
+  }
+  // Applique un incrément à un champ, sans jamais descendre sous zéro.
+  function bindSteps(root, inputId, onChange){
+    root.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{
+      const inp=document.getElementById(inputId); if(!inp) return;
+      const cur=num(inp.value), next=Math.max(0, Math.round((cur+Number(b.dataset.step))*100)/100);
+      inp.value=next;
+      if(onChange) onChange(next); else inp.dispatchEvent(new Event("input",{bubbles:true}));
+    }));
   }
 
   // ================= AJOUT D'UN ALIMENT =================
@@ -1895,6 +1923,7 @@
       </div>
       <label class="f" id="iQtyLbl">Quantité mangée (g)</label>
       <input class="t" id="iQty" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(v.qty)}">
+      <div class="step-row" id="iStepRow"></div>
       <div class="qty-row" id="iQtyRow"></div>
       <div class="calc-box">
         <div class="ct">Ce qui sera ajouté</div>
@@ -1937,6 +1966,8 @@
     document.getElementById("iValsLbl").textContent = isUnit ? "Valeurs pour une portion entière" : "Valeurs pour 100 g";
     document.getElementById("iQtyLbl").textContent  = isUnit ? "Nombre de portions" : "Quantité mangée (g)";
     document.getElementById("iKLbl").textContent    = isUnit ? "Ou calories seules (par portion)" : "Ou calories seules (pour 100 g)";
+    document.getElementById("iStepRow").innerHTML = stepRowHtml(isUnit);
+    bindSteps(sheetRoot, "iQty", ()=>refreshItemCalc());
     document.getElementById("iQtyRow").innerHTML = isUnit
       ? `<button data-iqty="0.5">½ portion</button><button data-iqty="1">1 portion</button><button data-iqty="2">2 portions</button>`
       : `<button data-iqty="50">50 g</button><button data-iqty="100">100 g</button><button data-iqty="200">200 g</button>`;
@@ -1999,7 +2030,7 @@
     const tot=a.reduce((s,x)=>({p:s.p+x.p,c:s.c+x.c,f:s.f+x.f,fi:s.fi+(x.fi||0)}),{p:0,c:0,f:0,fi:0});
     const kcal=Math.round(tot.p*KCAL.protein+tot.c*KCAL.carbs+tot.f*KCAL.fat+tot.fi*KCAL.fiber);
     const d1=v=>Math.round(v*10)/10;
-    return `<div class="basket"><div class="bt">Déjà ajouté à ce repas · ${a.length} produit${a.length>1?"s":""}</div>`+
+    return `<div class="basket"><div class="bt">${tr("Déjà ajouté à ce repas · N produits").replace("N", a.length)}</div>`+
       a.map(x=>`<div class="bi"><span>${escHtml(x.name)}</span><span>${Math.round(x.qty)} g · ${x.kcal} kcal</span></div>`).join("")+
       `<div class="bs"><span>Total ajouté</span><span>${d1(tot.p)} P · ${d1(tot.c)} G · ${d1(tot.f)} L · ${kcal} kcal</span></div></div>`;
   }
@@ -2097,7 +2128,7 @@
   function renderScanError(msg, code){
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Produit introuvable</h3>
       <div class="sheet-err">${escHtml(msg)}</div>
-      ${code?`<p class="sub">Code lu : ${escHtml(code)}. Tu peux saisir les macros à la main dans la carte du repas.</p>`:""}
+      ${code?`<p class="sub">${tr("Code lu : X. Tu peux saisir les macros à la main dans la carte du repas.").replace("X", escHtml(code))}</p>`:""}
       <div class="sheet-actions"><button class="btn secondary" data-act="closeScan">Fermer</button><button class="btn primary" data-act="rescan">Rescanner</button></div>
       </div></div>`;
     bindSheet(); applyI18n(sheetRoot);
@@ -2183,6 +2214,7 @@
       </div>
       <label class="f">Quantité consommée (g)</label>
       <input class="t" id="qtyInput" type="number" inputmode="decimal" min="0" step="1" value="${scanState.qty}">
+      <div class="step-row" id="sStepRow">${stepRowHtml(false)}</div>
       <div class="qty-row"><button data-qty="50">50 g</button><button data-qty="100">100 g</button>${servBtn}</div>
       <div class="prod">
         <div class="per">À ajouter · <b style="color:var(--acc)">${kcal} kcal</b></div>
@@ -2207,6 +2239,7 @@
     qi.addEventListener("input",()=>{ scanState.qty=num(qi.value); const s2=scaled();
       document.getElementById("rP").value=d1(s2.protein); document.getElementById("rC").value=d1(s2.carbs); document.getElementById("rF").value=d1(s2.fat); document.getElementById("rFi").value=d1(s2.fiber); refreshScanKcal(); });
     sheetRoot.querySelectorAll("[data-qty]").forEach(b=>b.addEventListener("click",()=>{ scanState.qty=Number(b.dataset.qty); qi.value=scanState.qty; qi.dispatchEvent(new Event("input")); }));
+    bindSteps(sheetRoot, "qtyInput", (v)=>{ scanState.qty=v; qi.dispatchEvent(new Event("input")); });
     ["rP","rC","rF","rFi"].forEach(id=>document.getElementById(id).addEventListener("input",refreshScanKcal));
   }
   function refreshScanKcal(){
@@ -2518,7 +2551,27 @@
     "Fais défiler du plus ancien au plus récent":{en:"Swipe from oldest to newest"},
     "Touche une photo pour l'ouvrir en plein écran et faire défiler":{en:"Tap a photo to open it full screen and swipe through"},
     "Pince ou double-touche pour zoomer":{en:"Pinch or double-tap to zoom"},
-    "Courbe de poids · fais glisser ton doigt pour lire une pesée":{en:"Weight curve · drag your finger to read a weigh-in"}
+    "Courbe de poids · fais glisser ton doigt pour lire une pesée":{en:"Weight curve · drag your finger to read a weigh-in"},
+    "Repas":{en:"Meals"},
+    "Espace occupé : X.":{en:"Space used: X."},
+    "Limite disponible : environ X.":{en:"Available limit: about X."},
+    "L'écart entre les deux dates est de N jours.":{en:"The gap between the two dates is N days."},
+    "N jours avec un maintien ajusté":{en:"N days with an adjusted maintenance"},
+    "N journées enregistrées, depuis le D.":{en:"N days recorded, since D."},
+    "N pesées enregistrées.":{en:"N weigh-ins recorded."},
+    "N journées restaurées":{en:"N days restored"},
+    "et N pesées":{en:"and N weigh-ins"},
+    "Déjà ajouté à ce repas · N produits":{en:"Already added to this meal · N items"},
+    "Code lu : X. Tu peux saisir les macros à la main dans la carte du repas.":{en:"Code read: X. You can enter the macros by hand in the meal card."},
+    "Par défaut N kcal. À réserver aux journées exceptionnelles : les statistiques s'adaptent automatiquement.":{en:"N kcal by default. For exceptional days only: the statistics adjust automatically."},
+    "N pesées seront définitivement supprimées de ce téléphone. Tes données de nutrition ne sont pas touchées.":{en:"N weigh-ins will be permanently deleted from this phone. Your nutrition data is untouched."},
+    "depuis la première":{en:"since the first"},
+    "Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps. Les photos d'évolution ne sont pas incluses dans la sauvegarde : elles resteraient trop lourdes pour un fichier.":{en:"Data is stored on this phone only. Remember to export a backup now and then. Progress photos are not included in the backup: they would make the file far too heavy."},
+    "Jour précédent":{en:"Previous day"},
+    "Jour suivant":{en:"Next day"},
+    "Choisir une date":{en:"Pick a date"},
+    "Modifier":{en:"Edit"},
+    "Moyennes sur N jours enregistrés":{en:"Averages over N recorded days"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2690,7 +2743,7 @@
       let delta="";
       if(first && p.weight!=null && p!==first){
         const dv=p.weight-first.weight;
-        delta=`<div class="sl-delta">${fmtKg(dv,true)} kg depuis la première</div>`;
+        delta=`<div class="sl-delta">${fmtKg(dv,true)} kg ${tr("depuis la première")}</div>`;
       }
       return `<div class="slide" data-slide="${p.id}"><img src="${p.img}" alt="" loading="lazy">`+
         `<span class="sl-i">${i+1} / ${list.length}</span>`+
@@ -2712,16 +2765,18 @@
   // Espace réellement occupé, plutôt qu'une estimation théorique.
   function updateStorageInfo(){
     const el=document.getElementById("phStorage");
-    const base="Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.";
+    const base=tr("Les photos restent sur ce téléphone et ne sont jamais envoyées ailleurs.");
     let bytes=0; phList.forEach(p=>{ bytes += (p.img?p.img.length:0)*0.75; });  // base64 : 4 caractères pour 3 octets
     const mb=bytes/1048576;
-    const used = phList.length ? " Espace occupé : "+(mb<1 ? Math.round(bytes/1024)+" Ko" : (Math.round(mb*10)/10).toString().replace(".",decSep())+" Mo")+"." : "";
+    const size = mb<1 ? Math.round(bytes/1024)+" Ko" : (Math.round(mb*10)/10).toString().replace(".",decSep())+" Mo";
+    const used = phList.length ? " "+tr("Espace occupé : X.").replace("X", size) : "";
     el.textContent=base+used;
     if(navigator.storage && navigator.storage.estimate){
       navigator.storage.estimate().then(est=>{
         if(!est || !est.quota) return;
         const qGb=est.quota/1073741824;
-        el.textContent = base+used+" Limite disponible : environ "+(qGb>=1 ? (Math.round(qGb*10)/10).toString().replace(".",decSep())+" Go" : Math.round(est.quota/1048576)+" Mo")+".";
+        const lim = qGb>=1 ? (Math.round(qGb*10)/10).toString().replace(".",decSep())+" Go" : Math.round(est.quota/1048576)+" Mo";
+        el.textContent = base+used+" "+tr("Limite disponible : environ X.").replace("X", lim);
       }).catch(()=>{});
     }
   }
@@ -2797,7 +2852,7 @@
         const w=(p.weight!=null)?`<div class="vs-w">${fmtKg(p.weight)}<span>kg</span></div>`
                                 :`<div class="vs-w" style="font-size:18px;color:rgba(255,255,255,.6)">—</div>`;
         let delta="";
-        if(first && p.weight!=null && p.id!==first.id) delta=`<div class="vs-delta">${fmtKg(p.weight-first.weight,true)} kg depuis la première</div>`;
+        if(first && p.weight!=null && p.id!==first.id) delta=`<div class="vs-delta">${fmtKg(p.weight-first.weight,true)} kg ${tr("depuis la première")}</div>`;
         return `<div class="vslide" data-id="${p.id}"><img src="${p.img}" alt="">`+
           `<div class="vs-meta">${w}<div class="vs-d">${mediumLabel(p.date)}${p.note?" · "+String(p.note).replace(/</g,"&lt;"):""}</div>${delta}</div></div>`;
       }).join("")}</div>
@@ -3037,7 +3092,7 @@
     const cur=effectiveMaintenance(currentDate), ov=hasMaintOverride(currentDate);
     sheetRoot.innerHTML = `<div class="sheet-backdrop" data-close="1"><div class="sheet">
       <h3>Maintien du jour</h3>
-      <p class="sub">Par défaut ${db.settings.maintenance} kcal. À réserver aux journées exceptionnelles (sortie, événement) : les statistiques hebdo, mensuelles et depuis le début s'adaptent automatiquement.</p>
+      <p class="sub">${tr("Par défaut N kcal. À réserver aux journées exceptionnelles : les statistiques s'adaptent automatiquement.").replace("N", db.settings.maintenance)}</p>
       <label class="f">Maintien pour ${escHtml(labelForDate(currentDate))} (kcal)</label>
       <input class="t" id="maintInput" type="number" inputmode="numeric" value="${cur}">
       <div class="sheet-actions">
@@ -3092,7 +3147,7 @@
     const n=weightEntries().length;
     if(!n) return flash("dataNote","Aucune pesée à effacer");
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet"><h3>Effacer les pesées</h3>
-      <p class="sub">${n} pesée${n>1?"s":""} seront définitivement supprimée${n>1?"s":""} de ce téléphone. Tes données de nutrition ne sont pas touchées.</p>
+      <p class="sub">${tr("N pesées seront définitivement supprimées de ce téléphone. Tes données de nutrition ne sont pas touchées.").replace("N", n)}</p>
       <div class="sheet-actions"><button class="btn secondary" data-act="close">Annuler</button>
       <button class="btn primary" style="background:var(--bad);color:#fff" data-act="confirmClearW">Effacer</button></div></div></div>`;
     bindSheet(); applyI18n(sheetRoot);
