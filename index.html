@@ -470,6 +470,13 @@
   .prod .b{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:2px;}
   .prod .per{font-size:11.5px;color:var(--ink-faint);font-weight:700;margin-top:10px;}
   .prod .k{font-size:14px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .goal-calc{background:rgba(var(--acc-rgb),.09);border:1px solid rgba(var(--acc-rgb),.26);border-radius:13px;
+    padding:12px 14px;margin-top:10px;}
+  .goal-calc .gc-v{font-size:22px;font-weight:900;color:var(--acc);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .goal-calc .gc-v small{font-size:13px;font-weight:800;margin-left:3px;}
+  .goal-calc .gc-split{font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums;}
+  .goal-calc .gc-warn{font-size:12px;color:var(--coral);font-weight:800;margin-top:6px;}
+  input[readonly]{opacity:.65;}
   .step-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 8px 0;}
   .step-row button{background:var(--surface-2);border:1px solid var(--line-strong);border-radius:11px;
     padding:12px 2px;font-size:14px;font-weight:900;font-family:inherit;font-variant-numeric:tabular-nums;
@@ -667,13 +674,18 @@
         </div>
         <div class="settings-field">
           <label>Objectif d'apport quotidien (kcal)</label>
-          <input type="number" inputmode="numeric" id="setCal">
-          <div class="hint">Ce que tu vises à manger chaque jour. Affiché comme repère, sans influence sur le bilan.</div>
+          <input type="number" inputmode="numeric" id="setCal" readonly>
+          <div class="hint">Calculé automatiquement depuis tes macros : 4 kcal/g pour les protéines et les glucides, 9 kcal/g pour les lipides.</div>
         </div>
         <div class="divider"></div>
         <div class="settings-field"><label>Protéines (g)</label><input type="number" inputmode="numeric" id="setProtein"></div>
         <div class="settings-field"><label>Glucides (g)</label><input type="number" inputmode="numeric" id="setCarbs"></div>
         <div class="settings-field"><label>Lipides (g)</label><input type="number" inputmode="numeric" id="setFat"></div>
+        <div class="goal-calc">
+          <div class="gc-v" id="goalCalc">—</div>
+          <div class="gc-split" id="goalSplit"></div>
+          <div class="gc-warn" id="goalWarn"></div>
+        </div>
         <div class="settings-field"><label>Eau (ml)</label><input type="number" inputmode="numeric" id="setWater"><div class="hint">Objectif quotidien d'hydratation, en millilitres.</div></div>
         <button class="btn primary" id="saveSettings">Enregistrer</button>
         <div class="note" id="saveNote"></div>
@@ -873,7 +885,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "40";                 // numéro affiché dans les réglages
+  const APP_VERSION = "41";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1678,6 +1690,35 @@
     el("waterChart").innerHTML=barChartSvg(cb, goal, {...LIGHT, good:"var(--fat-c)", bad:"var(--fat-c)"});
   }
 
+  // L'objectif calorique découle des macros : on ne peut pas viser 80 g de lipides
+  // et 2000 kcal, les deux chiffres seraient contradictoires.
+  function goalCaloriesFromMacros(){
+    const p=num(document.getElementById("setProtein").value),
+          c=num(document.getElementById("setCarbs").value),
+          f=num(document.getElementById("setFat").value);
+    return {p, c, f, cal: p*KCAL.protein + c*KCAL.carbs + f*KCAL.fat};
+  }
+  function refreshGoalCalc(){
+    const g=goalCaloriesFromMacros();
+    document.getElementById("setCal").value = Math.round(g.cal);
+    document.getElementById("goalCalc").innerHTML = Math.round(g.cal)+"<small>kcal / jour</small>";
+    const parts=[["Protéines",g.p*KCAL.protein],["Glucides",g.c*KCAL.carbs],["Lipides",g.f*KCAL.fat]];
+    document.getElementById("goalSplit").textContent = g.cal>0
+      ? parts.map(([l,v])=>Math.round(v/g.cal*100)+" % "+tr(l).toLowerCase()).join(" · ")
+      : "";
+    // repère utile : l'écart avec le maintien donne le déficit visé
+    const maint=num(document.getElementById("setMaint").value);
+    const w=document.getElementById("goalWarn");
+    if(g.cal<=0) w.textContent=tr("Renseigne tes macros pour obtenir ton objectif.");
+    else if(maint>0 && g.cal>=maint) w.textContent=tr("Cet objectif dépasse ton maintien : il ne produit aucun déficit.");
+    else if(maint>0) w.textContent="";
+    else w.textContent="";
+    if(maint>0 && g.cal>0 && g.cal<maint){
+      w.style.color="var(--ink-faint)";
+      w.textContent=tr("Déficit visé : N kcal par jour.").replace("N", Math.round(maint-g.cal));
+    } else w.style.color="";
+  }
+
   // ---------- settings view ----------
   function renderSettings(){
     document.getElementById("setMaint").value=db.settings.maintenance;
@@ -1686,6 +1727,7 @@
     document.getElementById("setCarbs").value=db.settings.carbsGoal;
     document.getElementById("setFat").value=db.settings.fatGoal;
     document.getElementById("setWater").value=db.settings.waterGoal;
+    refreshGoalCalc();
     document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
     const keys=loggedDates(), n=keys.length;
     let txt = n===0 ? tr("Aucune donnée enregistrée pour le moment.")
@@ -2571,7 +2613,11 @@
     "Jour suivant":{en:"Next day"},
     "Choisir une date":{en:"Pick a date"},
     "Modifier":{en:"Edit"},
-    "Moyennes sur N jours enregistrés":{en:"Averages over N recorded days"}
+    "Moyennes sur N jours enregistrés":{en:"Averages over N recorded days"},
+    "Calculé automatiquement depuis tes macros : 4 kcal/g pour les protéines et les glucides, 9 kcal/g pour les lipides.":{en:"Calculated automatically from your macros: 4 kcal/g for protein and carbs, 9 kcal/g for fat."},
+    "Renseigne tes macros pour obtenir ton objectif.":{en:"Fill in your macros to get your goal."},
+    "Cet objectif dépasse ton maintien : il ne produit aucun déficit.":{en:"This goal is above your maintenance: it creates no deficit."},
+    "Déficit visé : N kcal par jour.":{en:"Target deficit: N kcal per day."}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -2610,6 +2656,9 @@
     [/^jours d'écart$/, {en:"days apart"}],
     [/^Poids ce jour-là : (.+)\. Repris automatiquement de tes pesées\.$/, {en:"Weight that day: $1. Taken from your weigh-ins."}],
     [/^(\d+) photos?$/, {en:"$1 photo(s)"}],
+    [/^(\d+) % (protéines|glucides|lipides) · (\d+) % (protéines|glucides|lipides) · (\d+) % (protéines|glucides|lipides)$/,
+      {en:"$1 % protein · $3 % carbs · $5 % fat"}],
+    [/^(\d+) kcal \/ jour$/, {en:"$1 kcal / day"}],
     [/^(\d+) g$/, {en:"$1 g"}],
     [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F"}],
     [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F"}],
@@ -3111,7 +3160,7 @@
   document.querySelectorAll(".period-toggle button").forEach(btn=>btn.addEventListener("click",()=>{ currentPeriod=btn.dataset.period; renderStats(); }));
   document.getElementById("saveSettings").addEventListener("click",()=>{
     db.settings.maintenance=num(document.getElementById("setMaint").value);
-    db.settings.calGoal=num(document.getElementById("setCal").value);
+    db.settings.calGoal=Math.round(goalCaloriesFromMacros().cal);   // toujours cohérent avec les macros
     db.settings.proteinGoal=num(document.getElementById("setProtein").value);
     db.settings.carbsGoal=num(document.getElementById("setCarbs").value);
     db.settings.fatGoal=num(document.getElementById("setFat").value);
@@ -3119,6 +3168,9 @@
     const ok=persistNow(); flash("saveNote", ok?"Objectifs enregistrés ✓":"Erreur d'enregistrement", !ok); renderDay();
   });
   document.getElementById("exportBtn").addEventListener("click",exportData);
+  ["setProtein","setCarbs","setFat","setMaint"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener("input", refreshGoalCalc);
+  });
   document.getElementById("addLibFood").addEventListener("click",()=>openLibSheet(null));
   document.getElementById("phAdd").addEventListener("click",()=>document.getElementById("phFile").click());
   document.getElementById("phFile").addEventListener("change", async (e)=>{
