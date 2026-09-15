@@ -522,6 +522,86 @@
     --glass:rgba(24,28,33,.72);
   }
   html{background:#0A1214;} body{background:#0A1214;}
+
+  /* ================= TUTORIEL ================= */
+  .tuto{position:fixed;inset:0;z-index:120;background:linear-gradient(180deg,var(--bg0),var(--bg1));
+    display:flex;flex-direction:column;}
+  .tuto-skip{position:absolute;top:calc(16px + env(safe-area-inset-top));right:18px;z-index:8;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:var(--ink-soft);
+    border-radius:999px;padding:8px 15px;font-size:12.5px;font-weight:800;font-family:inherit;}
+  .tscreen{flex:1;display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:calc(58px + env(safe-area-inset-top)) 24px calc(18px + env(safe-area-inset-bottom));}
+  .tscreen.on{display:flex;}
+  .tkick{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);margin-bottom:10px;}
+  .tuto h2{font-size:27px;font-weight:900;letter-spacing:-.03em;line-height:1.12;margin:0 0 12px;}
+  .tuto h2 .g{background:linear-gradient(100deg,var(--acc-light),var(--acc) 45%,#CFE8A8);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .tuto p{font-size:15px;line-height:1.55;color:var(--ink-soft);margin:0 0 13px;}
+  .tuto p b{color:var(--ink);font-weight:800;}
+  .tspacer{flex:1;min-height:12px;}
+  .tnote{background:var(--surface-2);border-left:3px solid var(--acc);border-radius:0 12px 12px 0;
+    padding:11px 13px;font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:12px;}
+  .tcard{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px;}
+  .tcard.hero{background:linear-gradient(150deg,var(--hero-a),var(--hero-b));border-color:rgba(var(--acc-rgb),.25);}
+  .tgauge{display:flex;flex-direction:column;align-items:center;margin:6px 0 2px;}
+  .tgnum{font-size:44px;font-weight:900;letter-spacing:-.04em;color:var(--acc);line-height:1;}
+  .tglbl{font-size:11px;font-weight:900;letter-spacing:.14em;color:var(--acc);margin-top:5px;}
+  .tgmeta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:14px;padding-top:12px;
+    border-top:1px solid rgba(255,255,255,.12);text-align:center;}
+  .tgmeta .v{font-size:17px;font-weight:900;}
+  .tgmeta .k{font-size:10.5px;color:rgba(255,255,255,.6);font-weight:700;margin-top:2px;}
+  .tleg{display:flex;flex-direction:column;gap:9px;}
+  .tlrow{display:flex;align-items:flex-start;gap:10px;}
+  .tldot{width:10px;height:10px;border-radius:3px;flex-shrink:0;margin-top:5px;}
+  .tlname{font-size:14px;font-weight:800;}
+  .tltxt{font-size:12.5px;color:var(--ink-soft);line-height:1.45;margin-top:2px;}
+  .tfield{margin-bottom:11px;}
+  .tfield label{display:block;font-size:12px;font-weight:800;color:var(--ink-soft);margin-bottom:5px;}
+  .tfield input{width:100%;background:var(--surface-2);border:1px solid var(--acc);border-radius:12px;
+    padding:13px 14px;font-size:17px;font-weight:800;color:var(--ink);font-family:inherit;
+    box-shadow:0 0 0 3px rgba(var(--acc-rgb),.16);}
+  .tfield input:focus{outline:none;}
+  .tmacros{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .tcalc{background:rgba(var(--acc-rgb),.10);border:1px solid rgba(var(--acc-rgb),.28);border-radius:13px;padding:12px 14px;}
+  .tcalc .cv{font-size:22px;font-weight:900;color:var(--acc);font-variant-numeric:tabular-nums;}
+  .tcalc .cv small{font-size:12px;margin-left:3px;}
+  .tcalc .cs{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:4px;}
+  .tways{display:flex;flex-direction:column;gap:10px;}
+  .tway{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;padding:13px 14px;}
+  .tway .ico{width:34px;height:34px;border-radius:10px;background:rgba(var(--acc-rgb),.14);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .tway svg{width:18px;height:18px;stroke:var(--acc);fill:none;stroke-width:2;stroke-linecap:round;}
+  .tway .wt{font-size:14px;font-weight:800;}
+  .tway .wd{font-size:12px;color:var(--ink-soft);margin-top:2px;line-height:1.4;}
+  .tchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .tchip{background:rgba(var(--acc-rgb),.12);border:1px solid rgba(var(--acc-rgb),.32);border-radius:999px;
+    padding:8px 13px;font-size:12.5px;font-weight:800;display:flex;gap:6px;align-items:center;}
+  .tchip .p{color:var(--acc);font-weight:900;}
+  .tchip .q{font-size:10.5px;color:var(--ink-soft);}
+  .tsecbar{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;
+    padding:4px;gap:4px;margin-bottom:12px;}
+  .tsecbar div{flex:1;text-align:center;padding:9px 0;font-size:12.5px;font-weight:800;color:var(--ink-soft);border-radius:11px;}
+  .tsecbar div.on{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;}
+  .twarn{background:rgba(var(--bad-rgb),.10);border:1px solid rgba(var(--bad-rgb),.30);border-radius:14px;padding:14px;margin-bottom:13px;}
+  .twarn .wt{font-size:13.5px;font-weight:900;color:var(--bad);margin-bottom:5px;}
+  .twarn .wd{font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  .tfoot{padding-top:14px;}
+  .tdots{display:flex;justify-content:center;gap:6px;margin-bottom:14px;}
+  .tdots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.22);transition:all .25s;}
+  .tdots i.on{background:var(--acc);width:20px;border-radius:3px;}
+  .tbtn{width:100%;border:none;border-radius:15px;padding:15px;font-size:15px;font-weight:900;font-family:inherit;transition:transform .1s;}
+  .tbtn:active{transform:scale(.98);}
+  .tbtn.primary{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;
+    box-shadow:0 8px 22px rgba(var(--acc-rgb),.3);}
+  .tbtn.primary:disabled{opacity:.4;box-shadow:none;}
+  .tbtn.ghost{background:transparent;color:var(--ink-faint);font-weight:800;font-size:13.5px;padding:11px;margin-top:4px;}
+  .tdone{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;flex:1;}
+  .tdone .circ{width:78px;height:78px;border-radius:50%;background:rgba(var(--acc-rgb),.14);
+    border:2px solid var(--acc);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+  .tdone .circ svg{width:34px;height:34px;stroke:var(--acc);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+  .tmeal{border:1px dashed var(--line-strong);background:rgba(255,255,255,.04);border-radius:13px;
+    padding:13px 6px;font-size:12.5px;font-weight:800;color:var(--acc);text-align:center;}
 </style>
 </head>
 <body>
@@ -698,6 +778,7 @@
           <span class="vd" id="appVersionDate">—</span>
         </div>
         <div class="version-note" id="versionNote"></div>
+        <button class="btn secondary" id="replayTuto" style="margin-top:12px">Revoir le tutoriel</button>
       </div>
 
       <div class="card">
@@ -849,6 +930,166 @@
 
   <div id="sheetRoot"></div>
   <div id="viewerRoot"></div>
+  <!-- ================= TUTORIEL DE PREMIÈRE OUVERTURE ================= -->
+  <div class="tuto" id="tuto" style="display:none">
+    <button class="tuto-skip" id="tutoSkip">Passer</button>
+
+    <div class="tscreen on" data-t="0">
+      <div class="tspacer"></div>
+      <div class="tkick">Bienvenue</div>
+      <h2 class="g">Suivi calories</h2>
+      <p>Tu vas suivre ce que tu manges, ton poids, et voir les deux évoluer ensemble.</p>
+      <div class="tnote">Tes données restent sur ce téléphone. Rien n'est envoyé nulle part, aucun compte à créer.</div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="1">Commencer</button></div>
+    </div>
+
+    <div class="tscreen" data-t="1">
+      <div class="tkick">Le principe</div>
+      <h2>Deux nombres,<br>deux rôles</h2>
+      <div class="tcard hero">
+        <div class="tgauge"><div class="tgnum">1 444</div><div class="tglbl">RESTANT</div></div>
+        <div class="tgmeta">
+          <div><div class="v">556</div><div class="k">apport</div></div>
+          <div><div class="v" style="color:var(--acc)">2 000</div><div class="k">objectif</div></div>
+          <div><div class="v">2 600</div><div class="k">maintien</div></div>
+        </div>
+      </div>
+      <div class="tleg">
+        <div class="tlrow"><span class="tldot" style="background:var(--ink-soft)"></span>
+          <div><div class="tlname">Ton maintien</div>
+          <div class="tltxt">Ce que ton corps dépense par jour. Manger en dessous fait perdre du poids.</div></div></div>
+        <div class="tlrow"><span class="tldot" style="background:var(--acc)"></span>
+          <div><div class="tlname">Ton objectif</div>
+          <div class="tltxt">Ce que tu vises à manger. La jauge se remplit jusqu'à lui.</div></div></div>
+      </div>
+      <div class="tnote" style="margin-top:14px">L'écart entre les deux, c'est ton déficit quotidien : ici 600 kcal.</div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="2">J'ai compris</button></div>
+    </div>
+
+    <div class="tscreen" data-t="2">
+      <div class="tkick">À toi de jouer · 1 sur 2</div>
+      <h2>Commençons par<br>tes chiffres</h2>
+      <p>Saisis ton maintien, puis tes macros. <b>Les calories se calculent toutes seules.</b></p>
+      <div class="tfield"><label>Maintien calorique (kcal)</label>
+        <input type="number" inputmode="numeric" id="tMaint" placeholder="2600"></div>
+      <div class="tmacros">
+        <div class="tfield"><label>Prot.</label><input type="number" inputmode="numeric" id="tProt" placeholder="160"></div>
+        <div class="tfield"><label>Gluc.</label><input type="number" inputmode="numeric" id="tCarb" placeholder="150"></div>
+        <div class="tfield"><label>Lip.</label><input type="number" inputmode="numeric" id="tFat" placeholder="60"></div>
+      </div>
+      <div class="tcalc">
+        <div class="cv" id="tCalcVal">—</div>
+        <div class="cs" id="tCalcSplit"></div>
+        <div class="cs" id="tCalcDef" style="color:var(--acc);margin-top:5px"></div>
+      </div>
+      <div class="tnote" style="margin-top:12px">Un déficit de 300 à 500 kcal par jour correspond à environ 0,3 à 0,5 kg par semaine.</div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" id="tSaveGoals" disabled>Enregistrer et continuer</button>
+        <button class="tbtn ghost" id="tNoMaint">Je ne connais pas mon maintien</button></div>
+    </div>
+
+    <div class="tscreen" data-t="3">
+      <div class="tkick">Au quotidien</div>
+      <h2>Trois façons<br>d'ajouter un aliment</h2>
+      <div class="tways">
+        <div class="tway"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></div>
+          <div><div class="wt">Scanner</div><div class="wd">Le code-barres du produit : les valeurs arrivent seules.</div></div></div>
+        <div class="tway"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div><div class="wt">À la main</div><div class="wd">Les valeurs pour 100 g, puis la quantité mangée. Ou à la portion, pour une banane ou un verre.</div></div></div>
+        <div class="tway"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 12h7M11 5v14"/><circle cx="17" cy="12" r="3"/></svg></div>
+          <div><div class="wt">Calories seules</div><div class="wd">Quand tu ne connais que l'estimation, au restaurant par exemple.</div></div></div>
+      </div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="4">Suivant</button></div>
+    </div>
+
+    <div class="tscreen" data-t="4">
+      <div class="tkick">À toi de jouer · 2 sur 2</div>
+      <h2>Ton premier<br>aliment</h2>
+      <p>Ajoute quelque chose au repas de ton choix. Scanne un produit, ou saisis-en un à la main.</p>
+      <div class="tcard" style="border-color:rgba(var(--acc-rgb),.3)">
+        <div class="tlname">Déjeuner</div>
+        <div class="tltxt" style="margin-bottom:12px">Aucun aliment</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="tmeal" id="tAddFood">＋ Ajouter un aliment</button>
+          <button class="tmeal" id="tScanFood">▤ Scanner</button>
+        </div>
+      </div>
+      <div class="tnote">Tu verras ton chiffre apparaître tout de suite dans la jauge.</div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="5">Continuer</button>
+        <button class="tbtn ghost" data-tgo="5">Plus tard</button></div>
+    </div>
+
+    <div class="tscreen" data-t="5">
+      <div class="tkick">L'astuce qui change tout</div>
+      <h2>Enregistre ce que<br>tu manges souvent</h2>
+      <p>Coche <b>« Enregistrer dans mes aliments »</b> quand tu ajoutes ta banane, ton shaker ou ton skyr.</p>
+      <div class="tcard">
+        <div class="tlname">Petit-déjeuner</div>
+        <div class="tltxt">Mes aliments</div>
+        <div class="tchips">
+          <div class="tchip"><span class="p">+</span>Banane<span class="q">1× · 111 kcal</span></div>
+          <div class="tchip"><span class="p">+</span>Skyr<span class="q">150 g · 87 kcal</span></div>
+          <div class="tchip"><span class="p">+</span>Shaker<span class="q">30 g · 117 kcal</span></div>
+        </div>
+      </div>
+      <p style="margin-top:4px">Ils apparaissent ensuite en raccourci sous chaque repas : <b>un appui, c'est ajouté</b>.</p>
+      <div class="tnote">C'est ce qui fait tenir sur la durée. La plupart des gens abandonnent vers le cinquième jour, quand la saisie devient une corvée.</div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="6">Suivant</button></div>
+    </div>
+
+    <div class="tscreen" data-t="6">
+      <div class="tkick">Les deux autres sections</div>
+      <h2>La tendance compte<br>plus que la journée</h2>
+      <div class="tsecbar"><div>Nutrition</div><div class="on">Poids</div><div>Évolution</div></div>
+      <div class="tways">
+        <div class="tway"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 21h16l-2.5-12H6.5L4 21z"/><circle cx="12" cy="5" r="2.5"/></svg></div>
+          <div><div class="wt">Poids</div><div class="wd">Pèse-toi régulièrement : l'app calcule ton rythme réel et projette la date de ton objectif.</div></div></div>
+        <div class="tway"><div class="ico"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          <div><div class="wt">Évolution</div><div class="wd">Des photos datées, avec ton poids inscrit dessus. À trois mois, elles montrent ce que la balance ne dit pas.</div></div></div>
+      </div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="7">Suivant</button></div>
+    </div>
+
+    <div class="tscreen" data-t="7">
+      <div class="tkick">Deux choses à savoir</div>
+      <h2>Avant de<br>commencer</h2>
+      <div class="twarn">
+        <div class="wt">Tes données vivent uniquement ici</div>
+        <div class="wd">Exporte une sauvegarde de temps en temps, depuis Réglages puis Mes données. Si tu supprimes l'app, tout part avec elle.</div>
+      </div>
+      <div class="tcard">
+        <div class="tlname" style="margin-bottom:6px">Aucun suivi n'est exact au gramme près</div>
+        <div class="tltxt" style="line-height:1.55">Les méthodes déclaratives sous-estiment l'apport réel de 10 à 20 % en moyenne. Ce qui compte, c'est la régularité : l'app compare ton apport à ton poids réel et corrige le tir sur la durée.</div>
+      </div>
+      <div class="tspacer"></div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" data-tgo="8">Suivant</button></div>
+    </div>
+
+    <div class="tscreen" data-t="8">
+      <div class="tdone">
+        <div class="circ"><svg viewBox="0 0 24 24"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+        <h2 class="g" style="text-align:center">C'est parti</h2>
+        <p style="text-align:center;max-width:280px">Tu peux revoir ce tutoriel à tout moment depuis Réglages.</p>
+      </div>
+      <div class="tfoot"><div class="tdots"></div>
+        <button class="tbtn primary" id="tFinish">Terminer</button></div>
+    </div>
+  </div>
+
 
   <nav class="tabbar" id="tabsPoids" style="display:none">
     <button class="tab-btn active" data-view="wsuivi">
@@ -885,7 +1126,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "43";                 // numéro affiché dans les réglages
+  const APP_VERSION = "44";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -2629,7 +2870,64 @@
     "Cet objectif dépasse ton maintien : il ne produit aucun déficit.":{en:"This goal is above your maintenance: it creates no deficit."},
     "Déficit visé : N kcal par jour.":{en:"Target deficit: N kcal per day."},
     "DÉFINIS TES OBJECTIFS":{en:"SET YOUR GOALS"},
-    "objectif à définir":{en:"goal not set"}
+    "objectif à définir":{en:"goal not set"},
+    "Bienvenue":{en:"Welcome"},
+    "Commencer":{en:"Start"},
+    "Passer":{en:"Skip"},
+    "Suivant":{en:"Next"},
+    "Terminer":{en:"Finish"},
+    "Tu vas suivre ce que tu manges, ton poids, et voir les deux évoluer ensemble.":{en:"Track what you eat, your weight, and watch them change together."},
+    "Tes données restent sur ce téléphone. Rien n'est envoyé nulle part, aucun compte à créer.":{en:"Your data stays on this phone. Nothing is sent anywhere, no account needed."},
+    "Le principe":{en:"How it works"},
+    "J'ai compris":{en:"Got it"},
+    "Ton maintien":{en:"Your maintenance"},
+    "Ton objectif":{en:"Your goal"},
+    "Ce que ton corps dépense par jour. Manger en dessous fait perdre du poids.":{en:"What your body burns each day. Eating below it means losing weight."},
+    "Ce que tu vises à manger. La jauge se remplit jusqu'à lui.":{en:"What you aim to eat. The gauge fills up to it."},
+    "L'écart entre les deux, c'est ton déficit quotidien : ici 600 kcal.":{en:"The gap between the two is your daily deficit: 600 kcal here."},
+    "À toi de jouer · 1 sur 2":{en:"Your turn · 1 of 2"},
+    "À toi de jouer · 2 sur 2":{en:"Your turn · 2 of 2"},
+    "Saisis ton maintien, puis tes macros. Les calories se calculent toutes seules.":{en:"Enter your maintenance, then your macros. Calories are worked out for you."},
+    "Enregistrer et continuer":{en:"Save and continue"},
+    "Je ne connais pas mon maintien":{en:"I don't know my maintenance"},
+    "Un déficit de 300 à 500 kcal par jour correspond à environ 0,3 à 0,5 kg par semaine.":{en:"A deficit of 300 to 500 kcal a day is roughly 0.3 to 0.5 kg per week."},
+    "Valeurs de départ proposées. Ajuste-les dans les réglages quand tu les connaîtras.":{en:"Starting values suggested. Adjust them in settings once you know yours."},
+    "Au quotidien":{en:"Day to day"},
+    "Le code-barres du produit : les valeurs arrivent seules.":{en:"The product barcode: the values fill in by themselves."},
+    "À la main":{en:"By hand"},
+    "Les valeurs pour 100 g, puis la quantité mangée. Ou à la portion, pour une banane ou un verre.":{en:"Values per 100 g, then the amount eaten. Or per portion, for a banana or a glass."},
+    "Quand tu ne connais que l'estimation, au restaurant par exemple.":{en:"When you only have an estimate, at a restaurant for instance."},
+    "Ajoute quelque chose au repas de ton choix. Scanne un produit, ou saisis-en un à la main.":{en:"Add something to any meal. Scan a product, or enter one by hand."},
+    "Tu verras ton chiffre apparaître tout de suite dans la jauge.":{en:"You'll see your number appear in the gauge straight away."},
+    "Continuer":{en:"Continue"},
+    "Plus tard":{en:"Later"},
+    "L'astuce qui change tout":{en:"The trick that changes everything"},
+    "Coche « Enregistrer dans mes aliments » quand tu ajoutes ta banane, ton shaker ou ton skyr.":{en:"Tick the save option when you add your banana, your shake or your skyr."},
+    "Ils apparaissent ensuite en raccourci sous chaque repas : un appui, c'est ajouté.":{en:"They then appear as shortcuts under every meal: one tap and it's added."},
+    "C'est ce qui fait tenir sur la durée. La plupart des gens abandonnent vers le cinquième jour, quand la saisie devient une corvée.":{en:"This is what keeps you going. Most people give up around day five, when logging becomes a chore."},
+    "Les deux autres sections":{en:"The two other sections"},
+    "Pèse-toi régulièrement : l'app calcule ton rythme réel et projette la date de ton objectif.":{en:"Weigh yourself regularly: the app works out your real pace and projects your goal date."},
+    "Des photos datées, avec ton poids inscrit dessus. À trois mois, elles montrent ce que la balance ne dit pas.":{en:"Dated photos with your weight on them. After three months they show what the scale doesn't."},
+    "Deux choses à savoir":{en:"Two things to know"},
+    "Tes données vivent uniquement ici":{en:"Your data lives here only"},
+    "Exporte une sauvegarde de temps en temps, depuis Réglages puis Mes données. Si tu supprimes l'app, tout part avec elle.":{en:"Export a backup now and then, from Settings then My data. If you delete the app, everything goes with it."},
+    "Aucun suivi n'est exact au gramme près":{en:"No tracking is exact to the gram"},
+    "Les méthodes déclaratives sous-estiment l'apport réel de 10 à 20 % en moyenne. Ce qui compte, c'est la régularité : l'app compare ton apport à ton poids réel et corrige le tir sur la durée.":{en:"Self-reported methods underestimate real intake by 10 to 20 % on average. What matters is consistency: the app compares your intake with your real weight and corrects over time."},
+    "Tu peux revoir ce tutoriel à tout moment depuis Réglages.":{en:"You can replay this tutorial any time from Settings."},
+    "Revoir le tutoriel":{en:"Replay the tutorial"},
+    "Deux nombres,":{en:"Two numbers,"},
+    "deux rôles":{en:"two roles"},
+    "Commençons par":{en:"Let's start with"},
+    "tes chiffres":{en:"your numbers"},
+    "Trois façons":{en:"Three ways"},
+    "d'ajouter un aliment":{en:"to add a food"},
+    "Ton premier":{en:"Your first"},
+    "Enregistre ce que":{en:"Save what you"},
+    "tu manges souvent":{en:"eat often"},
+    "La tendance compte":{en:"The trend matters"},
+    "plus que la journée":{en:"more than one day"},
+    "Avant de":{en:"Before you"},
+    "C'est parti":{en:"Let's go"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -3067,6 +3365,100 @@
     renderPhotos();
   }
 
+
+  // ================= TUTORIEL DE PREMIÈRE OUVERTURE =================
+  // L'indicateur vit dans une clé séparée : il ne doit PAS figurer dans les sauvegardes
+  // exportées, sinon restaurer sur un téléphone neuf sauterait le tutoriel.
+  const TUTO_KEY = "suivi-calories:tuto";
+  const TUTO_SCREENS = 9;
+  function tutoSeen(){ try{ return localStorage.getItem(TUTO_KEY)==="1"; }catch(e){ return true; } }
+  function markTutoSeen(){ try{ localStorage.setItem(TUTO_KEY,"1"); }catch(e){} }
+
+  function tutoGo(n){
+    const root=document.getElementById("tuto");
+    root.querySelectorAll(".tscreen").forEach(sc=>sc.classList.toggle("on", Number(sc.dataset.t)===n));
+    root.querySelectorAll(".tdots").forEach(d=>{
+      d.innerHTML = Array.from({length:TUTO_SCREENS}, (_,i)=>`<i class="${i===n?"on":""}"></i>`).join("");
+    });
+    document.getElementById("tutoSkip").style.display = (n===TUTO_SCREENS-1) ? "none" : "";
+    const cur=root.querySelector(".tscreen.on"); if(cur) cur.scrollTop=0;
+    applyI18n(root);
+  }
+  function openTuto(){
+    const root=document.getElementById("tuto");
+    root.style.display="flex";
+    document.body.style.overflow="hidden";
+    // on pré-remplit avec ce qui existe déjà, pour un utilisateur qui rejoue le tutoriel
+    const g=(id,v)=>{ const el=document.getElementById(id); if(el) el.value = num(v)>0 ? v : ""; };
+    g("tMaint", db.settings.maintenance); g("tProt", db.settings.proteinGoal);
+    g("tCarb", db.settings.carbsGoal);    g("tFat", db.settings.fatGoal);
+    refreshTutoCalc();
+    tutoGo(0);
+  }
+  function closeTuto(){
+    markTutoSeen();
+    document.getElementById("tuto").style.display="none";
+    document.body.style.overflow="";
+    renderDay();
+  }
+  function refreshTutoCalc(){
+    const p=num(document.getElementById("tProt").value),
+          c=num(document.getElementById("tCarb").value),
+          f=num(document.getElementById("tFat").value),
+          m=num(document.getElementById("tMaint").value);
+    const cal = p*KCAL.protein + c*KCAL.carbs + f*KCAL.fat;
+    document.getElementById("tCalcVal").innerHTML = cal>0 ? Math.round(cal)+"<small>kcal / jour</small>" : "—";
+    document.getElementById("tCalcSplit").textContent = cal>0
+      ? [["Protéines",p*KCAL.protein],["Glucides",c*KCAL.carbs],["Lipides",f*KCAL.fat]]
+          .map(([l,v])=>Math.round(v/cal*100)+" % "+tr(l).toLowerCase()).join(" · ")
+      : "";
+    const d=document.getElementById("tCalcDef");
+    if(m>0 && cal>0 && cal<m) d.textContent = tr("Déficit visé : N kcal par jour.").replace("N", Math.round(m-cal));
+    else if(m>0 && cal>=m) d.textContent = tr("Cet objectif dépasse ton maintien : il ne produit aucun déficit.");
+    else d.textContent="";
+    // on n'avance qu'une fois les quatre valeurs renseignées
+    document.getElementById("tSaveGoals").disabled = !(m>0 && cal>0);
+  }
+  function bindTuto(){
+    const root=document.getElementById("tuto");
+    root.querySelectorAll("[data-tgo]").forEach(b=>b.addEventListener("click",()=>tutoGo(Number(b.dataset.tgo))));
+    ["tMaint","tProt","tCarb","tFat"].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.addEventListener("input", refreshTutoCalc);
+    });
+    document.getElementById("tutoSkip").addEventListener("click", closeTuto);
+    document.getElementById("tFinish").addEventListener("click", closeTuto);
+    document.getElementById("tSaveGoals").addEventListener("click",()=>{
+      db.settings.maintenance = num(document.getElementById("tMaint").value);
+      db.settings.proteinGoal = num(document.getElementById("tProt").value);
+      db.settings.carbsGoal   = num(document.getElementById("tCarb").value);
+      db.settings.fatGoal     = num(document.getElementById("tFat").value);
+      db.settings.calGoal     = calGoal();
+      persistNow(); renderDay();
+      tutoGo(3);
+    });
+    document.getElementById("tNoMaint").addEventListener("click",()=>{
+      // estimation de repli : sédentaire à modérément actif, à ajuster ensuite dans les réglages
+      document.getElementById("tMaint").value = 2200;
+      if(!num(document.getElementById("tProt").value)){
+        document.getElementById("tProt").value=140;
+        document.getElementById("tCarb").value=160;
+        document.getElementById("tFat").value=55;
+      }
+      refreshTutoCalc();
+      flashTutoHint();
+    });
+    document.getElementById("tAddFood").addEventListener("click",()=>{ closeTuto(); showSection("nutrition"); showView("day"); openItemSheet("lunch"); });
+    document.getElementById("tScanFood").addEventListener("click",()=>{ closeTuto(); showSection("nutrition"); showView("day"); openScanner("lunch"); });
+    const rb=document.getElementById("replayTuto");
+    if(rb) rb.addEventListener("click", openTuto);
+  }
+  function flashTutoHint(){
+    const d=document.getElementById("tCalcDef");
+    const prev=d.textContent;
+    d.textContent = tr("Valeurs de départ proposées. Ajuste-les dans les réglages quand tu les connaîtras.");
+    setTimeout(()=>{ if(d.textContent!==prev) refreshTutoCalc(); }, 4000);
+  }
+
   // ---------- navigation ----------
   const WEIGHT_VIEWS=["wsuivi","wsaisie","wreglages"];
   function showView(name){
@@ -3343,6 +3735,8 @@
   document.getElementById("wDate").max=todayISO();
   renderDay();
   applyI18n();
+  bindTuto();
+  if(!tutoSeen()) openTuto();
 })();
 </script>
 </body>
