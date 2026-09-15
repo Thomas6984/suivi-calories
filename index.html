@@ -885,7 +885,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "42";                 // numéro affiché dans les réglages
+  const APP_VERSION = "43";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -901,8 +901,9 @@
     {key:"carbs", label:"Glucides", color:"var(--carbs)", kcalPerG:4},
     {key:"fat", label:"Lipides", color:"var(--fat)", kcalPerG:9}
   ];
-  const DEFAULT_SETTINGS = {maintenance:2600, calGoal:2000, proteinGoal:150, carbsGoal:200, fatGoal:65,
-                            weightGoal:78, height:1.91, waterGoal:2500, lang:"fr"};
+  // Aucune valeur pré-remplie : chaque utilisateur saisit ses propres objectifs.
+  const DEFAULT_SETTINGS = {maintenance:0, calGoal:0, proteinGoal:0, carbsGoal:0, fatGoal:0,
+                            weightGoal:0, height:0, waterGoal:0, lang:"fr"};
   // Aucune donnée pré-chargée : chaque installation démarre vierge.
   const emptyMeal = () => ({items:[], note:""});
   const emptyDay = () => ({breakfast:emptyMeal(), lunch:emptyMeal(), dinner:emptyMeal(), other:emptyMeal(), water:0});
@@ -1425,8 +1426,8 @@
   }
 
   function renderWeightSettings(){
-    document.getElementById("setWGoal").value=db.settings.weightGoal;
-    document.getElementById("setHeight").value=db.settings.height;
+    document.getElementById("setWGoal").value=num(db.settings.weightGoal)>0?db.settings.weightGoal:"";
+    document.getElementById("setHeight").value=num(db.settings.height)>0?db.settings.height:"";
     document.getElementById("wSaveNote").textContent="";
     renderWeight();
   }
@@ -1501,7 +1502,8 @@
     const numEl=document.getElementById("gaugeNum"), lblEl=document.getElementById("gaugeLbl");
     // Au centre : ce qu'il reste avant d'atteindre l'objectif — l'information que l'on cherche.
     const left = goal - totals.cal;
-    if(!has){ numEl.textContent=String(Math.round(goal)); numEl.className="gauge-num neutral"; lblEl.textContent="À CONSOMMER"; lblEl.className="gauge-lbl neutral"; }
+    if(goal<=0){ numEl.textContent="—"; numEl.className="gauge-num neutral"; lblEl.textContent="DÉFINIS TES OBJECTIFS"; lblEl.className="gauge-lbl neutral"; }
+    else if(!has){ numEl.textContent=String(Math.round(goal)); numEl.className="gauge-num neutral"; lblEl.textContent="À CONSOMMER"; lblEl.className="gauge-lbl neutral"; }
     else if(left>0){ numEl.textContent=String(Math.round(left)); numEl.className="gauge-num good"; lblEl.textContent="RESTANT"; lblEl.className="gauge-lbl good"; }
     else if(left===0){ numEl.textContent="0"; numEl.className="gauge-num good"; lblEl.textContent="OBJECTIF ATTEINT"; lblEl.className="gauge-lbl good"; }
     else { numEl.textContent="+"+Math.round(-left); numEl.className="gauge-num bad"; lblEl.textContent="AU-DESSUS DE L'OBJECTIF"; lblEl.className="gauge-lbl bad"; }
@@ -1513,9 +1515,9 @@
     else { sideEl.textContent=fmtBalance(balance)+" kcal"; sideEl.className="bs-v "+(balance>=0?"good":"bad"); }
     document.getElementById("gauge").innerHTML=gaugeSvg(totals.cal, goal, maint);
     const mc=document.getElementById("metaCal"); mc.textContent=Math.round(totals.cal); mc.className="v"+(totals.cal>goal?" over":"");
-    document.getElementById("metaGoal").textContent=goal;
+    document.getElementById("metaGoal").textContent = goal>0 ? goal : "—";
     const maintEl=document.getElementById("metaMaint");
-    maintEl.textContent=maint; maintEl.className="v"+(hasMaintOverride(currentDate)?" adjusted":"");
+    maintEl.textContent = maint>0 ? maint : "—"; maintEl.className="v"+(hasMaintOverride(currentDate)?" adjusted":"");
     const noteEl=document.getElementById("adjustedNote");
     if(hasMaintOverride(currentDate)){ noteEl.textContent="Maintien ajusté pour cette journée (habituel : "+db.settings.maintenance+" kcal)"; noteEl.classList.add("show"); }
     else{ noteEl.classList.remove("show"); }
@@ -1525,9 +1527,9 @@
     document.getElementById("dayMacroBars").innerHTML=macroBarsHtml(totals);
     const wGoal=num(db.settings.waterGoal)||0, wVal=num(day.water);
     document.getElementById("waterVal").textContent=Math.round(wVal);
-    document.getElementById("waterGoalLbl").textContent="/ "+Math.round(wGoal)+" ml";
+    document.getElementById("waterGoalLbl").textContent = wGoal>0 ? "/ "+Math.round(wGoal)+" ml" : tr("objectif à définir");
     const wPct=wGoal>0?Math.round(wVal/wGoal*100):0;
-    document.getElementById("waterPct").textContent=wPct+" %";
+    document.getElementById("waterPct").textContent = wGoal>0 ? wPct+" %" : "";
     document.getElementById("waterFill").style.width=Math.min(100,wPct)+"%";
     MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const mt=mealTotals(day[m.key]), c=mt.cal, fi=mt.fiber;
       const al=mt.alcohol||0;
@@ -1707,8 +1709,8 @@
   }
   function refreshGoalCalc(){
     const g=goalCaloriesFromMacros();
-    document.getElementById("setCal").value = Math.round(g.cal);
-    document.getElementById("goalCalc").innerHTML = Math.round(g.cal)+"<small>kcal / jour</small>";
+    document.getElementById("setCal").value = g.cal>0 ? Math.round(g.cal) : "";
+    document.getElementById("goalCalc").innerHTML = g.cal>0 ? Math.round(g.cal)+"<small>kcal / jour</small>" : "—";
     const parts=[["Protéines",g.p*KCAL.protein],["Glucides",g.c*KCAL.carbs],["Lipides",g.f*KCAL.fat]];
     document.getElementById("goalSplit").textContent = g.cal>0
       ? parts.map(([l,v])=>Math.round(v/g.cal*100)+" % "+tr(l).toLowerCase()).join(" · ")
@@ -1728,12 +1730,13 @@
 
   // ---------- settings view ----------
   function renderSettings(){
-    document.getElementById("setMaint").value=db.settings.maintenance;
-    document.getElementById("setCal").value=calGoal();
-    document.getElementById("setProtein").value=db.settings.proteinGoal;
-    document.getElementById("setCarbs").value=db.settings.carbsGoal;
-    document.getElementById("setFat").value=db.settings.fatGoal;
-    document.getElementById("setWater").value=db.settings.waterGoal;
+    const blank=(v)=>num(v)>0?v:"";
+    document.getElementById("setMaint").value=blank(db.settings.maintenance);
+    document.getElementById("setCal").value=blank(calGoal());
+    document.getElementById("setProtein").value=blank(db.settings.proteinGoal);
+    document.getElementById("setCarbs").value=blank(db.settings.carbsGoal);
+    document.getElementById("setFat").value=blank(db.settings.fatGoal);
+    document.getElementById("setWater").value=blank(db.settings.waterGoal);
     refreshGoalCalc();
     document.getElementById("saveNote").textContent=""; document.getElementById("dataNote").textContent="";
     const keys=loggedDates(), n=keys.length;
@@ -2624,7 +2627,9 @@
     "Calculé automatiquement depuis tes macros : 4 kcal/g pour les protéines et les glucides, 9 kcal/g pour les lipides.":{en:"Calculated automatically from your macros: 4 kcal/g for protein and carbs, 9 kcal/g for fat."},
     "Renseigne tes macros pour obtenir ton objectif.":{en:"Fill in your macros to get your goal."},
     "Cet objectif dépasse ton maintien : il ne produit aucun déficit.":{en:"This goal is above your maintenance: it creates no deficit."},
-    "Déficit visé : N kcal par jour.":{en:"Target deficit: N kcal per day."}
+    "Déficit visé : N kcal par jour.":{en:"Target deficit: N kcal per day."},
+    "DÉFINIS TES OBJECTIFS":{en:"SET YOUR GOALS"},
+    "objectif à définir":{en:"goal not set"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
