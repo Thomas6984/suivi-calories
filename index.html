@@ -900,7 +900,7 @@
         <div class="card-sub">Une valeur par date. Réenregistrer une date existante remplace la valeur.</div>
         <div class="w-form" style="margin-top:12px">
           <div class="field full"><label>Date</label><input type="date" id="wDate"></div>
-          <div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" min="0" id="wKg" placeholder="82.6"></div>
+          <div class="field"><label>Poids (kg)</label><input type="text" inputmode="decimal" autocomplete="off" step="0.1" min="0" id="wKg" placeholder="82,6"></div>
           <button class="w-add" id="wAdd">Ajouter</button>
         </div>
         <div class="note" id="wNote"></div>
@@ -915,12 +915,12 @@
         <div class="meal-title" style="margin-bottom:14px">Objectif de poids</div>
         <div class="settings-field">
           <label>Poids cible (kg)</label>
-          <input type="number" inputmode="decimal" step="0.1" id="setWGoal">
+          <input type="text" inputmode="decimal" autocomplete="off" step="0.1" id="setWGoal">
           <div class="hint">Sert au pourcentage d'avancement et aux deux projections.</div>
         </div>
         <div class="settings-field">
           <label>Taille (m)</label>
-          <input type="number" inputmode="decimal" step="0.01" id="setHeight">
+          <input type="text" inputmode="decimal" autocomplete="off" step="0.01" id="setHeight">
           <div class="hint">Sert uniquement au calcul de l'IMC.</div>
         </div>
         <button class="btn primary" id="saveWSettings">Enregistrer</button>
@@ -1138,7 +1138,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "45";                 // numéro affiché dans les réglages
+  const APP_VERSION = "46";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1254,7 +1254,11 @@
   function escHtml(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
   // ---------- computations ----------
-  function num(v){ const n=Number(v); return isFinite(n)&&n>0?n:0; }
+  // La virgule est le séparateur décimal du clavier français : on l'accepte partout.
+  function num(v){
+    const n = Number(String(v==null?"":v).replace(",", ".").trim());
+    return isFinite(n) && n>0 ? n : 0;
+  }
   // Un aliment : valeurs pour 100 g × quantité réellement mangée.
   function itemTotals(it){
     // à l'unité : le facteur est le nombre de portions ; au poids : la quantité rapportée à 100 g
@@ -1387,7 +1391,7 @@
     return arr;
   }
   function splitBlock(t, size){
-    const parts=splitParts(t), total=parts.reduce((s,x)=>s+x.val,0), d1=v=>Math.round(v*10)/10;
+    const parts=splitParts(t), total=parts.reduce((s,x)=>s+x.val,0), d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     const leg=parts.map(x=>{ const pct=total>0?Math.round(x.val/total*100):0;
       return `<div class="ms-row"><span class="ms-dot" style="background:${x.color}"></span><span class="ms-name">${x.label}</span>`+
              `<span class="ms-pct" style="color:${x.color}">${pct} %</span><span class="ms-g">${d1(num(t[x.key]))} g</span></div>`; }).join("");
@@ -1833,7 +1837,7 @@
     container.innerHTML=MEALS.map(m=>{
       const meal=day[m.key]||emptyMeal(), items=meal.items||[];
       const esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
-      const d1=v=>Math.round(v*10)/10;
+      const d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
       const rows = items.length ? items.map((it,i)=>{ const o=itemTotals(it);
         const mtot0=mealTotals(meal);
         const share = mtot0.cal>0 ? Math.round(o.cal/mtot0.cal*100) : 0;
@@ -1964,7 +1968,7 @@
   }
 
   function renderWaterStats(sum, days, ok, nDays, wBars, goal){
-    const el=id=>document.getElementById(id), avg=days?sum/days:0, d1=v=>Math.round(v*10)/10;
+    const el=id=>document.getElementById(id), avg=days?sum/days:0, d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     el("wsGoal").innerHTML = goal ? Math.round(goal)+"<small>ml</small>" : "—";
     el("wsAvg").innerHTML = days ? Math.round(avg)+"<small>ml</small>" : "—";
     el("wsAvg").className = "num "+(days ? (goal>0 && avg>=goal ? "good":"bad") : "");
@@ -2037,7 +2041,7 @@
     const el=document.getElementById("foodLib"); if(!el) return;
     const list=savedFoods(), esc=(x)=>String(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
     if(!list.length){ el.innerHTML=`<div class="food-empty">Aucun aliment enregistré</div>`; return; }
-    const d1=v=>Math.round(v*10)/10;
+    const d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     el.innerHTML=list.map((f,i)=>{ const o=itemTotals({per100:f.per100, qty:f.qty, unit:!!f.unit});
       const uTxt = f.unit ? (d1(num(f.qty))+" "+(num(f.qty)>1?"portions":"portion")) : (Math.round(num(f.qty))+" g");
       const rTxt = f.unit ? "par portion" : "pour 100 g";
@@ -2083,19 +2087,19 @@
       </div>
       <label class="f" id="lValsLbl">Valeurs pour 100 g</label>
       <div class="per100-grid">
-        <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lP" value="${esc(v.per100.protein)}"></div>
-        <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lC" value="${esc(v.per100.carbs)}"></div>
-        <div class="field"><label>Lip.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lF" value="${esc(v.per100.fat)}"></div>
-        <div class="field"><label>Fibres</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lFi" value="${esc(v.per100.fiber)}"></div>
-        <div class="field alcohol"><label>Alcool</label><input type="number" inputmode="decimal" min="0" step="0.1" id="lA" value="${esc(v.per100.alcohol)}"></div>
+        <div class="field"><label>Prot.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="lP" value="${esc(v.per100.protein)}"></div>
+        <div class="field"><label>Gluc.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="lC" value="${esc(v.per100.carbs)}"></div>
+        <div class="field"><label>Lip.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="lF" value="${esc(v.per100.fat)}"></div>
+        <div class="field"><label>Fibres</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="lFi" value="${esc(v.per100.fiber)}"></div>
+        <div class="field alcohol"><label>Alcool</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="lA" value="${esc(v.per100.alcohol)}"></div>
       </div>
       <div class="kcal-direct">
         <div class="kd-lbl" id="lKLbl">Ou calories seules (pour 100 g)</div>
-        <input type="number" inputmode="decimal" min="0" step="1" id="lK" placeholder="kcal / 100 g" value="${esc(v.per100.kcal)}">
+        <input type="text" inputmode="decimal" autocomplete="off" min="0" step="1" id="lK" placeholder="kcal / 100 g" value="${esc(v.per100.kcal)}">
         <div class="kd-hint">À utiliser si tu ne connais pas les macros. Ignoré dès qu'une macro est renseignée.</div>
       </div>
       <label class="f" id="lQtyLbl">Quantité habituelle (g)</label>
-      <input class="t" id="lQty" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(v.qty)}">
+      <input class="t" id="lQty" type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" value="${esc(v.qty)}">
       <div class="step-row" id="lStepRow"></div>
       <div class="calc-box"><div class="ct">Par portion habituelle</div><div class="cv" id="lKcal">0 kcal</div><div class="cm" id="lMacros">0 P · 0 G · 0 L</div></div>
       <div class="sheet-actions">
@@ -2116,7 +2120,7 @@
       qty:num(document.getElementById("lQty").value), unit:libUnit};
   }
   function refreshLibCalc(){
-    const f=readLibSheet(), o=itemTotals(f), d1=v=>Math.round(v*10)/10;
+    const f=readLibSheet(), o=itemTotals(f), d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     document.getElementById("lKcal").textContent=Math.round(o.cal)+" kcal";
     document.getElementById("lMacros").textContent = (o.protein||o.carbs||o.fat||o.fiber||o.alcohol)
       ? d1(o.protein)+" P · "+d1(o.carbs)+" G · "+d1(o.fat)+" L"+(o.fiber?" · "+d1(o.fiber)+" F":"")+(o.alcohol?" · "+d1(o.alcohol)+" A":"")
@@ -2243,19 +2247,19 @@
       </div>
       <label class="f" id="iValsLbl">Valeurs pour 100 g</label>
       <div class="per100-grid">
-        <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iP" value="${esc(v.per100.protein)}"></div>
-        <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iC" value="${esc(v.per100.carbs)}"></div>
-        <div class="field"><label>Lip.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iF" value="${esc(v.per100.fat)}"></div>
-        <div class="field"><label>Fibres</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iFi" value="${esc(v.per100.fiber)}"></div>
-        <div class="field alcohol"><label>Alcool</label><input type="number" inputmode="decimal" min="0" step="0.1" id="iA" value="${esc(v.per100.alcohol)}"></div>
+        <div class="field"><label>Prot.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="iP" value="${esc(v.per100.protein)}"></div>
+        <div class="field"><label>Gluc.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="iC" value="${esc(v.per100.carbs)}"></div>
+        <div class="field"><label>Lip.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="iF" value="${esc(v.per100.fat)}"></div>
+        <div class="field"><label>Fibres</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="iFi" value="${esc(v.per100.fiber)}"></div>
+        <div class="field alcohol"><label>Alcool</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="iA" value="${esc(v.per100.alcohol)}"></div>
       </div>
       <div class="kcal-direct">
         <div class="kd-lbl" id="iKLbl">Ou calories seules (pour 100 g)</div>
-        <input type="number" inputmode="decimal" min="0" step="1" id="iK" placeholder="kcal / 100 g" value="${esc(v.per100.kcal)}">
+        <input type="text" inputmode="decimal" autocomplete="off" min="0" step="1" id="iK" placeholder="kcal / 100 g" value="${esc(v.per100.kcal)}">
         <div class="kd-hint">À utiliser si tu ne connais pas les macros. Ignoré dès qu'une macro est renseignée.</div>
       </div>
       <label class="f" id="iQtyLbl">Quantité mangée (g)</label>
-      <input class="t" id="iQty" type="number" inputmode="decimal" min="0" step="0.1" value="${esc(v.qty)}">
+      <input class="t" id="iQty" type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" value="${esc(v.qty)}">
       <div class="step-row" id="iStepRow"></div>
       <div class="qty-row" id="iQtyRow"></div>
       <div class="calc-box">
@@ -2317,7 +2321,7 @@
       qty:num(document.getElementById("iQty").value), unit:!!(itemState&&itemState.unit)};
   }
   function refreshItemCalc(){
-    const it=readItemSheet(), o=itemTotals(it), d1=v=>Math.round(v*10)/10;
+    const it=readItemSheet(), o=itemTotals(it), d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     document.getElementById("iKcal").textContent=Math.round(o.cal)+" kcal";
     document.getElementById("iMacros").textContent = (o.protein||o.carbs||o.fat||o.fiber||o.alcohol)
       ? d1(o.protein)+" P · "+d1(o.carbs)+" G · "+d1(o.fat)+" L"+(o.fiber?" · "+d1(o.fiber)+" F":"")+(o.alcohol?" · "+d1(o.alcohol)+" A":"")
@@ -2362,7 +2366,7 @@
     if(!a.length) return "";
     const tot=a.reduce((s,x)=>({p:s.p+x.p,c:s.c+x.c,f:s.f+x.f,fi:s.fi+(x.fi||0)}),{p:0,c:0,f:0,fi:0});
     const kcal=Math.round(tot.p*KCAL.protein+tot.c*KCAL.carbs+tot.f*KCAL.fat+tot.fi*KCAL.fiber);
-    const d1=v=>Math.round(v*10)/10;
+    const d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     return `<div class="basket"><div class="bt">${tr("Déjà ajouté à ce repas · N produits").replace("N", a.length)}</div>`+
       a.map(x=>`<div class="bi"><span>${escHtml(x.name)}</span><span>${Math.round(x.qty)} g · ${x.kcal} kcal</span></div>`).join("")+
       `<div class="bs"><span>Total ajouté</span><span>${d1(tot.p)} P · ${d1(tot.c)} G · ${d1(tot.f)} L · ${kcal} kcal</span></div></div>`;
@@ -2531,7 +2535,7 @@
   function renderScanResult(){
     const p=scanState.product, sc=scaled();
     const kcal=Math.round(sc.protein*KCAL.protein+sc.carbs*KCAL.carbs+sc.fat*KCAL.fat+sc.fiber*KCAL.fiber);
-    const d1=v=>Math.round(v*10)/10;
+    const d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     const per100=Math.round(p.protein*KCAL.protein+p.carbs*KCAL.carbs+p.fat*KCAL.fat+p.fiber*KCAL.fiber);
     const labelLine = p.labelKcal ? ` · étiquette : <b>${Math.round(p.labelKcal)} kcal</b>` : "";
     const servBtn = p.serving>0 ? `<button data-qty="${p.serving}">1 portion (${p.serving} g)</button>` : `<button data-qty="150">150 g</button>`;
@@ -2546,16 +2550,16 @@
         <div class="k">${d1(p.protein)} g prot · ${d1(p.carbs)} g gluc · ${d1(p.fat)} g lip${p.fiber?` · ${d1(p.fiber)} g fibres`:""}</div>
       </div>
       <label class="f">Quantité consommée (g)</label>
-      <input class="t" id="qtyInput" type="number" inputmode="decimal" min="0" step="1" value="${scanState.qty}">
+      <input class="t" id="qtyInput" type="text" inputmode="decimal" autocomplete="off" min="0" step="1" value="${scanState.qty}">
       <div class="step-row" id="sStepRow">${stepRowHtml(false)}</div>
       <div class="qty-row"><button data-qty="50">50 g</button><button data-qty="100">100 g</button>${servBtn}</div>
       <div class="prod">
         <div class="per">À ajouter · <b style="color:var(--acc)">${kcal} kcal</b></div>
         <div class="res-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
-          <div class="field"><label>Prot.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rP" value="${d1(sc.protein)}"></div>
-          <div class="field"><label>Gluc.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rC" value="${d1(sc.carbs)}"></div>
-          <div class="field"><label>Lip.</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rF" value="${d1(sc.fat)}"></div>
-          <div class="field"><label>Fibres</label><input type="number" inputmode="decimal" min="0" step="0.1" id="rFi" value="${d1(sc.fiber)}"></div>
+          <div class="field"><label>Prot.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="rP" value="${d1(sc.protein)}"></div>
+          <div class="field"><label>Gluc.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="rC" value="${d1(sc.carbs)}"></div>
+          <div class="field"><label>Lip.</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="rF" value="${d1(sc.fat)}"></div>
+          <div class="field"><label>Fibres</label><input type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" id="rFi" value="${d1(sc.fiber)}"></div>
         </div>
       </div>
       <div class="sheet-actions">
