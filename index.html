@@ -1138,7 +1138,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "46";                 // numéro affiché dans les réglages
+  const APP_VERSION = "47";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -1295,7 +1295,9 @@
     const cal = num(st.proteinGoal)*KCAL.protein + num(st.carbsGoal)*KCAL.carbs + num(st.fatGoal)*KCAL.fat;
     return cal>0 ? Math.round(cal) : num(st.calGoal);
   }
-  function macroCalorieSplit(totals){ return MACROS.map(m=>({...m, val:(totals[m.key]||0)*m.kcalPerG})); }
+  // Le donut doit rendre compte de TOUTES les calories du jour, fibres et alcool compris,
+  // sinon son total ne correspond pas à l'apport affiché juste au-dessus.
+  function macroCalorieSplit(totals){ return splitParts(totals); }
   function fmtSigned(v){ v=Math.round(v); return (v>0?"+":"")+v; }        // v = cal - maint (positif = surplus)
   function fmtBalance(balance){ const r=Math.round(balance); return r>=0 ? "-"+r : "+"+(-r); } // balance = maint - cal
 
@@ -1378,7 +1380,7 @@
   function donutLegendHtml(parts, grams){
     const total=parts.reduce((s,p)=>s+p.val,0);
     return parts.map(p=>{ const pct=total>0?Math.round((p.val/total)*100):0;
-      const g=grams[p.key]||0, goal=db.settings[p.key+"Goal"]||0, over=goal>0&&g>goal;
+      const g=num(grams[p.key]), goal=num(db.settings[p.key+"Goal"]), over=goal>0&&g>goal;
       return `<div class="legend-row"><span class="legend-dot" style="background:${p.color}"></span><span class="legend-label">${p.label}</span>`+
         `<span class="legend-val">${pct}%</span><span class="legend-g${over?" over":""}">${Math.round(g)} g</span></div>`; }).join("");
   }
@@ -1908,7 +1910,7 @@
     document.getElementById("statsTitle").textContent=title;
     document.getElementById("statsRange").textContent = (currentPeriod==="all" && logged.length) ? "depuis le "+mediumLabel(start) : mediumLabel(start)+" → "+mediumLabel(today);
 
-    let cnt=0, sumCal=0, sumBal=0, sumP=0, sumC=0, sumF=0, defDays=0, cum=0, sumWater=0, waterDays=0, waterOk=0;
+    let cnt=0, sumCal=0, sumBal=0, sumP=0, sumC=0, sumF=0, sumFi=0, sumA=0, defDays=0, cum=0, sumWater=0, waterDays=0, waterOk=0;
     const wGoalS=num(db.settings.waterGoal); const wBars=[];
     const bars=[], rows=[], cumPts=[];
     for(let i=0;i<nDays;i++){
@@ -1917,7 +1919,7 @@
       const dayMaint=effectiveMaintenance(iso); const ov=hasMaintOverride(iso);
       if(ov) overrideDays++;
       let diffTxt="—", color="var(--ink-faint)";
-      if(has){ cnt++; sumCal+=t.cal; const bal=dayMaint-t.cal; sumBal+=bal; sumP+=t.protein; sumC+=t.carbs; sumF+=t.fat; if(bal>=0) defDays++;
+      if(has){ cnt++; sumCal+=t.cal; const bal=dayMaint-t.cal; sumBal+=bal; sumP+=t.protein; sumC+=t.carbs; sumF+=t.fat; sumFi+=t.fiber; sumA+=t.alcohol; if(bal>=0) defDays++;
         cum+=(t.cal-dayMaint); diffTxt=fmtBalance(bal); color=bal>=0?"var(--good)":"var(--bad)"; }
       const wv=dayWater(iso); if(wv>0){ sumWater+=wv; waterDays++; if(wGoalS>0 && wv>=wGoalS) waterOk++; }
       wBars.push({iso, label:shortLabel(iso), value:wv, hasData:wv>0, ref:wGoalS});
@@ -1960,7 +1962,7 @@
     avgCal.innerHTML=Math.round(sumCal/cnt)+"<small>kcal</small>"; avgCal.className="num";
     dd.innerHTML=defDays+"<small>/ "+cnt+"</small>"; dd.className="num "+(defDays>=cnt/2?"good":"bad");
 
-    const avgTotals={protein:sumP/cnt, carbs:sumC/cnt, fat:sumF/cnt};
+    const avgTotals={protein:sumP/cnt, carbs:sumC/cnt, fat:sumF/cnt, fiber:sumFi/cnt, alcohol:sumA/cnt};
     const parts=macroCalorieSplit(avgTotals);
     donutEl.innerHTML=donutChart(parts); legendEl.innerHTML=donutLegendHtml(parts, avgTotals);
     barsEl.innerHTML=macroBarsHtml(avgTotals);
@@ -2364,8 +2366,8 @@
   function basketHtml(){
     const a=(scanState&&scanState.added)||[];
     if(!a.length) return "";
-    const tot=a.reduce((s,x)=>({p:s.p+x.p,c:s.c+x.c,f:s.f+x.f,fi:s.fi+(x.fi||0)}),{p:0,c:0,f:0,fi:0});
-    const kcal=Math.round(tot.p*KCAL.protein+tot.c*KCAL.carbs+tot.f*KCAL.fat+tot.fi*KCAL.fiber);
+    const tot=a.reduce((s,x)=>({p:s.p+x.p,c:s.c+x.c,f:s.f+x.f,fi:s.fi+(x.fi||0),al:s.al+(x.al||0)}),{p:0,c:0,f:0,fi:0,al:0});
+    const kcal=Math.round(tot.p*KCAL.protein+tot.c*KCAL.carbs+tot.f*KCAL.fat+tot.fi*KCAL.fiber+tot.al*KCAL.alcohol);
     const d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     return `<div class="basket"><div class="bt">${tr("Déjà ajouté à ce repas · N produits").replace("N", a.length)}</div>`+
       a.map(x=>`<div class="bi"><span>${escHtml(x.name)}</span><span>${Math.round(x.qty)} g · ${x.kcal} kcal</span></div>`).join("")+
@@ -2374,6 +2376,8 @@
   function stopCamera(){
     try{ if(scanStop) scanStop(); }catch(e){}
     scanStop=null;
+    const v=document.getElementById("scanVideo");
+    if(v){ try{ v.pause(); }catch(e){} v.srcObject=null; }
   }
   function closeScanner(){ stopCamera(); closeSheet(); scanState=null; }
 
@@ -2394,21 +2398,45 @@
     startCamera();
   }
 
+  // Le flux caméra est conservé d'un scan à l'autre : chaque nouvel appel à getUserMedia
+  // redéclenche la demande d'autorisation sur iOS. On ne le libère qu'en quittant l'app.
+  let camStream=null;
+  function camAlive(){
+    return !!(camStream && camStream.getVideoTracks().some(t=>t.readyState==="live"));
+  }
+  function releaseCamera(){
+    try{ if(camStream) camStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    camStream=null;
+  }
+  async function getCameraStream(){
+    if(camAlive()){
+      camStream.getVideoTracks().forEach(t=>{ t.enabled=true; });
+      return camStream;
+    }
+    try{
+      // Résolution élevée demandée : un code EAN-13 a besoin de détails fins pour être lu à distance.
+      camStream=await navigator.mediaDevices.getUserMedia({audio:false,
+        video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}});
+    }catch(e){
+      camStream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}}});
+    }
+    return camStream;
+  }
+  // La caméra est rendue au système quand l'app passe en arrière-plan,
+  // pour ne pas laisser l'indicateur allumé.
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden) releaseCamera(); });
+  window.addEventListener("pagehide", releaseCamera);
+
   async function startCamera(){
     const video=document.getElementById("scanVideo");
     const hint=document.getElementById("scanHint");
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ hint.textContent="Caméra indisponible — saisis le code à la main"; return; }
     let stream;
-    try{
-      // Résolution élevée demandée : un code EAN-13 a besoin de détails fins pour être lu à distance.
-      stream=await navigator.mediaDevices.getUserMedia({audio:false,
-        video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}});
-    }catch(e){
-      try{ stream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}}}); }
-      catch(e2){ hint.textContent="Accès caméra refusé — saisis le code à la main"; return; }
-    }
+    try{ stream=await getCameraStream(); }
+    catch(e2){ hint.textContent="Accès caméra refusé — saisis le code à la main"; return; }
     let stopped=false;
-    const stopTracks=()=>{ try{stream.getTracks().forEach(t=>t.stop());}catch(e){} };
+    // À la fermeture, on coupe l'image sans rendre la caméra : l'autorisation reste acquise.
+    const stopTracks=()=>{ try{ stream.getVideoTracks().forEach(t=>{ t.enabled=false; }); }catch(e){} };
     scanStop=()=>{ stopped=true; stopTracks(); };
 
     // 1) API native (Chrome Android) : boucle image par image
@@ -2519,9 +2547,11 @@
         protein:isFinite(prot)?prot:0, carbs:isFinite(carb)?carb:0, fat:isFinite(fat)?fat:0,
         fiber:isFinite(fib)&&fib>0?fib:0, alcohol:isFinite(alc)&&alc>0?alc:0,
         labelKcal:isFinite(labelKcal)&&labelKcal>0?labelKcal:0,
-        serving:Number(p.serving_quantity)||0
+        ...parseServings(p)
       };
-      scanState.qty=100;
+      // On démarre sur la portion réelle du produit quand elle est connue,
+      // plutôt que sur 100 g qui ne correspond presque jamais à ce qu'on mange.
+      scanState.qty = scanState.product.serving>0 ? scanState.product.serving : 100;
       renderScanResult();
     }catch(e){
       renderScanError("Réponse inattendue du service. Réessaie ou saisis les macros à la main.", code);
@@ -2532,13 +2562,45 @@
     const p=scanState.product, q=num(scanState.qty)/100;
     return {protein:p.protein*q, carbs:p.carbs*q, fat:p.fat*q, fiber:p.fiber*q};
   }
+  // Open Food Facts renseigne la portion de plusieurs façons, souvent incohérentes :
+  // serving_quantity (nombre), serving_size (texte libre : "1 pot (150 g)"), product_quantity
+  // et quantity (contenu du paquet). On les lit toutes et on retient la plus fiable.
+  function parseAmount(txt){
+    if(!txt) return 0;
+    const m=String(txt).replace(",",".").match(/([\d.]+)\s*(kg|g|l|cl|ml)/i);
+    if(!m) return 0;
+    const v=parseFloat(m[1]); if(!isFinite(v)||v<=0) return 0;
+    const u=m[2].toLowerCase();
+    if(u==="kg"||u==="l") return v*1000;
+    if(u==="cl") return v*10;
+    return v;                                   // g et ml sont équivalents ici
+  }
+  function parseServings(p){
+    // la portion : d'abord le texte de l'étiquette, plus fiable que le champ numérique
+    let serving = parseAmount(p.serving_size) || Number(String(p.serving_quantity||"").replace(",",".")) || 0;
+    if(!isFinite(serving) || serving<=0) serving=0;
+    // libellé d'origine ("1 pot", "2 tranches") s'il en existe un
+    let servLabel="";
+    if(p.serving_size){
+      const t=String(p.serving_size).trim();
+      const m=t.match(/^([^()]*?)\s*\(/);
+      if(m && m[1] && m[1].trim().length>1 && /[a-zà-ÿ]/i.test(m[1])) servLabel=m[1].trim().slice(0,24);
+    }
+    // contenu total du paquet, utile pour un produit qu'on finit d'un coup
+    const pack = Number(String(p.product_quantity||"").replace(",",".")) || parseAmount(p.quantity) || 0;
+    return {serving, servLabel, pack:(isFinite(pack)&&pack>0)?pack:0};
+  }
+
   function renderScanResult(){
     const p=scanState.product, sc=scaled();
     const kcal=Math.round(sc.protein*KCAL.protein+sc.carbs*KCAL.carbs+sc.fat*KCAL.fat+sc.fiber*KCAL.fiber);
     const d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
     const per100=Math.round(p.protein*KCAL.protein+p.carbs*KCAL.carbs+p.fat*KCAL.fat+p.fiber*KCAL.fiber);
     const labelLine = p.labelKcal ? ` · étiquette : <b>${Math.round(p.labelKcal)} kcal</b>` : "";
-    const servBtn = p.serving>0 ? `<button data-qty="${p.serving}">1 portion (${p.serving} g)</button>` : `<button data-qty="150">150 g</button>`;
+    // Raccourcis adaptés au produit : sa portion, et le paquet entier quand il est connu.
+    const servBtn = p.serving>0
+      ? `<button data-qty="${p.serving}">${p.servLabel ? escHtml(p.servLabel) : tr("1 portion")} (${Math.round(p.serving)} g)</button>`
+      : (p.pack>0 && p.pack<=500 ? `<button data-qty="${p.pack}">${tr("Le paquet")} (${Math.round(p.pack)} g)</button>` : `<button data-qty="150">150 g</button>`);
     sheetRoot.innerHTML=`<div class="sheet-backdrop"><div class="sheet">
       <h3>Produit trouvé</h3>
       <p class="sub">Vérifie la quantité, puis ajoute à ${escHtml(MEALS.find(m=>m.key===scanState.mealKey).label)}.</p>
@@ -2601,7 +2663,7 @@
     day[st.mealKey].items.push(it);
     setDay(currentDate, day);
     const o=itemTotals(it);
-    st.added.push({name:p.name, qty:qty, p:o.protein, c:o.carbs, f:o.fat, fi:o.fiber, kcal:Math.round(o.cal)});
+    st.added.push({name:p.name, qty:qty, p:o.protein, c:o.carbs, f:o.fat, fi:o.fiber, al:o.alcohol, kcal:Math.round(o.cal)});
     st.product=null; st.qty=100;
     renderDay();
     if(keepOpen) renderScanStage(); else closeScanner();
@@ -2976,7 +3038,8 @@
     "3 mois":{en:"3 months"},
     "6 mois":{en:"6 months"},
     "Tout":{en:"All"},
-    "Échelle ajustée à la période · fais glisser ton doigt pour lire une pesée":{en:"Scale fitted to the period · drag your finger to read a weigh-in"}
+    "Échelle ajustée à la période · fais glisser ton doigt pour lire une pesée":{en:"Scale fitted to the period · drag your finger to read a weigh-in"},
+    "Le paquet":{en:"Whole pack"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
