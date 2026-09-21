@@ -614,8 +614,14 @@
     display:flex;flex-direction:column;}
   #calc .c-top{position:absolute;top:0;left:0;right:0;z-index:5;
     padding:calc(14px + env(safe-area-inset-top)) 22px 0;}
+  #calc.has-back .c-top{padding-left:112px;padding-right:62px;}
   #calc .c-prog{height:4px;background:var(--track);border-radius:3px;margin-top:10px;}
   #calc .c-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--acc-deep),var(--acc));border-radius:3px;transition:width .3s;}
+  #calc .c-backtop{position:absolute;top:calc(12px + env(safe-area-inset-top));left:16px;z-index:6;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:var(--ink);
+    border-radius:999px;height:32px;padding:0 13px 0 9px;font-size:13px;font-weight:800;font-family:inherit;
+    display:flex;align-items:center;gap:3px;}
+  #calc .c-backtop svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
   #calc .c-close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:18px;background:rgba(255,255,255,.08);
     border:1px solid rgba(255,255,255,.14);color:var(--ink-soft);border-radius:50%;width:32px;height:32px;
     font-size:18px;font-family:inherit;line-height:1;}
@@ -1033,6 +1039,7 @@
   <!-- ================= CALCULATEUR DE MAINTIEN ================= -->
   <div id="calc" style="display:none">
     <div class="c-top"><div class="c-prog"><i id="cProg" style="width:20%"></i></div></div>
+    <button class="c-backtop" id="cBackTop" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Retour</button>
     <button class="c-close" id="cClose" aria-label="Fermer">×</button>
 
     <div class="c-step on" data-cs="0">
@@ -1330,7 +1337,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "48";                 // numéro affiché dans les réglages
+  const APP_VERSION = "49";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -3337,7 +3344,8 @@
     "Rameur — modéré":{en:"Rowing machine — moderate"},
     "Yoga":{en:"Yoga"},
     "Pilates":{en:"Pilates"},
-    "Danse — soutenue":{en:"Dance — vigorous"}
+    "Danse — soutenue":{en:"Dance — vigorous"},
+    "Retour":{en:"Back"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -3821,6 +3829,9 @@
     cEl("cErr0").textContent="";
     // en passage obligatoire, aucune sortie possible avant la fin
     cEl("cClose").style.display = calcState.mandatory ? "none" : "";
+    // Le bouton Retour n'existe que depuis les réglages : dans le tutoriel, le calcul est obligatoire.
+    cEl("cBackTop").style.display = calcState.mandatory ? "none" : "";
+    cEl("calc").classList.toggle("has-back", !calcState.mandatory);
     renderCalcSports();
     cEl("calc").style.display="flex";
     document.body.style.overflow="hidden";
@@ -3910,6 +3921,10 @@
     cEl("cAddSport").addEventListener("click",()=>{ calcState.sports.push({i:0, per:3, min:60}); renderCalcSports(); });
     cEl("calc").querySelectorAll("[data-cback]").forEach(b=>b.addEventListener("click",()=>calcGo(Math.max(0,calcStep-1))));
     cEl("cClose").addEventListener("click",()=>{ if(!calcState.mandatory) closeCalc(); });
+    cEl("cBackTop").addEventListener("click",()=>{
+      if(calcState.mandatory) return;
+      if(calcStep>0) calcGo(calcStep-1); else closeCalc();
+    });
     cEl("cUse").addEventListener("click",()=>{
       const m=calcState.result;
       // le profil est conservé pour pré-remplir un prochain calcul
