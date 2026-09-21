@@ -608,6 +608,92 @@
   .tdone .circ svg{width:34px;height:34px;stroke:var(--acc);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
   .tmeal{border:1px dashed var(--line-strong);background:rgba(255,255,255,.04);border-radius:13px;
     padding:13px 6px;font-size:12.5px;font-weight:800;color:var(--acc);text-align:center;}
+
+  /* ================= CALCULATEUR DE MAINTIEN ================= */
+  #calc{position:fixed;inset:0;z-index:130;background:linear-gradient(180deg,var(--bg0),var(--bg1));
+    display:flex;flex-direction:column;}
+  #calc .c-top{position:absolute;top:0;left:0;right:0;z-index:5;
+    padding:calc(14px + env(safe-area-inset-top)) 22px 0;}
+  #calc .c-prog{height:4px;background:var(--track);border-radius:3px;margin-top:10px;}
+  #calc .c-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--acc-deep),var(--acc));border-radius:3px;transition:width .3s;}
+  #calc .c-close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:18px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);color:var(--ink-soft);border-radius:50%;width:32px;height:32px;
+    font-size:18px;font-family:inherit;line-height:1;}
+  #calc .c-step{flex:1;display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:calc(46px + env(safe-area-inset-top)) 22px calc(16px + env(safe-area-inset-bottom));}
+  #calc .c-step.on{display:flex;}
+  #calc .c-kick{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);margin-bottom:9px;}
+  #calc h2{font-size:25px;font-weight:900;letter-spacing:-.03em;line-height:1.15;margin:0 0 10px;}
+  #calc .c-lead{font-size:14px;line-height:1.5;color:var(--ink-soft);margin:0 0 16px;}
+  #calc .c-lead b{color:var(--ink);}
+  #calc .c-spacer{flex:1;min-height:12px;}
+  #calc .c-seg{display:flex;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:13px;padding:3px;margin-bottom:14px;}
+  #calc .c-seg button{flex:1;border:none;background:none;padding:12px 0;border-radius:10px;font-size:14px;font-weight:800;color:var(--ink-soft);font-family:inherit;}
+  #calc .c-seg button.on{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;}
+  #calc .c-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  #calc .c-field{margin-bottom:12px;}
+  #calc .c-field label{display:block;font-size:12px;font-weight:800;color:var(--ink-soft);margin-bottom:6px;}
+  #calc .c-field input{width:100%;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;
+    padding:13px 44px 13px 14px;font-size:18px;font-weight:800;color:var(--ink);font-family:inherit;}
+  #calc .c-field input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.18);}
+  #calc .c-unit{position:relative;}
+  #calc .c-unit span{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:800;color:var(--ink-faint);pointer-events:none;}
+  #calc .c-opt{font-size:11.5px;color:var(--ink-faint);font-weight:600;margin-top:5px;line-height:1.4;}
+  #calc .c-details{background:var(--surface);border:1px dashed var(--line-strong);border-radius:14px;padding:13px 14px;margin-top:4px;}
+  #calc .c-details summary{font-size:13px;font-weight:800;color:var(--acc);cursor:pointer;list-style:none;}
+  #calc .c-details summary::-webkit-details-marker{display:none;}
+  #calc .c-details[open] summary{margin-bottom:10px;}
+  #calc .c-levels{display:flex;flex-direction:column;gap:9px;}
+  #calc .c-lvl{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
+    border-radius:15px;padding:13px 14px;text-align:left;font-family:inherit;color:var(--ink);width:100%;transition:border-color .2s, background .2s;}
+  #calc .c-lvl.on{border-color:var(--acc);background:rgba(var(--acc-rgb),.08);}
+  #calc .c-lvl .n{width:26px;height:26px;border-radius:8px;background:var(--surface-3);display:flex;align-items:center;
+    justify-content:center;font-size:13px;font-weight:900;color:var(--ink-soft);flex-shrink:0;}
+  #calc .c-lvl.on .n{background:var(--acc);color:#08120D;}
+  #calc .c-lvl .t{font-size:14px;font-weight:800;}
+  #calc .c-lvl .d{font-size:12px;color:var(--ink-soft);margin-top:3px;line-height:1.4;}
+  #calc .c-lvl .ex{font-size:11.5px;color:var(--ink-faint);margin-top:4px;line-height:1.4;font-style:italic;}
+  #calc .c-sport{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px;margin-bottom:10px;}
+  #calc .c-sport-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+  #calc .c-sport-head .sn{font-size:13px;font-weight:900;color:var(--acc);}
+  #calc .c-sport-head button{background:rgba(var(--bad-rgb),.12);border:1px solid rgba(var(--bad-rgb),.3);color:var(--bad);
+    border-radius:8px;width:26px;height:26px;font-size:15px;font-family:inherit;}
+  #calc select{width:100%;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:11px;padding:12px;
+    font-size:14px;font-weight:700;color:var(--ink);font-family:inherit;margin-bottom:9px;-webkit-appearance:none;appearance:none;}
+  #calc .c-sport .c-field{margin-bottom:0;}
+  #calc .c-sport .c-field input{font-size:16px;padding:11px 12px;}
+  #calc .c-sport-kcal{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:9px;}
+  #calc .c-sport-kcal b{color:var(--acc);}
+  #calc .c-add{width:100%;background:transparent;border:1px dashed var(--line-strong);border-radius:13px;padding:13px;
+    color:var(--acc);font-size:13.5px;font-weight:800;font-family:inherit;}
+  #calc .c-nosport{text-align:center;font-size:12.5px;color:var(--ink-faint);padding:6px 0 12px;}
+  #calc .c-result{background:linear-gradient(150deg,var(--hero-a),var(--hero-b));border:1px solid rgba(var(--acc-rgb),.25);
+    border-radius:20px;padding:20px 18px;text-align:center;margin-bottom:14px;}
+  #calc .c-result .rv{font-size:52px;font-weight:900;letter-spacing:-.04em;color:var(--acc);line-height:1;font-variant-numeric:tabular-nums;}
+  #calc .c-result .ru{font-size:13px;font-weight:800;color:rgba(255,255,255,.7);margin-top:6px;letter-spacing:.06em;text-transform:uppercase;}
+  #calc .c-result .rr{font-size:12.5px;color:rgba(255,255,255,.62);margin-top:10px;font-weight:700;}
+  #calc .c-stack{display:flex;height:12px;border-radius:7px;overflow:hidden;margin:4px 0 12px;background:var(--track);}
+  #calc .c-stack i{display:block;height:100%;}
+  #calc .c-brk{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  #calc .c-brow{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px;}
+  #calc .c-brow .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+  #calc .c-brow .bl{flex:1;font-size:13px;font-weight:800;}
+  #calc .c-brow .bl small{display:block;font-size:11px;color:var(--ink-faint);font-weight:600;margin-top:2px;}
+  #calc .c-brow .bv{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;}
+  #calc .c-note{background:var(--surface-2);border-left:3px solid var(--acc);border-radius:0 12px 12px 0;
+    padding:11px 13px;font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:12px;}
+  #calc .c-note b{color:var(--ink);}
+  #calc .c-warn{background:rgba(var(--bad-rgb),.08);border:1px solid rgba(var(--bad-rgb),.25);border-radius:13px;
+    padding:12px 13px;font-size:12px;color:var(--ink-soft);line-height:1.5;margin-bottom:12px;}
+  #calc .c-warn b{color:var(--bad);}
+  #calc .c-foot{padding-top:12px;display:flex;gap:9px;}
+  #calc .c-btn{flex:1;border:none;border-radius:15px;padding:15px;font-size:15px;font-weight:900;font-family:inherit;}
+  #calc .c-btn.primary{background:linear-gradient(180deg,var(--acc-light),var(--acc) 55%,var(--acc-deep));color:#08120D;box-shadow:0 8px 22px rgba(var(--acc-rgb),.28);}
+  #calc .c-btn.primary:disabled{opacity:.35;box-shadow:none;}
+  #calc .c-btn.back{flex:0 0 56px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line-strong);}
+  #calc .c-err{font-size:12px;color:var(--bad);font-weight:700;min-height:16px;margin-top:2px;}
+  .calc-launch{width:100%;margin-top:10px;background:rgba(var(--acc-rgb),.10);border:1px solid rgba(var(--acc-rgb),.32);
+    color:var(--acc);border-radius:13px;padding:12px;font-size:13.5px;font-weight:800;font-family:inherit;}
 </style>
 </head>
 <body>
@@ -756,6 +842,7 @@
         <div class="settings-field">
           <label>Maintien calorique (TDEE)</label>
           <input type="number" inputmode="numeric" id="setMaint">
+          <button class="calc-launch" id="openCalcSettings">Calculer mon maintien</button>
           <div class="hint">Calories brûlées par jour en moyenne. Le déficit/surplus est calculé par rapport à ce chiffre. Astuce : sur une journée exceptionnelle (sortie, événement), touche la valeur « maintien » sur l'écran Jour pour l'ajuster ponctuellement — les statistiques s'adaptent automatiquement, sans toucher à ce réglage général.</div>
         </div>
         <div class="settings-field">
@@ -942,6 +1029,111 @@
 
   <div id="sheetRoot"></div>
   <div id="viewerRoot"></div>
+
+  <!-- ================= CALCULATEUR DE MAINTIEN ================= -->
+  <div id="calc" style="display:none">
+    <div class="c-top"><div class="c-prog"><i id="cProg" style="width:20%"></i></div></div>
+    <button class="c-close" id="cClose" aria-label="Fermer">×</button>
+
+    <div class="c-step on" data-cs="0">
+      <div class="c-kick">Étape 1 sur 5 · Profil</div>
+      <h2>Qui es-tu ?</h2>
+      <p class="c-lead">Ces quatre mesures déterminent ton métabolisme de base, la dépense de ton corps au repos complet.</p>
+      <div class="c-seg" id="cSex"><button data-v="m" class="on">Homme</button><button data-v="f">Femme</button></div>
+      <div class="c-grid2">
+        <div class="c-field"><label>Âge</label><div class="c-unit"><input id="cAge" inputmode="numeric" placeholder="30"><span>ans</span></div></div>
+        <div class="c-field"><label>Taille</label><div class="c-unit"><input id="cHeight" inputmode="numeric" placeholder="178"><span>cm</span></div></div>
+      </div>
+      <div class="c-field"><label>Poids</label><div class="c-unit"><input id="cWeight" inputmode="decimal" placeholder="80,0"><span>kg</span></div></div>
+      <details class="c-details" id="cBfBox">
+        <summary>+ Je connais mon taux de masse grasse</summary>
+        <div class="c-field" style="margin-bottom:0">
+          <div class="c-unit"><input id="cBf" inputmode="decimal" placeholder="18"><span>%</span></div>
+          <div class="c-opt">Plus précis pour une personne très musclée ou en forte surcharge. Seulement si mesuré (impédancemètre, DEXA), pas estimé à l'œil.</div>
+        </div>
+      </details>
+      <div class="c-err" id="cErr0"></div>
+      <div class="c-spacer"></div>
+      <div class="c-foot"><button class="c-btn primary" id="cNext0">Continuer</button></div>
+    </div>
+
+    <div class="c-step" data-cs="1">
+      <div class="c-kick">Étape 2 sur 5 · Travail</div>
+      <h2>Ton activité professionnelle</h2>
+      <p class="c-lead">C'est le facteur qui varie le plus d'une personne à l'autre. Choisis ce qui décrit <b>la majeure partie</b> de ta journée de travail.</p>
+      <div class="c-levels" id="cJob">
+        <button class="c-lvl" data-v="1.40"><span class="n">1</span><div><div class="t">Assis presque toute la journée</div>
+          <div class="d">Ordinateur, réunions, peu de déplacements.</div>
+          <div class="ex">Cadre de bureau, développeur, comptable, chauffeur routier</div></div></button>
+        <button class="c-lvl" data-v="1.50"><span class="n">2</span><div><div class="t">Assis, avec déplacements réguliers</div>
+          <div class="d">Tu te lèves souvent, tu marches entre deux tâches.</div>
+          <div class="ex">Enseignant, commercial en agence, médecin, ingénieur terrain</div></div></button>
+        <button class="c-lvl" data-v="1.65"><span class="n">3</span><div><div class="t">Debout la majeure partie du temps</div>
+          <div class="d">Station debout prolongée, marche fréquente, effort léger.</div>
+          <div class="ex">Vendeur, serveur, infirmier, coiffeur, cuisinier</div></div></button>
+        <button class="c-lvl" data-v="1.80"><span class="n">4</span><div><div class="t">Travail physique modéré</div>
+          <div class="d">Port de charges, manutention, en mouvement quasi constant.</div>
+          <div class="ex">Artisan, magasinier, livreur à pied, mécanicien, aide-soignant</div></div></button>
+        <button class="c-lvl" data-v="2.00"><span class="n">5</span><div><div class="t">Travail physique intense</div>
+          <div class="d">Effort soutenu et charges lourdes plusieurs heures par jour.</div>
+          <div class="ex">Ouvrier du BTP, déménageur, agriculteur, pompier, bûcheron</div></div></button>
+      </div>
+      <div class="c-spacer"></div>
+      <div class="c-foot"><button class="c-btn back" data-cback>‹</button><button class="c-btn primary" id="cNext1" disabled>Continuer</button></div>
+    </div>
+
+    <div class="c-step" data-cs="2">
+      <div class="c-kick">Étape 3 sur 5 · Vie quotidienne</div>
+      <h2>En dehors du travail</h2>
+      <p class="c-lead">Déplacements, tâches ménagères, courses, enfants. <b>Sans compter le sport</b>, qui vient à l'étape suivante.</p>
+      <div class="c-levels" id="cLife">
+        <button class="c-lvl" data-v="-0.05"><span class="n">1</span><div><div class="t">Très peu actif</div>
+          <div class="d">Voiture pour tout, soirées et week-ends surtout assis.</div>
+          <div class="ex">Moins de 5 000 pas par jour</div></div></button>
+        <button class="c-lvl" data-v="0"><span class="n">2</span><div><div class="t">Peu actif</div>
+          <div class="d">Quelques trajets à pied, tâches ménagères légères.</div>
+          <div class="ex">Entre 5 000 et 7 500 pas par jour</div></div></button>
+        <button class="c-lvl" data-v="0.05"><span class="n">3</span><div><div class="t">Modérément actif</div>
+          <div class="d">Trajets à pied ou à vélo au quotidien, souvent debout chez toi.</div>
+          <div class="ex">Entre 7 500 et 10 000 pas par jour</div></div></button>
+        <button class="c-lvl" data-v="0.10"><span class="n">4</span><div><div class="t">Actif</div>
+          <div class="d">Beaucoup de marche, bricolage, jardinage, enfants en bas âge.</div>
+          <div class="ex">Entre 10 000 et 12 500 pas par jour</div></div></button>
+        <button class="c-lvl" data-v="0.15"><span class="n">5</span><div><div class="t">Très actif</div>
+          <div class="d">Rarement assis, toujours en mouvement.</div>
+          <div class="ex">Plus de 12 500 pas par jour</div></div></button>
+      </div>
+      <div class="c-note" style="margin-top:12px">Ton iPhone compte tes pas : app Santé, puis Activité, puis Pas. Prends la moyenne d'une semaine normale.</div>
+      <div class="c-spacer"></div>
+      <div class="c-foot"><button class="c-btn back" data-cback>‹</button><button class="c-btn primary" id="cNext2" disabled>Continuer</button></div>
+    </div>
+
+    <div class="c-step" data-cs="3">
+      <div class="c-kick">Étape 4 sur 5 · Sport</div>
+      <h2>Ton activité sportive</h2>
+      <p class="c-lead">Ajoute chaque activité pratiquée régulièrement. Compte la durée <b>effective</b>, sans les pauses ni le vestiaire.</p>
+      <div id="cSports"></div>
+      <button class="c-add" id="cAddSport">＋ Ajouter une activité</button>
+      <div class="c-spacer"></div>
+      <div class="c-foot"><button class="c-btn back" data-cback>‹</button><button class="c-btn primary" id="cNext3">Calculer</button></div>
+    </div>
+
+    <div class="c-step" data-cs="4">
+      <div class="c-kick">Étape 5 sur 5 · Résultat</div>
+      <h2>Ton maintien calorique</h2>
+      <div class="c-result">
+        <div class="rv" id="cTotal">—</div>
+        <div class="ru">kcal par jour</div>
+        <div class="rr" id="cRange"></div>
+      </div>
+      <div class="c-stack" id="cStack"></div>
+      <div class="c-brk" id="cBreak"></div>
+      <div class="c-note" id="cPal"></div>
+      <div class="c-warn"><b>C'est un point de départ, pas une vérité.</b> Même la meilleure équation se trompe de plus de 10 % pour une partie des gens. Après trois ou quatre semaines de suivi, compare ton apport réel à l'évolution de ton poids pour ajuster ce chiffre.</div>
+      <div class="c-spacer"></div>
+      <div class="c-foot"><button class="c-btn back" data-cback>‹</button><button class="c-btn primary" id="cUse">Utiliser ce maintien</button></div>
+    </div>
+  </div>
   <!-- ================= TUTORIEL DE PREMIÈRE OUVERTURE ================= -->
   <div class="tuto" id="tuto" style="display:none">
     <button class="tuto-skip" id="tutoSkip">Passer</button>
@@ -979,7 +1171,7 @@
       <div class="tnote" style="margin-top:14px">L'écart entre les deux, c'est ton déficit quotidien : ici 600 kcal.</div>
       <div class="tspacer"></div>
       <div class="tfoot"><div class="tdots"></div>
-        <button class="tbtn primary" data-tgo="2">J'ai compris</button></div>
+        <button class="tbtn primary" id="tToCalc">J'ai compris</button></div>
     </div>
 
     <div class="tscreen" data-t="2">
@@ -1002,7 +1194,7 @@
       <div class="tspacer"></div>
       <div class="tfoot"><div class="tdots"></div>
         <button class="tbtn primary" id="tSaveGoals" disabled>Enregistrer et continuer</button>
-        <button class="tbtn ghost" id="tNoMaint">Je ne connais pas mon maintien</button></div>
+        <button class="tbtn ghost" id="tRedoCalc">Refaire le calcul</button></div>
     </div>
 
     <div class="tscreen" data-t="3">
@@ -1138,7 +1330,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "47";                 // numéro affiché dans les réglages
+  const APP_VERSION = "48";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -3039,7 +3231,113 @@
     "6 mois":{en:"6 months"},
     "Tout":{en:"All"},
     "Échelle ajustée à la période · fais glisser ton doigt pour lire une pesée":{en:"Scale fitted to the period · drag your finger to read a weigh-in"},
-    "Le paquet":{en:"Whole pack"}
+    "Le paquet":{en:"Whole pack"},
+    "Étape 1 sur 5 · Profil":{en:"Step 1 of 5 · Profile"},
+    "Étape 2 sur 5 · Travail":{en:"Step 2 of 5 · Work"},
+    "Étape 3 sur 5 · Vie quotidienne":{en:"Step 3 of 5 · Daily life"},
+    "Étape 4 sur 5 · Sport":{en:"Step 4 of 5 · Sport"},
+    "Étape 5 sur 5 · Résultat":{en:"Step 5 of 5 · Result"},
+    "Qui es-tu ?":{en:"About you"},
+    "Ces quatre mesures déterminent ton métabolisme de base, la dépense de ton corps au repos complet.":{en:"These four measurements set your basal metabolic rate, what your body burns at complete rest."},
+    "Homme":{en:"Male"},
+    "Femme":{en:"Female"},
+    "Âge":{en:"Age"},
+    "Taille":{en:"Height"},
+    "ans":{en:"yrs"},
+    "+ Je connais mon taux de masse grasse":{en:"+ I know my body fat percentage"},
+    "Plus précis pour une personne très musclée ou en forte surcharge. Seulement si mesuré (impédancemètre, DEXA), pas estimé à l'œil.":{en:"More accurate for very muscular or very overweight people. Only if measured (bioimpedance, DEXA), not guessed."},
+    "L'âge doit être compris entre 18 et 90 ans.":{en:"Age must be between 18 and 90."},
+    "La taille doit être comprise entre 130 et 230 cm.":{en:"Height must be between 130 and 230 cm."},
+    "Le poids doit être compris entre 35 et 250 kg.":{en:"Weight must be between 35 and 250 kg."},
+    "Le taux de masse grasse doit être compris entre 3 et 60 %.":{en:"Body fat must be between 3 and 60 %."},
+    "Ton activité professionnelle":{en:"Your job"},
+    "C'est le facteur qui varie le plus d'une personne à l'autre. Choisis ce qui décrit la majeure partie de ta journée de travail.":{en:"This is the factor that varies most between people. Pick what describes most of your working day."},
+    "Assis presque toute la journée":{en:"Seated almost all day"},
+    "Ordinateur, réunions, peu de déplacements.":{en:"Computer, meetings, little moving around."},
+    "Cadre de bureau, développeur, comptable, chauffeur routier":{en:"Office manager, developer, accountant, truck driver"},
+    "Assis, avec déplacements réguliers":{en:"Seated, moving around regularly"},
+    "Tu te lèves souvent, tu marches entre deux tâches.":{en:"You get up often and walk between tasks."},
+    "Enseignant, commercial en agence, médecin, ingénieur terrain":{en:"Teacher, branch salesperson, doctor, field engineer"},
+    "Debout la majeure partie du temps":{en:"Standing most of the time"},
+    "Station debout prolongée, marche fréquente, effort léger.":{en:"Long periods standing, frequent walking, light effort."},
+    "Vendeur, serveur, infirmier, coiffeur, cuisinier":{en:"Shop assistant, waiter, nurse, hairdresser, cook"},
+    "Travail physique modéré":{en:"Moderate physical work"},
+    "Port de charges, manutention, en mouvement quasi constant.":{en:"Carrying loads, handling goods, almost always moving."},
+    "Artisan, magasinier, livreur à pied, mécanicien, aide-soignant":{en:"Tradesperson, warehouse worker, courier on foot, mechanic, care assistant"},
+    "Travail physique intense":{en:"Heavy physical work"},
+    "Effort soutenu et charges lourdes plusieurs heures par jour.":{en:"Sustained effort and heavy loads for hours every day."},
+    "Ouvrier du BTP, déménageur, agriculteur, pompier, bûcheron":{en:"Construction worker, mover, farmer, firefighter, lumberjack"},
+    "En dehors du travail":{en:"Outside work"},
+    "Déplacements, tâches ménagères, courses, enfants. Sans compter le sport, qui vient à l'étape suivante.":{en:"Getting around, housework, shopping, children. Not counting sport, which comes next."},
+    "Très peu actif":{en:"Very inactive"},
+    "Voiture pour tout, soirées et week-ends surtout assis.":{en:"Car for everything, evenings and weekends mostly seated."},
+    "Moins de 5 000 pas par jour":{en:"Fewer than 5,000 steps a day"},
+    "Peu actif":{en:"Lightly active"},
+    "Quelques trajets à pied, tâches ménagères légères.":{en:"Some walking, light housework."},
+    "Entre 5 000 et 7 500 pas par jour":{en:"5,000 to 7,500 steps a day"},
+    "Modérément actif":{en:"Moderately active"},
+    "Trajets à pied ou à vélo au quotidien, souvent debout chez toi.":{en:"Walking or cycling daily, often on your feet at home."},
+    "Entre 7 500 et 10 000 pas par jour":{en:"7,500 to 10,000 steps a day"},
+    "Actif":{en:"Active"},
+    "Beaucoup de marche, bricolage, jardinage, enfants en bas âge.":{en:"Lots of walking, DIY, gardening, young children."},
+    "Entre 10 000 et 12 500 pas par jour":{en:"10,000 to 12,500 steps a day"},
+    "Très actif":{en:"Very active"},
+    "Rarement assis, toujours en mouvement.":{en:"Rarely seated, always on the move."},
+    "Plus de 12 500 pas par jour":{en:"More than 12,500 steps a day"},
+    "Ton iPhone compte tes pas : app Santé, puis Activité, puis Pas. Prends la moyenne d'une semaine normale.":{en:"Your iPhone counts your steps: Health app, then Activity, then Steps. Use the average of a normal week."},
+    "Ton activité sportive":{en:"Your sport"},
+    "Ajoute chaque activité pratiquée régulièrement. Compte la durée effective, sans les pauses ni le vestiaire.":{en:"Add each activity you do regularly. Count active time only, not breaks or changing."},
+    "＋ Ajouter une activité":{en:"＋ Add an activity"},
+    "Calculer":{en:"Calculate"},
+    "Aucune activité ajoutée. Laisse vide si tu ne fais pas de sport.":{en:"No activity added. Leave empty if you don't do sport."},
+    "Activité":{en:"Activity"},
+    "Séances / semaine":{en:"Sessions / week"},
+    "Minutes / séance":{en:"Minutes / session"},
+    "Soit en moyenne":{en:"That's on average"},
+    "par jour":{en:"per day"},
+    "Ton maintien calorique":{en:"Your maintenance calories"},
+    "kcal par jour":{en:"kcal per day"},
+    "Fourchette probable : A à B kcal":{en:"Likely range: A to B kcal"},
+    "Métabolisme de base":{en:"Basal metabolism"},
+    "Vie quotidienne et travail":{en:"Daily life and work"},
+    "Déplacements, posture, digestion":{en:"Moving around, posture, digestion"},
+    "Aucune activité":{en:"No activity"},
+    "1 activité":{en:"1 activity"},
+    "N activités":{en:"N activities"},
+    "Katch-McArdle (masse maigre)":{en:"Katch-McArdle (lean mass)"},
+    "Ton niveau d'activité global est de X, soit un mode de vie Y selon la classification FAO/OMS/UNU.":{en:"Your overall activity level is X, meaning a Y lifestyle according to the FAO/WHO/UNU classification."},
+    "sédentaire à légèrement actif":{en:"sedentary to lightly active"},
+    "modérément actif":{en:"moderately active"},
+    "très actif":{en:"very active"},
+    "C'est un point de départ, pas une vérité.":{en:"This is a starting point, not a truth."},
+    "Même la meilleure équation se trompe de plus de 10 % pour une partie des gens. Après trois ou quatre semaines de suivi, compare ton apport réel à l'évolution de ton poids pour ajuster ce chiffre.":{en:"Even the best equation is off by more than 10 % for some people. After three or four weeks of tracking, compare your real intake with your weight trend to adjust this figure."},
+    "Utiliser ce maintien":{en:"Use this maintenance"},
+    "Calculer mon maintien":{en:"Calculate my maintenance"},
+    "Maintien mis à jour : N kcal":{en:"Maintenance updated: N kcal"},
+    "Refaire le calcul":{en:"Recalculate"},
+    "Musculation — modérée":{en:"Weight training — moderate"},
+    "Musculation — intense":{en:"Weight training — vigorous"},
+    "Course à pied — 8 km/h":{en:"Running — 8 km/h"},
+    "Course à pied — 10 km/h":{en:"Running — 10 km/h"},
+    "Course à pied — 12 km/h":{en:"Running — 12 km/h"},
+    "Marche rapide — 5,5 km/h":{en:"Brisk walking — 5.5 km/h"},
+    "Randonnée":{en:"Hiking"},
+    "Vélo — modéré (16 à 19 km/h)":{en:"Cycling — moderate (16 to 19 km/h)"},
+    "Vélo — soutenu (19 à 22 km/h)":{en:"Cycling — brisk (19 to 22 km/h)"},
+    "Vélo d'appartement — modéré":{en:"Stationary bike — moderate"},
+    "Natation — crawl modéré":{en:"Swimming — moderate front crawl"},
+    "Natation — brasse loisir":{en:"Swimming — leisurely breaststroke"},
+    "Football — loisir":{en:"Football — casual"},
+    "Football — compétition":{en:"Football — competitive"},
+    "Basketball":{en:"Basketball"},
+    "Tennis — simple":{en:"Tennis — singles"},
+    "Padel":{en:"Padel"},
+    "Boxe — sac, entraînement":{en:"Boxing — bag, training"},
+    "Circuit training / HIIT":{en:"Circuit training / HIIT"},
+    "Rameur — modéré":{en:"Rowing machine — moderate"},
+    "Yoga":{en:"Yoga"},
+    "Pilates":{en:"Pilates"},
+    "Danse — soutenue":{en:"Dance — vigorous"}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -3478,6 +3776,156 @@
   }
 
 
+
+  // ================= CALCULATEUR DE MAINTIEN =================
+  // Maintien = métabolisme de base × niveau d'activité quotidienne + dépense nette du sport.
+  // Métabolisme : Mifflin-St Jeor (référence de l'Association américaine de diététique),
+  // ou Katch-McArdle si le taux de masse grasse est connu.
+  // Niveau d'activité : bornes FAO/OMS/UNU 2004 (1,40 à 2,40).
+  // Sport : équivalents métaboliques du Compendium des activités physiques ; on retire 1 MET
+  // pour ne pas compter deux fois la dépense de repos, déjà incluse dans le métabolisme de base.
+  const CALC_SPORTS = [
+    ["Musculation — modérée", 3.5], ["Musculation — intense", 6.0],
+    ["Course à pied — 8 km/h", 8.3], ["Course à pied — 10 km/h", 9.8], ["Course à pied — 12 km/h", 11.8],
+    ["Marche rapide — 5,5 km/h", 4.3], ["Randonnée", 6.0],
+    ["Vélo — modéré (16 à 19 km/h)", 6.8], ["Vélo — soutenu (19 à 22 km/h)", 8.0], ["Vélo d'appartement — modéré", 6.8],
+    ["Natation — crawl modéré", 8.3], ["Natation — brasse loisir", 5.3],
+    ["Football — loisir", 7.0], ["Football — compétition", 10.0], ["Basketball", 6.5],
+    ["Tennis — simple", 8.0], ["Padel", 6.0], ["Boxe — sac, entraînement", 7.8],
+    ["Circuit training / HIIT", 8.0], ["Rameur — modéré", 7.0],
+    ["Yoga", 2.5], ["Pilates", 3.0], ["Danse — soutenue", 7.3]
+  ];
+  let calcState=null, calcStep=0;
+  const cEl=id=>document.getElementById(id);
+  const cFmt=n=>Math.round(n).toLocaleString(currentLang()==="en"?"en-GB":"fr-FR");
+
+  // opts : { mandatory:bool, onDone:function(maintenance) }
+  function openCalc(opts){
+    opts=opts||{};
+    const prof=(db.settings.profile)||{};
+    calcState={ sex:prof.sex||"m", job:prof.job!=null?prof.job:null, life:prof.life!=null?prof.life:null,
+                sports:Array.isArray(prof.sports)?prof.sports.map(x=>({...x})):[],
+                mandatory:!!opts.mandatory, onDone:opts.onDone||null };
+    // pré-remplissage : profil déjà saisi, sinon taille et dernière pesée connues de l'app
+    const lastW=weightEntries(); const wNow=lastW.length?lastW[lastW.length-1].kg:0;
+    cEl("cAge").value    = prof.age ? prof.age : "";
+    cEl("cHeight").value = prof.height ? prof.height : (num(db.settings.height)>0 ? Math.round(num(db.settings.height)*100) : "");
+    cEl("cWeight").value = wNow ? String(wNow).replace(".",decSep()) : (prof.weight ? String(prof.weight).replace(".",decSep()) : "");
+    cEl("cBf").value     = prof.bf ? String(prof.bf).replace(".",decSep()) : "";
+    if(prof.bf) cEl("cBfBox").setAttribute("open",""); else cEl("cBfBox").removeAttribute("open");
+    cEl("cSex").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===calcState.sex));
+    [["cJob","job","cNext1"],["cLife","life","cNext2"]].forEach(([id,key,btn])=>{
+      cEl(id).querySelectorAll(".c-lvl").forEach(b=>b.classList.toggle("on", calcState[key]!=null && Number(b.dataset.v)===calcState[key]));
+      cEl(btn).disabled = calcState[key]==null;
+    });
+    cEl("cErr0").textContent="";
+    // en passage obligatoire, aucune sortie possible avant la fin
+    cEl("cClose").style.display = calcState.mandatory ? "none" : "";
+    renderCalcSports();
+    cEl("calc").style.display="flex";
+    document.body.style.overflow="hidden";
+    calcGo(0);
+  }
+  function closeCalc(){
+    cEl("calc").style.display="none";
+    if(document.getElementById("tuto").style.display!=="flex") document.body.style.overflow="";
+  }
+  function calcGo(n){
+    calcStep=n;
+    cEl("calc").querySelectorAll(".c-step").forEach(s=>s.classList.toggle("on", Number(s.dataset.cs)===n));
+    cEl("cProg").style.width=((n+1)/5*100)+"%";
+    const cur=cEl("calc").querySelector(".c-step.on"); if(cur) cur.scrollTop=0;
+    if(n===4) calcCompute();
+    applyI18n(cEl("calc"));
+  }
+  function calcSportKcal(sp){
+    const w=num(cEl("cWeight").value), met=CALC_SPORTS[sp.i] ? CALC_SPORTS[sp.i][1] : 0;
+    return Math.max(0, met-1) * w * (num(sp.min)/60) * num(sp.per) / 7;
+  }
+  function renderCalcSports(){
+    const box=cEl("cSports"), list=calcState.sports;
+    if(!list.length){ box.innerHTML=`<div class="c-nosport">Aucune activité ajoutée. Laisse vide si tu ne fais pas de sport.</div>`; applyI18n(box); return; }
+    box.innerHTML=list.map((sp,k)=>`
+      <div class="c-sport">
+        <div class="c-sport-head"><span class="sn">${tr("Activité")} ${k+1}</span><button data-cdel="${k}">×</button></div>
+        <select data-ck="${k}" data-cf="i">${CALC_SPORTS.map((s,i)=>`<option value="${i}" ${i==sp.i?"selected":""}>${tr(s[0])}</option>`).join("")}</select>
+        <div class="c-grid2">
+          <div class="c-field"><label>Séances / semaine</label><input data-ck="${k}" data-cf="per" inputmode="decimal" value="${sp.per}"></div>
+          <div class="c-field"><label>Minutes / séance</label><input data-ck="${k}" data-cf="min" inputmode="numeric" value="${sp.min}"></div>
+        </div>
+        <div class="c-sport-kcal">${tr("Soit en moyenne")} <b id="cSk${k}">${cFmt(calcSportKcal(sp))} kcal</b> ${tr("par jour")}</div>
+      </div>`).join("");
+    const upd=(el)=>{ const sp=list[Number(el.dataset.ck)];
+      sp[el.dataset.cf] = el.dataset.cf==="i" ? Number(el.value) : el.value;
+      cEl("cSk"+el.dataset.ck).textContent=cFmt(calcSportKcal(sp))+" kcal"; };
+    box.querySelectorAll("[data-cf]").forEach(el=>{ el.addEventListener("input",()=>upd(el)); el.addEventListener("change",()=>upd(el)); });
+    box.querySelectorAll("[data-cdel]").forEach(b=>b.addEventListener("click",()=>{ list.splice(Number(b.dataset.cdel),1); renderCalcSports(); }));
+    applyI18n(box);
+  }
+  function calcCompute(){
+    const a=num(cEl("cAge").value), h=num(cEl("cHeight").value), w=num(cEl("cWeight").value), bf=num(cEl("cBf").value);
+    let bmr, method;
+    if(bf>0){ bmr = 370 + 21.6*(w*(1-bf/100)); method="Katch-McArdle (masse maigre)"; }
+    else { bmr = 10*w + 6.25*h - 5*a + (calcState.sex==="m" ? 5 : -161); method="Mifflin-St Jeor"; }
+    const pal = Math.min(2.40, Math.max(1.35, calcState.job + calcState.life));
+    const daily = bmr*pal - bmr;
+    const sport = calcState.sports.reduce((s,sp)=>s+calcSportKcal(sp),0);
+    const total = bmr + daily + sport;
+    calcState.result = Math.round(total);
+    cEl("cTotal").textContent=cFmt(total);
+    cEl("cRange").textContent=tr("Fourchette probable : A à B kcal").replace("A",cFmt(total*0.9)).replace("B",cFmt(total*1.1));
+    const n=calcState.sports.length;
+    const parts=[["Métabolisme de base", bmr, "var(--violet)", method],
+                 ["Vie quotidienne et travail", daily, "var(--carbs-c)", "Déplacements, posture, digestion"],
+                 ["Sport", sport, "var(--acc)", n ? tr(n>1?"N activités":"1 activité").replace("N",n) : "Aucune activité"]];
+    cEl("cStack").innerHTML=parts.map(p=>`<i style="width:${p[1]/total*100}%;background:${p[2]}"></i>`).join("");
+    cEl("cBreak").innerHTML=parts.map(p=>`<div class="c-brow"><span class="dot" style="background:${p[2]}"></span>
+        <div class="bl">${tr(p[0])}<small>${tr(p[3])}</small></div><div class="bv">${cFmt(p[1])}</div></div>`).join("");
+    const eff=total/bmr, cat = eff<1.70 ? "sédentaire à légèrement actif" : eff<2.00 ? "modérément actif" : "très actif";
+    cEl("cPal").innerHTML = tr("Ton niveau d'activité global est de X, soit un mode de vie Y selon la classification FAO/OMS/UNU.")
+      .replace("X","<b>"+eff.toFixed(2).replace(".",decSep())+"</b>").replace("Y","<b>"+tr(cat)+"</b>");
+  }
+  function bindCalc(){
+    cEl("cSex").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+      calcState.sex=b.dataset.v; cEl("cSex").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); }));
+    cEl("cNext0").addEventListener("click",()=>{
+      const a=num(cEl("cAge").value), h=num(cEl("cHeight").value), w=num(cEl("cWeight").value), bf=num(cEl("cBf").value);
+      let e="";
+      if(a<18||a>90) e="L'âge doit être compris entre 18 et 90 ans.";
+      else if(h<130||h>230) e="La taille doit être comprise entre 130 et 230 cm.";
+      else if(w<35||w>250) e="Le poids doit être compris entre 35 et 250 kg.";
+      else if(cEl("cBf").value && (bf<3||bf>60)) e="Le taux de masse grasse doit être compris entre 3 et 60 %.";
+      cEl("cErr0").textContent=e ? tr(e) : "";
+      if(!e) calcGo(1);
+    });
+    [["cJob","job","cNext1"],["cLife","life","cNext2"]].forEach(([id,key,btn])=>{
+      cEl(id).querySelectorAll(".c-lvl").forEach(b=>b.addEventListener("click",()=>{
+        calcState[key]=Number(b.dataset.v);
+        cEl(id).querySelectorAll(".c-lvl").forEach(x=>x.classList.toggle("on",x===b));
+        cEl(btn).disabled=false; }));
+    });
+    cEl("cNext1").addEventListener("click",()=>calcGo(2));
+    cEl("cNext2").addEventListener("click",()=>calcGo(3));
+    cEl("cNext3").addEventListener("click",()=>calcGo(4));
+    cEl("cAddSport").addEventListener("click",()=>{ calcState.sports.push({i:0, per:3, min:60}); renderCalcSports(); });
+    cEl("calc").querySelectorAll("[data-cback]").forEach(b=>b.addEventListener("click",()=>calcGo(Math.max(0,calcStep-1))));
+    cEl("cClose").addEventListener("click",()=>{ if(!calcState.mandatory) closeCalc(); });
+    cEl("cUse").addEventListener("click",()=>{
+      const m=calcState.result;
+      // le profil est conservé pour pré-remplir un prochain calcul
+      db.settings.profile = { sex:calcState.sex, age:num(cEl("cAge").value), height:num(cEl("cHeight").value),
+        weight:num(cEl("cWeight").value), bf:num(cEl("cBf").value), job:calcState.job, life:calcState.life,
+        sports:calcState.sports.map(x=>({i:Number(x.i), per:num(x.per), min:num(x.min)})) };
+      if(!num(db.settings.height) && num(cEl("cHeight").value)) db.settings.height = num(cEl("cHeight").value)/100;
+      db.settings.maintenance = m;
+      persistNow();
+      const cb=calcState.onDone;
+      closeCalc();
+      if(cb) cb(m);
+      renderDay();
+    });
+  }
+
   // ================= TUTORIEL DE PREMIÈRE OUVERTURE =================
   // L'indicateur vit dans une clé séparée : il ne doit PAS figurer dans les sauvegardes
   // exportées, sinon restaurer sur un téléphone neuf sauterait le tutoriel.
@@ -3497,6 +3945,7 @@
     applyI18n(root);
   }
   function openTuto(){
+    tutoCalcDone = num(db.settings.maintenance)>0 && !!db.settings.profile;
     const root=document.getElementById("tuto");
     root.style.display="flex";
     document.body.style.overflow="hidden";
@@ -3537,7 +3986,11 @@
     ["tMaint","tProt","tCarb","tFat"].forEach(id=>{
       const el=document.getElementById(id); if(el) el.addEventListener("input", refreshTutoCalc);
     });
-    document.getElementById("tutoSkip").addEventListener("click", closeTuto);
+    document.getElementById("tToCalc").addEventListener("click",()=>openTutoCalc());
+    // « Passer » ne permet pas d'éviter le calcul du maintien : sans lui, l'app n'a pas de sens.
+    document.getElementById("tutoSkip").addEventListener("click",()=>{
+      if(!tutoCalcDone) openTutoCalc(); else closeTuto();
+    });
     document.getElementById("tFinish").addEventListener("click", closeTuto);
     document.getElementById("tSaveGoals").addEventListener("click",()=>{
       db.settings.maintenance = num(document.getElementById("tMaint").value);
@@ -3548,21 +4001,21 @@
       persistNow(); renderDay();
       tutoGo(3);
     });
-    document.getElementById("tNoMaint").addEventListener("click",()=>{
-      // estimation de repli : sédentaire à modérément actif, à ajuster ensuite dans les réglages
-      document.getElementById("tMaint").value = 2200;
-      if(!num(document.getElementById("tProt").value)){
-        document.getElementById("tProt").value=140;
-        document.getElementById("tCarb").value=160;
-        document.getElementById("tFat").value=55;
-      }
-      refreshTutoCalc();
-      flashTutoHint();
-    });
+    // Le maintien vient du calculateur. Ce bouton permet de le refaire sans quitter le tutoriel.
+    document.getElementById("tRedoCalc").addEventListener("click",()=>openTutoCalc());
     document.getElementById("tAddFood").addEventListener("click",()=>{ closeTuto(); showSection("nutrition"); showView("day"); openItemSheet("lunch"); });
     document.getElementById("tScanFood").addEventListener("click",()=>{ closeTuto(); showSection("nutrition"); showView("day"); openScanner("lunch"); });
     const rb=document.getElementById("replayTuto");
     if(rb) rb.addEventListener("click", openTuto);
+  }
+  let tutoCalcDone=false;
+  function openTutoCalc(){
+    openCalc({ mandatory:true, onDone:(m)=>{
+      tutoCalcDone=true;
+      document.getElementById("tMaint").value=m;
+      refreshTutoCalc();
+      tutoGo(2);
+    }});
   }
   function flashTutoHint(){
     const d=document.getElementById("tCalcDef");
@@ -3703,6 +4156,11 @@
     if(b.disabled) return;
     wPeriod=b.dataset.wp;
     renderWeight();
+  }));
+  document.getElementById("openCalcSettings").addEventListener("click",()=>openCalc({
+    mandatory:false,
+    onDone:(m)=>{ document.getElementById("setMaint").value=m; refreshGoalCalc();
+                  flash("saveNote", tr("Maintien mis à jour : N kcal").replace("N", m)); }
   }));
   document.getElementById("addLibFood").addEventListener("click",()=>openLibSheet(null));
   document.getElementById("phAdd").addEventListener("click",()=>document.getElementById("phFile").click());
@@ -3852,6 +4310,7 @@
   document.getElementById("wDate").max=todayISO();
   renderDay();
   applyI18n();
+  bindCalc();
   bindTuto();
   if(!tutoSeen()) openTuto();
 })();
