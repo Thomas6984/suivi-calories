@@ -847,25 +847,25 @@
         <div class="meal-title" style="margin-bottom:14px">Objectifs</div>
         <div class="settings-field">
           <label>Maintien calorique (TDEE)</label>
-          <input type="number" inputmode="numeric" id="setMaint">
+          <input type="text" inputmode="numeric" autocomplete="off" id="setMaint">
           <button class="calc-launch" id="openCalcSettings">Calculer mon maintien</button>
           <div class="hint">Calories brûlées par jour en moyenne. Le déficit/surplus est calculé par rapport à ce chiffre. Astuce : sur une journée exceptionnelle (sortie, événement), touche la valeur « maintien » sur l'écran Jour pour l'ajuster ponctuellement — les statistiques s'adaptent automatiquement, sans toucher à ce réglage général.</div>
         </div>
         <div class="settings-field">
           <label>Objectif d'apport quotidien (kcal)</label>
-          <input type="number" inputmode="numeric" id="setCal" readonly>
+          <input type="text" inputmode="numeric" autocomplete="off" id="setCal" readonly>
           <div class="hint">Calculé automatiquement depuis tes macros : 4 kcal/g pour les protéines et les glucides, 9 kcal/g pour les lipides.</div>
         </div>
         <div class="divider"></div>
-        <div class="settings-field"><label>Protéines (g)</label><input type="number" inputmode="numeric" id="setProtein"></div>
-        <div class="settings-field"><label>Glucides (g)</label><input type="number" inputmode="numeric" id="setCarbs"></div>
-        <div class="settings-field"><label>Lipides (g)</label><input type="number" inputmode="numeric" id="setFat"></div>
+        <div class="settings-field"><label>Protéines (g)</label><input type="text" inputmode="numeric" autocomplete="off" id="setProtein"></div>
+        <div class="settings-field"><label>Glucides (g)</label><input type="text" inputmode="numeric" autocomplete="off" id="setCarbs"></div>
+        <div class="settings-field"><label>Lipides (g)</label><input type="text" inputmode="numeric" autocomplete="off" id="setFat"></div>
         <div class="goal-calc">
           <div class="gc-v" id="goalCalc">—</div>
           <div class="gc-split" id="goalSplit"></div>
           <div class="gc-warn" id="goalWarn"></div>
         </div>
-        <div class="settings-field"><label>Eau (ml)</label><input type="number" inputmode="numeric" id="setWater"><div class="hint">Objectif quotidien d'hydratation, en millilitres.</div></div>
+        <div class="settings-field"><label>Eau (ml)</label><input type="text" inputmode="numeric" autocomplete="off" id="setWater"><div class="hint">Objectif quotidien d'hydratation, en millilitres.</div></div>
         <button class="btn primary" id="saveSettings">Enregistrer</button>
         <div class="note" id="saveNote"></div>
       </div>
@@ -1186,11 +1186,11 @@
       <h2>Commençons par<br>tes chiffres</h2>
       <p>Saisis ton maintien, puis tes macros. <b>Les calories se calculent toutes seules.</b></p>
       <div class="tfield"><label>Maintien calorique (kcal)</label>
-        <input type="number" inputmode="numeric" id="tMaint" placeholder="2600"></div>
+        <input type="text" inputmode="numeric" autocomplete="off" id="tMaint" placeholder="2600"></div>
       <div class="tmacros">
-        <div class="tfield"><label>Prot.</label><input type="number" inputmode="numeric" id="tProt" placeholder="160"></div>
-        <div class="tfield"><label>Gluc.</label><input type="number" inputmode="numeric" id="tCarb" placeholder="150"></div>
-        <div class="tfield"><label>Lip.</label><input type="number" inputmode="numeric" id="tFat" placeholder="60"></div>
+        <div class="tfield"><label>Prot.</label><input type="text" inputmode="numeric" autocomplete="off" id="tProt" placeholder="160"></div>
+        <div class="tfield"><label>Gluc.</label><input type="text" inputmode="numeric" autocomplete="off" id="tCarb" placeholder="150"></div>
+        <div class="tfield"><label>Lip.</label><input type="text" inputmode="numeric" autocomplete="off" id="tFat" placeholder="60"></div>
       </div>
       <div class="tcalc">
         <div class="cv" id="tCalcVal">—</div>
@@ -1337,7 +1337,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "49";                 // numéro affiché dans les réglages
+  const APP_VERSION = "50";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-09-09";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -4127,7 +4127,7 @@
       <h3>Maintien du jour</h3>
       <p class="sub">${tr("Par défaut N kcal. À réserver aux journées exceptionnelles : les statistiques s'adaptent automatiquement.").replace("N", db.settings.maintenance)}</p>
       <label class="f">Maintien pour ${escHtml(labelForDate(currentDate))} (kcal)</label>
-      <input class="t" id="maintInput" type="number" inputmode="numeric" value="${cur}">
+      <input class="t" id="maintInput" type="text" inputmode="numeric" autocomplete="off" value="${cur}">
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
         <button class="btn primary" data-act="saveMaint">Enregistrer</button>
@@ -4175,7 +4175,13 @@
   document.getElementById("openCalcSettings").addEventListener("click",()=>openCalc({
     mandatory:false,
     onDone:(m)=>{ document.getElementById("setMaint").value=m; refreshGoalCalc();
-                  flash("saveNote", tr("Maintien mis à jour : N kcal").replace("N", m)); }
+                  // Le calcul doit être enregistré tout de suite : sans ça, le message
+                  // "mis à jour" est trompeur puisque rien n'est encore persisté, et la
+                  // valeur revient à l'ancienne dès que l'écran Réglages est quitté.
+                  db.settings.maintenance=num(m);
+                  const ok=persistNow(); renderDay();
+                  flash("saveNote", ok ? tr("Maintien mis à jour : N kcal").replace("N", m)
+                                        : tr("Erreur d'enregistrement"), !ok); }
   }));
   document.getElementById("addLibFood").addEventListener("click",()=>openLibSheet(null));
   document.getElementById("phAdd").addEventListener("click",()=>document.getElementById("phFile").click());
