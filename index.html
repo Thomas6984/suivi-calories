@@ -966,7 +966,7 @@
           <div class="kpi"><div class="num" id="wVar7">—</div><div class="lbl">7 derniers jours</div></div>
           <div class="kpi"><div class="num" id="wVar30">—</div><div class="lbl">30 derniers jours</div></div>
           <div class="kpi"><div class="num" id="wVarAll">—</div><div class="lbl">depuis le début</div></div>
-          <div class="kpi"><div class="num" id="wRemain">—</div><div class="lbl">reste à perdre</div></div>
+          <div class="kpi"><div class="num" id="wRemain">—</div><div class="lbl" id="wRemainLbl">reste à perdre</div></div>
         </div>
       </div>
 
@@ -1012,7 +1012,7 @@
           <div class="hint">Sert au pourcentage d'avancement et aux deux projections.</div>
         </div>
         <div class="settings-field">
-          <label>Taille (m)</label>
+          <label>Taille (m ou cm)</label>
           <input type="text" inputmode="decimal" autocomplete="off" step="0.01" id="setHeight">
           <div class="hint">Sert uniquement au calcul de l'IMC.</div>
         </div>
@@ -1337,8 +1337,8 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "50";                 // numéro affiché dans les réglages
-  const APP_DATE = "2026-09-09";             // date de cette version
+  const APP_VERSION = "51";                 // numéro affiché dans les réglages
+  const APP_DATE = "2026-10-01";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
     {key:"breakfast", label:"Petit-déjeuner"},
@@ -1434,7 +1434,8 @@
     const t=totalsOf(data);
     const anyNote = MEALS.some(m=>mealHasNote(data[m.key]));
     const anyItem = MEALS.some(m=>((data[m.key]||{}).items||[]).length>0);
-    if(!anyItem && !anyNote && !num(data.water)) delete db.days[iso]; else db.days[iso]=data;
+    // Le maintien ajusté du jour compte comme une donnée : sans lui, retirer le dernier aliment l'effaçait.
+    if(!anyItem && !anyNote && !num(data.water) && !num(data.maint)) delete db.days[iso]; else db.days[iso]=data;
     persistDebounced();
   }
   function loggedDates(){ return Object.keys(db.days).sort(); }
@@ -1454,9 +1455,22 @@
 
   // ---------- computations ----------
   // La virgule est le séparateur décimal du clavier français : on l'accepte partout.
+  // Espaces (y compris insécables : « 2 500 ») et unité tapée à la suite (« 13 g ») sont tolérés.
+  function parseNum(v){
+    let s = String(v==null?"":v).replace(/[\s  ]/g,"").replace(",", ".");
+    s = s.replace(/(kcal|cal|kg|g|ml|cl|l|cm|m|%)$/i, "");
+    return Number(s);
+  }
   function num(v){
-    const n = Number(String(v==null?"":v).replace(",", ".").trim());
+    const n = parseNum(v);
     return isFinite(n) && n>0 ? n : 0;
+  }
+  // Un champ rempli mais illisible ne doit jamais être enregistré comme un zéro silencieux.
+  function badField(v){
+    const s=String(v==null?"":v).trim();
+    if(!s) return false;
+    const n=parseNum(s);
+    return !(isFinite(n) && n>=0);
   }
   // Un aliment : valeurs pour 100 g × quantité réellement mangée.
   function itemTotals(it){
@@ -1762,16 +1776,21 @@
     el("wCurrent").textContent=fmtKg(cur.kg); el("wCurrent").className="gauge-num good"; el("wCurrent").style.fontSize="44px";
     el("wHeroSub").textContent="Pesée du "+fmtDateLong(cur.t)+" · "+list.length+" mesure"+(list.length>1?"s":"");
     const totalDelta=cur.kg-start.kg;
+    // Sens de l'objectif : perte par défaut, prise si la cible est au-dessus du poids de départ.
+    // Sans cible (0), rien ne doit être calculé « vers 0 kg ».
+    const hasGoal = goal>0;
+    const dir = (hasGoal && goal>start.kg) ? 1 : -1;
+    const good = dv => dv*dir>=0;
     el("wSinceStart").textContent=fmtKg(totalDelta,true)+" kg depuis le début";
-    el("wSinceStart").className="gauge-lbl "+(totalDelta<=0?"good":"bad");
+    el("wSinceStart").className="gauge-lbl "+(good(totalDelta)?"good":"bad");
 
     // progression vers l'objectif
-    const totalToLose=start.kg-goal;
-    let pct = totalToLose>0 ? Math.max(0,Math.min(100,((start.kg-cur.kg)/totalToLose)*100)) : 0;
+    const span0=goal-start.kg;
+    let pct = (hasGoal && span0!==0) ? Math.max(0,Math.min(100,((cur.kg-start.kg)/span0)*100)) : 0;
     el("wGoalFill").style.width=pct.toFixed(0)+"%";
     el("wStartLbl").textContent=fmtKg(start.kg)+" kg";
-    el("wPct").textContent=Math.round(pct)+" % accompli";
-    el("wGoalLbl").textContent=fmtKg(goal)+" kg";
+    el("wPct").textContent=hasGoal ? Math.round(pct)+" % accompli" : tr("Objectif à définir");
+    el("wGoalLbl").textContent=hasGoal ? fmtKg(goal)+" kg" : "—";
     const shown=windowedWeights(list);
     // une période plus courte que l'historique disponible n'a pas de sens
     document.querySelectorAll("#wZoom [data-wp]").forEach(b=>{
@@ -1797,43 +1816,47 @@
       const e=el(id);
       if(past==null){ e.textContent="—"; e.className="num"; return null; }
       const dv=cur.kg-past;
-      e.innerHTML=fmtKg(dv,true)+"<small>kg</small>"; e.className="num "+(dv<=0?"good":"bad");
+      e.innerHTML=fmtKg(dv,true)+"<small>kg</small>"; e.className="num "+(good(dv)?"good":"bad");
       return dv;
     }
     setVar("wVar7",7); setVar("wVar30",30);
-    const eAll=el("wVarAll"); eAll.innerHTML=fmtKg(totalDelta,true)+"<small>kg</small>"; eAll.className="num "+(totalDelta<=0?"good":"bad");
-    const remain=cur.kg-goal;
+    const eAll=el("wVarAll"); eAll.innerHTML=fmtKg(totalDelta,true)+"<small>kg</small>"; eAll.className="num "+(good(totalDelta)?"good":"bad");
+    const remain = hasGoal ? (dir===1 ? goal-cur.kg : cur.kg-goal) : null;
     const eR=el("wRemain");
-    eR.innerHTML = remain>0 ? fmtKg(remain)+"<small>kg</small>" : "Atteint";
-    eR.className="num "+(remain>0?"":"good");
+    el("wRemainLbl").textContent = tr(dir===1 ? "reste à prendre" : "reste à perdre");
+    if(!hasGoal){ eR.textContent="—"; eR.className="num"; }
+    else { eR.innerHTML = remain>0 ? fmtKg(remain)+"<small>kg</small>" : tr("Atteint"); eR.className="num "+(remain>0?"":"good"); }
 
-    // projections
+    // projections : rythme = progression vers la cible par jour (positif = dans le bon sens)
     const daysTotal=Math.max(1,(cur.t-start.t)/DAY_MS);
-    const rateAll=(start.kg-cur.kg)/daysTotal;                 // kg perdus par jour
+    const chgAll=(cur.kg-start.kg)/daysTotal;                 // variation réelle, signée, par jour
+    const rateAll=chgAll*dir;
     const past30=weightAt(list, cur.t-30*DAY_MS);
-    const rate30 = past30==null ? null : (past30-cur.kg)/30;
-    el("wGoalRight").textContent="cible "+fmtKg(goal)+" kg";
+    const chg30 = past30==null ? null : (cur.kg-past30)/30;
+    const rate30 = chg30==null ? null : chg30*dir;
+    el("wGoalRight").textContent = hasGoal ? "cible "+fmtKg(goal)+" kg" : "—";
 
-    function showProj(dateId,rateId,rate){
+    function showProj(dateId,rateId,rate,chg){
       const dEl=el(dateId), rEl=el(rateId);
       if(rate==null){ dEl.textContent="—"; rEl.textContent="pas assez de recul"; return null; }
-      rEl.textContent=fmtKg(rate*7,true).replace("+","+")+" kg / semaine";
+      // le signe affiché est celui de la variation réelle : − perte, + prise
+      rEl.textContent=fmtKg(chg*7,true)+" kg / semaine";
+      if(!hasGoal){ dEl.textContent="—"; dEl.style.color="var(--ink)"; return null; }
       if(remain<=0){ dEl.textContent="Atteint"; dEl.style.color="var(--good)"; return 0; }
       if(rate<=0){ dEl.textContent="Non atteint"; dEl.style.color="var(--bad)"; return null; }
       const daysLeft=remain/rate;
       if(daysLeft>3650){ dEl.textContent="Trop lointain"; dEl.style.color="var(--bad)"; return null; }
-      dEl.textContent=new Date(cur.t+daysLeft*DAY_MS).toLocaleDateString(loc(),{day:"numeric",month:"short",year:"numeric"});
+      // en jours calendaires : ajouter des tranches de 24 h décalait d'un jour au passage à l'heure d'hiver
+      dEl.textContent=fromISO(addDays(cur.iso, Math.round(daysLeft))).toLocaleDateString(loc(),{day:"numeric",month:"short",year:"numeric"});
       dEl.style.color="var(--ink)";
       return daysLeft;
     }
-    const dAll=showProj("wProjAllDate","wProjAllRate",rateAll);
-    const d30=showProj("wProj30Date","wProj30Rate",rate30);
-    // le rythme est affiché comme une perte : on force le signe négatif
-    el("wProjAllRate").textContent="−"+fmtKg(rateAll*7)+" kg / semaine";
-    if(rate30!=null) el("wProj30Rate").textContent=(rate30>=0?"−":"+")+fmtKg(Math.abs(rate30)*7)+" kg / semaine";
+    const dAll=showProj("wProjAllDate","wProjAllRate",rateAll,chgAll);
+    const d30=showProj("wProj30Date","wProj30Rate",rate30,chg30);
 
     let note="";
-    if(rate30!=null && rateAll>0){
+    if(!hasGoal) note=tr("Définis un poids cible dans l'onglet Objectif pour obtenir une projection.");
+    else if(rate30!=null && rateAll>0){
       const ratio=rate30/rateAll;
       if(ratio<0.75) note="Ton rythme récent est plus lent que ta moyenne : la date réaliste se situe plutôt vers la seconde projection.";
       else if(ratio>1.25) note="Ton rythme récent est plus rapide que ta moyenne : tu es en avance sur ta trajectoire.";
@@ -2044,7 +2067,7 @@
         const share = mtot0.cal>0 ? Math.round(o.cal/mtot0.cal*100) : 0;
         const parts=splitParts(o), ptot=parts.reduce((sm,x)=>sm+x.val,0);
         const seg = ptot>0 ? parts.map(x=>`<span style="width:${(x.val/ptot*100).toFixed(1)}%;background:${x.color}"></span>`).join("") : "";
-        const pcts = ptot>0 ? parts.map(x=>Math.round(x.val/ptot*100)+" % "+x.label.toLowerCase()).join(" · ") : "";
+        const pcts = ptot>0 ? parts.map(x=>Math.round(x.val/ptot*100)+" % "+tr(x.label).toLowerCase()).join(" · ") : "";
         return `<div class="food"><div class="fn"><div class="fname">${esc(it.name||"Aliment")}</div>`+
           `<div class="fmeta">${it.unit ? (d1(num(it.qty))+" "+(num(it.qty)>1?"portions":"portion")) : (d1(num(it.qty))+" g")} · ${(o.protein||o.carbs||o.fat||o.fiber||o.alcohol) ? d1(o.protein)+" P / "+d1(o.carbs)+" G / "+d1(o.fat)+" L"+(o.fiber?" / "+d1(o.fiber)+" F":"")+(o.alcohol?" / "+d1(o.alcohol)+" A":"") : "calories seules"}</div>`+
           (seg?`<div class="fbar">${seg}</div><div class="fshare">${pcts} — ${share} % du repas</div>`:"")+
@@ -2139,7 +2162,7 @@
     }
     document.getElementById("barsTitle").textContent=barsTitle;
     document.getElementById("barsSub").textContent=barsSub;
-    document.getElementById("barsSub").textContent = tr(barsSub) + (overrideDays ? " · "+tr("N jours avec un maintien ajusté").replace("N", overrideDays) : "");
+    document.getElementById("barsSub").textContent = tr(barsSub) + (overrideDays ? " · "+(overrideDays>1 ? tr("N jours avec un maintien ajusté").replace("N", overrideDays) : tr("1 jour avec un maintien ajusté")) : "");
     document.getElementById("statsChart").innerHTML=barChartSvg(chartBars, calGoal(), LIGHT, maint);
     document.getElementById("cumChart").innerHTML=lineChartSvg(cnt?cumPts:[], LIGHT);
     document.getElementById("statsDays").innerHTML = rows.length ? rows.reverse().join("") : `<div class="empty-note">Aucune donnée</div>`;
@@ -2230,7 +2253,7 @@
       : tr("N journées enregistrées, depuis le D.").replace("N", n).replace("D", fromISO(keys[0]).toLocaleDateString(loc()));
     const nw=weightEntries().length;
     if(nw) txt+=" "+tr("N pesées enregistrées.").replace("N", nw);
-    txt+=" Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps. Les photos d'évolution ne sont pas incluses dans la sauvegarde : elles resteraient trop lourdes pour un fichier.";
+    txt+=" "+tr("Les données sont stockées uniquement sur ce téléphone. Pense à exporter une sauvegarde de temps en temps. Les photos d'évolution ne sont pas incluses dans la sauvegarde : elles resteraient trop lourdes pour un fichier.");
     document.getElementById("dataInfo").textContent=txt;
     renderFoodLib();
     document.getElementById("appVersion").textContent="v"+APP_VERSION;
@@ -2272,8 +2295,11 @@
     if(resetQty) document.getElementById("lQty").value = isUnit ? 1 : 100;
     applyI18n(sheetRoot); refreshLibCalc();
   }
+  let libEditName=null;   // nom d'origine de l'aliment modifié : un renommage doit remplacer, pas dupliquer
   function openLibSheet(preset){
-    const v=preset||{name:"",per100:{protein:"",carbs:"",fat:"",fiber:"",alcohol:"",kcal:""},qty:100};
+    libEditName = preset ? preset.name : null;
+    // copie : la saisie ne doit pas modifier l'aliment enregistré tant qu'on n'a pas validé
+    const v=preset ? {...preset, per100:{...preset.per100}} : {name:"",per100:{protein:"",carbs:"",fat:"",fiber:"",alcohol:"",kcal:""},qty:100};
     if(v.per100.alcohol===undefined) v.per100.alcohol="";
     if(v.per100.kcal===undefined) v.per100.kcal="";
     const esc=(x)=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
@@ -2303,6 +2329,7 @@
       <input class="t" id="lQty" type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" value="${esc(v.qty)}">
       <div class="step-row" id="lStepRow"></div>
       <div class="calc-box"><div class="ct">Par portion habituelle</div><div class="cv" id="lKcal">0 kcal</div><div class="cm" id="lMacros">0 P · 0 G · 0 L</div></div>
+      <div class="sheet-err" id="lErr" style="display:none"></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
         <button class="btn primary" data-act="saveLib">Enregistrer</button>
@@ -2328,15 +2355,26 @@
       : "Calories seules";
     applyI18n(sheetRoot);
   }
+  // Erreur affichée DANS la feuille : la note de la page est masquée par elle.
+  function sheetError(id, msg){
+    const e=document.getElementById(id); if(!e) return;
+    e.textContent=tr(msg); e.style.display="";
+    e.scrollIntoView({block:"nearest"});
+  }
   function saveLibFood(){
     const f=readLibSheet(), p=f.per100;
-    if(!f.name) return flash("foodNote","Donne un nom à l'aliment", true);
-    if(f.qty<=0) return;
-    if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0 && p.alcohol<=0 && p.kcal<=0) return;
-    saveFood(f); closeSheet(); renderFoodLib(); renderDay(); flash("foodNote","Aliment enregistré ✓");
+    if(!f.name) return sheetError("lErr","Donne un nom à l'aliment");
+    const fields={lP:"Prot.",lC:"Gluc.",lF:"Lip.",lFi:"Fibres",lA:"Alcool",lK:"Calories",lQty:"Quantité"};
+    const bad=Object.keys(fields).find(id=>badField(document.getElementById(id).value));
+    if(bad) return sheetError("lErr", tr("Valeur illisible dans le champ X").replace("X", tr(fields[bad])));
+    if(f.qty<=0) return sheetError("lErr","Indique une quantité supérieure à 0");
+    if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0 && p.alcohol<=0 && p.kcal<=0)
+      return sheetError("lErr","Renseigne au moins une valeur nutritionnelle, ou les calories seules");
+    if(libEditName && foodKey(libEditName)!==foodKey(f.name)) removeFood(libEditName);
+    saveFood(f); libEditName=null; closeSheet(); renderFoodLib(); renderDay(); flash("foodNote","Aliment enregistré ✓");
   }
 
-  function flash(id,msg,isErr){ const el=document.getElementById(id); el.textContent=msg; el.className="note"+(isErr?" err":""); setTimeout(()=>{el.textContent="";},2500); }
+  function flash(id,msg,isErr){ const el=document.getElementById(id); el.textContent=tr(msg); el.className="note"+(isErr?" err":""); setTimeout(()=>{el.textContent="";},2500); }
 
   // ---------- export / import ----------
   function exportData(){
@@ -2435,7 +2473,7 @@
     if(v.per100.alcohol===undefined) v.per100.alcohol="";
     if(v.per100.kcal===undefined) v.per100.kcal="";
     const esc=(x)=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
-    const mealLbl=(MEALS.find(m=>m.key===mealKey)||{}).label||"";
+    const mealLbl=tr((MEALS.find(m=>m.key===mealKey)||{}).label||"");
     sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet">
       <h3>${itemState.editIndex!==null ? "Modifier l'aliment" : "Ajouter un aliment"}</h3>
       <p class="sub">Saisis les valeurs pour 100 g, puis la quantité mangée. Destination : ${esc(mealLbl)}.</p>
@@ -2469,6 +2507,7 @@
         <div class="cm" id="iMacros">0 P · 0 G · 0 L</div>
       </div>
       <div id="iSplit"></div>
+      <div class="sheet-err" id="iErr" style="display:none"></div>
       <div class="save-toggle"><input type="checkbox" id="iSave"><label for="iSave">Enregistrer dans mes aliments (ajout en un geste ensuite)</label></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="close">Annuler</button>
@@ -2532,9 +2571,13 @@
   }
   function saveItem(){
     const it=readItemSheet();
-    if(it.qty<=0) return;
+    const fields={iP:"Prot.",iC:"Gluc.",iF:"Lip.",iFi:"Fibres",iA:"Alcool",iK:"Calories",iQty:"Quantité"};
+    const bad=Object.keys(fields).find(id=>badField(document.getElementById(id).value));
+    if(bad) return sheetError("iErr", tr("Valeur illisible dans le champ X").replace("X", tr(fields[bad])));
+    if(it.qty<=0) return sheetError("iErr","Indique une quantité supérieure à 0");
     const p=it.per100;
-    if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0 && p.alcohol<=0 && p.kcal<=0) return;
+    if(p.protein<=0 && p.carbs<=0 && p.fat<=0 && p.fiber<=0 && p.alcohol<=0 && p.kcal<=0)
+      return sheetError("iErr","Renseigne au moins une valeur nutritionnelle, ou les calories seules");
     if(!it.name) it.name="Aliment";
     const chk=document.getElementById("iSave");
     if(chk && chk.checked) saveFood(it);
@@ -2589,6 +2632,7 @@
       <div class="scan-stage"><video id="scanVideo" playsinline muted autoplay></video><div class="scan-frame"></div><div class="scan-hint" id="scanHint">Recherche du code…</div></div>
       <label class="f">Ou saisis le code à la main</label>
       <input class="t" id="manualCode" type="text" inputmode="numeric" placeholder="Ex. : 3017620422003">
+      <div class="sheet-err" id="codeErr" style="display:none;margin-top:10px"></div>
       <div class="sheet-actions">
         <button class="btn secondary" data-act="closeScan">Annuler</button>
         <button class="btn primary" data-act="manualLookup">Chercher</button>
@@ -2841,7 +2885,10 @@
     ["rP","rC","rF","rFi"].forEach(id=>document.getElementById(id).addEventListener("input",refreshScanKcal));
   }
   function refreshScanKcal(){
-    const p=num(document.getElementById("rP").value), c=num(document.getElementById("rC").value), f=num(document.getElementById("rF").value), fi=num((document.getElementById("rFi")||{}).value);
+    // mêmes valeurs que celles qui seront enregistrées (exactes si le champ n'a pas été retouché)
+    const sc=scaled(), d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
+    const val=(id,key)=>{ const v=(document.getElementById(id)||{}).value; return v===d1(sc[key]) ? sc[key] : num(v); };
+    const p=val("rP","protein"), c=val("rC","carbs"), f=val("rF","fat"), fi=val("rFi","fiber");
     const el=sheetRoot.querySelectorAll(".prod .per")[1];
     if(el) el.innerHTML='À ajouter · <b style="color:var(--acc)">'+Math.round(p*KCAL.protein+c*KCAL.carbs+f*KCAL.fat+fi*KCAL.fiber)+' kcal</b>';
   }
@@ -2856,7 +2903,11 @@
     const rp=num(document.getElementById("rP").value), rc=num(document.getElementById("rC").value),
           rf=num(document.getElementById("rF").value), rfi=num((document.getElementById("rFi")||{}).value);
     if(rp<=0 && rc<=0 && rf<=0 && rfi<=0 && !num(p.alcohol) && !num(p.labelKcal)) return;
-    const it={name:p.name, per100:{protein:rp/factor, carbs:rc/factor, fat:rf/factor, fiber:rfi/factor,
+    // Champ non retouché : on garde la valeur exacte du produit plutôt que de la recalculer
+    // depuis l'affichage arrondi au dixième (6,3 g devenait 6,33 g).
+    const sc=scaled(), d1=v=>String(Math.round(v*10)/10).replace(".",decSep());
+    const keep=(id,key,val)=> (document.getElementById(id)||{}).value===d1(sc[key]) ? num(p[key]) : val/factor;
+    const it={name:p.name, per100:{protein:keep("rP","protein",rp), carbs:keep("rC","carbs",rc), fat:keep("rF","fat",rf), fiber:keep("rFi","fiber",rfi),
               alcohol:num(p.alcohol), kcal:(rp<=0&&rc<=0&&rf<=0&&rfi<=0&&!num(p.alcohol))?num(p.labelKcal):0}, qty:qty};
     const day=getDay(currentDate);
     day[st.mealKey].items.push(it);
@@ -3345,7 +3396,25 @@
     "Yoga":{en:"Yoga"},
     "Pilates":{en:"Pilates"},
     "Danse — soutenue":{en:"Dance — vigorous"},
-    "Retour":{en:"Back"}
+    "Retour":{en:"Back"},
+    // v51
+    "Calories brûlées par jour en moyenne. Le déficit/surplus est calculé par rapport à ce chiffre. Astuce : sur une journée exceptionnelle (sortie, événement), touche la valeur « maintien » sur l'écran Jour pour l'ajuster ponctuellement — les statistiques s'adaptent automatiquement, sans toucher à ce réglage général.":{en:"Calories burned per day on average. Your deficit/surplus is computed against this number. Tip: on an unusual day (night out, event), tap the “maintenance” value on the Day screen to adjust it for that day only — stats adapt automatically, without changing this general setting."},
+    "kcal / jour":{en:"kcal / day"},
+    "Objectif à définir":{en:"Goal not set"},
+    "reste à prendre":{en:"left to gain"},
+    "Définis un poids cible dans l'onglet Objectif pour obtenir une projection.":{en:"Set a target weight in the Goal tab to get a projection."},
+    "Taille (m ou cm)":{en:"Height (m or cm)"},
+    "Poids cible invalide":{en:"Invalid target weight"},
+    "Taille invalide : en mètres (1,80) ou en centimètres (180)":{en:"Invalid height: in metres (1.80) or centimetres (180)"},
+    "Maintien":{en:"Maintenance"},
+    "Eau":{en:"Water"},
+    "Calories":{en:"Calories"},
+    "Quantité":{en:"Amount"},
+    "Indique une quantité supérieure à 0":{en:"Enter an amount greater than 0"},
+    "Renseigne au moins une valeur nutritionnelle, ou les calories seules":{en:"Enter at least one nutrition value, or calories only"},
+    "Toucher à nouveau pour supprimer définitivement":{en:"Tap again to delete permanently"},
+    "1 jour avec un maintien ajusté":{en:"1 day with an adjusted maintenance"},
+    "Code incomplet : saisis les 8 à 13 chiffres sous le code-barres.":{en:"Incomplete code: type the 8 to 13 digits under the barcode."}
   };;;
   // Phrases contenant des nombres : on traduit la forme, pas le contenu.
   const PATTERNS=[
@@ -3388,6 +3457,11 @@
       {en:"$1 % protein · $3 % carbs · $5 % fat"}],
     [/^(\d+) kcal \/ jour$/, {en:"$1 kcal / day"}],
     [/^(\d+) g$/, {en:"$1 g"}],
+    [/^(.+) · (\d+) kcal · pour 100 g : (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 · $2 kcal · per 100 g: $3 P / $4 C / $5 F"}],
+    [/^(.+) · (\d+) kcal · par portion : (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 · $2 kcal · per portion: $3 P / $4 C / $5 F"}],
+    [/^Saisis les valeurs pour 100 g, puis la quantité mangée\. Destination : (.+)\.$/, {en:"Enter the values per 100 g, then the amount eaten. Goes to: $1."}],
+    [/^Valeur invalide : (.+)$/, {en:"Invalid value: $1"}],
+    [/^Valeur illisible dans le champ (.+)$/, {en:"Unreadable value in the $1 field"}],
     [/^(.+) g · (.+) P \/ (.+) G \/ (.+) L$/, {en:"$1 g · $2 P / $3 C / $4 F"}],
     [/^(.+) P · (.+) G · (.+) L$/, {en:"$1 P · $2 C · $3 F"}],
     [/^(.+) % du repas$/, {en:"$1 % of the meal"}],
@@ -3558,11 +3632,16 @@
     }
   }
 
+  // Le poids affiché suit les pesées actuelles (une pesée ajoutée ou corrigée après la photo est prise en compte).
+  function refreshPhotoWeights(){
+    phList.forEach(p=>{ const w=weightForDate(p.date); if(w!=null) p.weight=Math.round(w*10)/10; });
+  }
   function renderPhotos(){
+    refreshPhotoWeights();
     const el=document.getElementById("phGrid");
     document.getElementById("phCount").textContent = phList.length + (phList.length>1?" photos":" photo");
     const list=phList.slice().sort((a,b)=>b.date.localeCompare(a.date));
-    if(!list.length){ el.innerHTML=`<div class="food-empty" style="grid-column:1/-1">Aucune photo pour le moment</div>`; renderCarousel(); updateStorageInfo(); return; }
+    if(!list.length){ el.innerHTML=`<div class="food-empty" style="grid-column:1/-1">Aucune photo pour le moment</div>`; renderCarousel(); updateStorageInfo(); applyI18n(el); return; }
     el.innerHTML=list.map(p=>{
       const w=(p.weight!=null)?fmtKg(p.weight)+" kg":"";
       const selIdx=phSel.indexOf(p.id);
@@ -3769,6 +3848,12 @@
       phList=phList.filter(p=>p.id!==phDraft.id); phList.push(phDraft);
       closeSheet(); phDraft=null; renderPhotos(); renderCompare(); flash("phNote","Photo enregistrée ✓");
     }catch(e){ flash("phNote","Enregistrement impossible : espace insuffisant", true); }
+  }
+  // Les photos ne sont pas dans la sauvegarde : une suppression est définitive, d'où un second appui.
+  function askDeletePhoto(btn){
+    btn.textContent=tr("Toucher à nouveau pour supprimer définitivement");
+    btn.dataset.act="phDelConfirm";
+    btn.style.background="var(--bad)"; btn.style.color="#fff";
   }
   async function deletePhotoDraft(){
     if(!phDraft) return;
@@ -4018,12 +4103,28 @@
     });
     // Le maintien vient du calculateur. Ce bouton permet de le refaire sans quitter le tutoriel.
     document.getElementById("tRedoCalc").addEventListener("click",()=>openTutoCalc());
-    document.getElementById("tAddFood").addEventListener("click",()=>{ closeTuto(); showSection("nutrition"); showView("day"); openItemSheet("lunch"); });
-    document.getElementById("tScanFood").addEventListener("click",()=>{ closeTuto(); showSection("nutrition"); showView("day"); openScanner("lunch"); });
+    // Le tutoriel est seulement masqué le temps d'ajouter l'aliment, puis reprend à l'écran suivant :
+    // le fermer ici faisait sauter les derniers écrans (dont l'avertissement sur la sauvegarde).
+    const suspendTuto=()=>{ tutoResumeAt=5; document.getElementById("tuto").style.display="none"; document.body.style.overflow="";
+      showSection("nutrition"); showView("day"); };
+    document.getElementById("tAddFood").addEventListener("click",()=>{ suspendTuto(); openItemSheet("lunch"); });
+    document.getElementById("tScanFood").addEventListener("click",()=>{ suspendTuto(); openScanner("lunch"); });
     const rb=document.getElementById("replayTuto");
     if(rb) rb.addEventListener("click", openTuto);
   }
-  let tutoCalcDone=false;
+  let tutoCalcDone=false, tutoResumeAt=null;
+  // Appelée à chaque fermeture de feuille : si le tutoriel attend, il réapparaît une fois
+  // qu'aucune feuille n'est plus ouverte (le passage scanner -> édition en enchaîne deux).
+  function maybeResumeTuto(){
+    if(tutoResumeAt==null) return;
+    setTimeout(()=>{
+      if(tutoResumeAt==null || sheetRoot.innerHTML.trim()) return;
+      const n=tutoResumeAt; tutoResumeAt=null;
+      document.getElementById("tuto").style.display="flex";
+      document.body.style.overflow="hidden";
+      tutoGo(n);
+    }, 350);
+  }
   function openTutoCalc(){
     openCalc({ mandatory:true, onDone:(m)=>{
       tutoCalcDone=true;
@@ -4077,7 +4178,7 @@
   // saisie d'une pesée
   document.getElementById("wAdd").addEventListener("click",()=>{
     const dEl=document.getElementById("wDate"), kEl=document.getElementById("wKg");
-    const iso=dEl.value, kg=Number(String(kEl.value).replace(",","."));
+    const iso=dEl.value, kg=parseNum(kEl.value);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return flash("wNote","Choisis une date",true);
     if(!(kg>0) || kg>500) return flash("wNote","Poids invalide",true);
     const existed = db.weights[iso]!=null;
@@ -4087,29 +4188,36 @@
     flash("wNote", existed ? "Pesée du "+fromISO(iso).toLocaleDateString(loc())+" mise à jour" : "Pesée enregistrée ✓");
   });
   document.getElementById("saveWSettings").addEventListener("click",()=>{
-    const g=Number(String(document.getElementById("setWGoal").value).replace(",","."));
-    const h=Number(String(document.getElementById("setHeight").value).replace(",","."));
+    const gRaw=document.getElementById("setWGoal").value, hRaw=document.getElementById("setHeight").value;
+    const g=parseNum(gRaw);
+    let h=parseNum(hRaw);
+    if(h>=100 && h<260) h=h/100;                 // taille saisie en centimètres (comme dans le calculateur)
+    // Champ rempli mais hors limites : on refuse au lieu d'effacer la valeur existante.
+    if(String(gRaw).trim() && !(g>0&&g<500)) return flash("wSaveNote","Poids cible invalide",true);
+    if(String(hRaw).trim() && !(h>0.5&&h<2.6)) return flash("wSaveNote","Taille invalide : en mètres (1,80) ou en centimètres (180)",true);
     db.settings.weightGoal = (g>0&&g<500)?g:0;
-    db.settings.height = (h>0.5&&h<2.6)?h:0;
+    db.settings.height = (h>0.5&&h<2.6)?Math.round(h*100)/100:0;
+    document.getElementById("setHeight").value = db.settings.height || "";
     const ok=persistNow();
     flash("wSaveNote", ok?"Objectif enregistré ✓":"Erreur d'enregistrement", !ok);
     renderWeight();
   });
   const sheetRoot=document.getElementById("sheetRoot");
-  function closeSheet(){ sheetRoot.innerHTML=""; }
+  function closeSheet(){ sheetRoot.innerHTML=""; maybeResumeTuto(); }
   function bindSheet(){
     const bd=sheetRoot.querySelector(".sheet-backdrop"); if(!bd) return;
     bd.addEventListener("click",(e)=>{ if(e.target===bd && bd.dataset.close){ if(scanState) closeScanner(); else closeSheet(); } });
     sheetRoot.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{
       const a=b.dataset.act;
       if(a==="close") closeSheet();
-      else if(a==="saveMaint"){ setDayMaintenance(currentDate, num(document.getElementById("maintInput").value)); closeSheet(); renderDay(); }
+      else if(a==="saveMaint"){ if(badField(document.getElementById("maintInput").value)) return; setDayMaintenance(currentDate, num(document.getElementById("maintInput").value)); closeSheet(); renderDay(); }
       else if(a==="resetMaint"){ setDayMaintenance(currentDate, 0); closeSheet(); renderDay(); }
       else if(a==="saveItem") saveItem();
       else if(a==="deleteItem") deleteCurrentItem();
       else if(a==="saveLib") saveLibFood();
       else if(a==="phSave") savePhotoDraft();
-      else if(a==="phDel") deletePhotoDraft();
+      else if(a==="phDel") askDeletePhoto(b);
+      else if(a==="phDelConfirm") deletePhotoDraft();
 
       else if(a==="closeScan") closeScanner();
       else if(a==="rescan") renderScanStage();
@@ -4118,7 +4226,8 @@
       else if(a==="editScan") editScannedItem();
       else if(a==="confirmClearW"){ db.weights={}; persistNow(); closeSheet(); renderSettings(); flash("dataNote","Pesées effacées"); }
       else if(a==="manualLookup"){ const v=(document.getElementById("manualCode")||{}).value||""; const code=v.replace(/[^0-9]/g,"");
-        if(code.length<6) return; stopCamera(); lookupProduct(code); }
+        if(code.length<6) return sheetError("codeErr","Code incomplet : saisis les 8 à 13 chiffres sous le code-barres.");
+        stopCamera(); lookupProduct(code); }
     }));
   }
   function openMaintSheet(){
@@ -4143,6 +4252,10 @@
   document.getElementById("datePicker").addEventListener("change",(e)=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){ currentDate=e.target.value; renderDay(); } });
   document.querySelectorAll(".period-toggle button").forEach(btn=>btn.addEventListener("click",()=>{ currentPeriod=btn.dataset.period; renderStats(); }));
   document.getElementById("saveSettings").addEventListener("click",()=>{
+    // Un champ rempli mais illisible bloque l'enregistrement : sinon il écraserait le réglage par 0.
+    const labels={setMaint:"Maintien", setProtein:"Protéines", setCarbs:"Glucides", setFat:"Lipides", setWater:"Eau"};
+    const bad=Object.keys(labels).find(id=>badField(document.getElementById(id).value));
+    if(bad) return flash("saveNote", tr("Valeur invalide : X").replace("X", tr(labels[bad])), true);
     db.settings.maintenance=num(document.getElementById("setMaint").value);
     db.settings.calGoal=Math.round(goalCaloriesFromMacros().cal);   // trace de la valeur, mais calGoal() reste la référence
     db.settings.proteinGoal=num(document.getElementById("setProtein").value);
@@ -4160,6 +4273,7 @@
   ["setProtein","setCarbs","setFat"].forEach(id=>{
     const el=document.getElementById(id); if(!el) return;
     el.addEventListener("change",()=>{
+      if(["setProtein","setCarbs","setFat"].some(i=>badField(document.getElementById(i).value))) return;
       db.settings.proteinGoal=num(document.getElementById("setProtein").value);
       db.settings.carbsGoal=num(document.getElementById("setCarbs").value);
       db.settings.fatGoal=num(document.getElementById("setFat").value);
@@ -4287,13 +4401,9 @@
     ["gesturestart","gesturechange","gestureend"].forEach(ev=>
       document.addEventListener(ev, e=>{ if(!inViewer(e)) e.preventDefault(); }, {passive:false}));
     document.addEventListener("touchmove", e=>{ if(e.touches && e.touches.length>1 && !inViewer(e)) e.preventDefault(); }, {passive:false});
-    let lastTouch=0;
-    document.addEventListener("touchend", e=>{
-      if(inViewer(e)) return;                      // dans la visionneuse, le double-tap sert à zoomer
-      const now=Date.now();
-      if(now-lastTouch<=320) e.preventDefault();
-      lastTouch=now;
-    }, {passive:false});
+    // Le double-tap-zoom est déjà neutralisé par touch-action:manipulation (CSS, en tête de fichier).
+    // L'ancien blocage par preventDefault sur touchend annulait aussi tout appui suivant le précédent
+    // de moins de 320 ms : deux « +250 ml » rapides n'en comptaient qu'un.
   })();
 
   // ---------- init ----------
