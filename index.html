@@ -785,6 +785,18 @@
   .save-toggle input{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border-radius:12px;
     border:2px solid var(--line-strong);background:var(--surface);flex-shrink:0;}
   .save-toggle input:checked{background:var(--acc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2308120D' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/26px no-repeat;border-color:var(--acc);}
+
+  /* ================= v53 : grands nombres ================= */
+  /* Chiffres plus aérés : graisse semi-grasse, sans resserrement des lettres, chasse proportionnelle
+     (les chiffres « tabulaires » ne servent qu'à aligner des colonnes). */
+  .gauge-num,.hero-meta .v,.stat .num,.kpi .num,.water-val,.goal-calc .gc-v,.adapt-box .ab-v,#calc .c-result .rv,.vslide .vs-w,.slide .sl-w{
+    font-weight:600;letter-spacing:0;font-variant-numeric:proportional-nums lining-nums;}
+  /* La jauge reprend de la largeur : le nombre central doit tenir à l'intérieur de l'arc. */
+  .gauge-wrap{max-width:280px;}
+  .gauge-center{bottom:26px;}
+  #gaugeNum{display:inline-block;}
+  .gauge-center .gauge-lbl{letter-spacing:.06em;max-width:60%;margin-left:auto;margin-right:auto;line-height:1.25;}
+  .gauge-num.fit{font-size:28px;}
 </style>
 </head>
 <body>
@@ -1382,8 +1394,8 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "52";                 // numéro affiché dans les réglages
-  const APP_DATE = "2026-10-03";             // date de cette version
+  const APP_VERSION = "53";                 // numéro affiché dans les réglages
+  const APP_DATE = "2026-10-04";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
     {key:"breakfast", label:"Petit-déjeuner"},
@@ -1651,7 +1663,7 @@
       svg+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="12" font-weight="400" fill="rgba(255,255,255,.85)" text-anchor="middle" dominant-baseline="middle">maintien</text>`;
     }
     svg+=`<text x="${cx-r}" y="${cy+26}" font-size="12" fill="rgba(255,255,255,.78)" text-anchor="middle" font-weight="400">0</text>`;
-    svg+=`<text x="${cx+r}" y="${cy+26}" font-size="12" fill="rgba(255,255,255,.78)" text-anchor="middle" font-weight="400">${goal}</text>`;
+    svg+=`<text x="${cx+r}" y="${cy+26}" font-size="12" fill="rgba(255,255,255,.78)" text-anchor="middle" font-weight="400">${fmtInt(goal)}</text>`;
     return svg+`</svg>`;
   }
 
@@ -2120,7 +2132,7 @@
     else {
       // En prise de masse, dépasser l'objectif n'est pas une faute : pas de corail.
       const cls = dir===1 ? "neutral" : "bad";
-      numEl.textContent="+"+fmtInt(-left); numEl.className="gauge-num "+cls; lblEl.textContent="AU-DESSUS DE L'OBJECTIF"; lblEl.className="gauge-lbl "+cls;
+      numEl.textContent="+"+fmtInt(-left); numEl.className="gauge-num "+cls; lblEl.textContent="AU-DELÀ DE L'OBJECTIF"; lblEl.className="gauge-lbl "+cls;
     }
     // Le bilan par rapport au maintien reste visible, en toutes lettres et jugé selon le sens de l'objectif.
     const sideEl=document.getElementById("sideBalance");
@@ -2128,6 +2140,7 @@
     if(!has || maint<=0){ sideEl.textContent="—"; sideEl.className="bs-v"; }
     else { sideEl.textContent=gapWords(balance); sideEl.className="bs-v "+(balanceGood(balance, maint)?"good":"bad"); }
     document.getElementById("gauge").innerHTML=gaugeSvg(totals.cal, goal, maint);
+    fitGaugeNum();
     const mc=document.getElementById("metaCal"); mc.textContent=fmtInt(totals.cal); mc.className="v"+(totals.cal>goal && goal>0 && dir!==1?" over":"");
     document.getElementById("metaGoal").textContent = goal>0 ? fmtInt(goal) : "—";
     const maintEl=document.getElementById("metaMaint");
@@ -2148,6 +2161,15 @@
     MEALS.forEach(m=>{ const el=document.querySelector(`.meal-card[data-meal="${m.key}"] .meal-sub`); if(el){ const c=mealTotals(day[m.key]).cal;
       el.textContent=c>0?fmtInt(c)+" kcal":""; } });
   }
+  // Le nombre central ne doit jamais toucher l'arc : l'espace intérieur fait environ 52 % de la largeur de la jauge.
+  function fitGaugeNum(){
+    const n=document.getElementById("gaugeNum"), w=document.querySelector("#view-day .gauge-wrap");
+    if(!n||!w) return;
+    n.classList.remove("fit");
+    const room=w.getBoundingClientRect().width*0.52;
+    if(room>0 && n.getBoundingClientRect().width>room) n.classList.add("fit");
+  }
+  window.addEventListener("resize", fitGaugeNum);
   // Le repas du même nom la veille, pour le reprendre d'un geste.
   function yesterdayMeal(mealKey){
     const y=getDay(addDays(currentDate,-1)); const items=(y[mealKey]&&y[mealKey].items)||[];
@@ -3601,6 +3623,7 @@
     "À CONSOMMER":{en:"TO EAT"},
     "OBJECTIF ATTEINT":{en:"GOAL REACHED"},
     "AU-DESSUS DE L'OBJECTIF":{en:"OVER THE GOAL"},
+    "AU-DELÀ DE L'OBJECTIF":{en:"OVER THE GOAL"},
     "Écart entre ton apport et ton objectif":{en:"Gap between your intake and your goal"},
     "7 derniers jours · pointillé = objectif":{en:"Last 7 days · dashed line = goal"},
     "Bilan vs maintien":{en:"Balance vs maintenance"},
