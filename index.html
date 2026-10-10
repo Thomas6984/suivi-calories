@@ -10,7 +10,9 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <title>Suivi calories</title>
+<link rel="preload" href="./fonts/jersey-10-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script src="./zxing.min.js" defer></script>
+<script src="./pixel-art.js"></script>
 <style>
   /* ============================================================
      Suivi — v10 · refonte visuelle : sombre, colorée, en mouvement
@@ -797,6 +799,312 @@
   #gaugeNum{display:inline-block;}
   .gauge-center .gauge-lbl{letter-spacing:.06em;max-width:60%;margin-left:auto;margin-right:auto;line-height:1.25;}
   .gauge-num.fit{font-size:28px;}
+
+  /* =====================================================================
+     v54 · LA QUÊTE DU ROYAUME : thème pixel (nuit étoilée, panneaux à bords nets)
+     Police des titres : Jersey 10 (licence SIL OFL 1.1), embarquée dans l'app : nette et lisible,
+     accents compris. Elle n'a qu'une graisse : le gras n'est jamais simulé (font-synthesis).
+     Les textes longs et les champs restent dans la police système, plus lisible.
+     ===================================================================== */
+  @font-face{font-family:"Jersey 10";src:url("./fonts/jersey-10-latin-400-normal.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap;}
+  html{font-synthesis:none;}
+  :root{
+    --pix:"Jersey 10", ui-monospace, "SF Mono", Menlo, monospace;
+    --bg0:#0E1430; --bg1:#121A3C; --surface:#18214A; --surface-2:#1E2958; --surface-3:#263468; --track:#24305E;
+    --line:rgba(255,255,255,.09); --line-strong:rgba(255,255,255,.18);
+    --ink:#EEF1FF; --ink-soft:#B8C0E0; --ink-faint:#9CA6CE;
+    --hero-a:#22306E; --hero-b:#141D48;
+    --gold:#F2C14E; --gold-l:#FFE08A; --gold-d:#9A6E14; --ember:#FF8A3C;
+    --r-commun:#9AA3AE; --r-rare:#5EA7FF; --r-epique:#B58CFF; --r-legendaire:#F2C14E; --r-mythique:#FF5A6E;
+    --pxb:0 0 0 2px #070A1C, inset 0 2px 0 rgba(255,255,255,.08), inset 0 -3px 0 rgba(0,0,0,.28);
+    --radius:6px;
+  }
+  html,body{background:#0E1430;}
+  body{background-color:#0E1430;background-image:var(--g-stars, none),linear-gradient(180deg,#0E1430 0%,#151E48 60%,#1B2556 100%);
+    background-size:288px 288px,100% 100%;background-attachment:fixed,fixed;image-rendering:pixelated;}
+  .aurora{display:none;}
+  #scrollBar{background:linear-gradient(90deg,var(--gold),var(--ember));box-shadow:none;height:3px;}
+  /* panneaux */
+  .card{border-radius:6px;border:none;box-shadow:var(--pxb), 0 6px 0 rgba(0,0,0,.25);
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)),var(--surface);}
+  .card.hero{background:linear-gradient(170deg,var(--hero-a),var(--hero-b));box-shadow:0 0 0 2px #070A1C, inset 0 2px 0 rgba(255,255,255,.12), inset 0 -3px 0 rgba(0,0,0,.3), 0 6px 0 rgba(0,0,0,.25);}
+  .hero .glow{display:none;}
+  .card-title,.meal-title,.sheet h3,.g-title,.tab-btn span,.date-label,.mode-seg button,.period-toggle button,.btn,.add-btn,.banner .bn-t,.kpi .lbl,.stat .lbl,.gauge-lbl,.hero-meta .k,.w-add,.tbtn,.c-btn,.lang-btn{font-family:var(--pix);letter-spacing:.01em;}
+  .card-title,.g-title{font-size:16px;font-weight:700;color:var(--gold-l);}
+  .meal-title{font-size:17px;}
+  .gauge-num,.stat .num,.kpi .num,.hero-meta .v,.water-val{font-family:var(--pix);font-weight:700;letter-spacing:0;}
+  .btn,.add-btn,.w-add,.sheet input.t,.settings-field input,.field input,.food,.stat,.kpi,.proj,.banner,.mode-seg,.period-toggle button,.date-nav button,.water-btns button{border-radius:5px;}
+  .btn.primary{background:linear-gradient(180deg,#FFE08A,#F2C14E 55%,#C98A1E);color:#2A1A04;box-shadow:0 0 0 2px #3A2606, inset 0 2px 0 rgba(255,255,255,.55), inset 0 -3px 0 rgba(0,0,0,.2), 0 4px 0 #3A2606;}
+  .btn.primary:active{transform:translateY(3px);box-shadow:0 0 0 2px #3A2606, inset 0 2px 0 rgba(255,255,255,.4), 0 1px 0 #3A2606;}
+  .btn.secondary{box-shadow:0 0 0 2px #070A1C, inset 0 2px 0 rgba(255,255,255,.08), 0 4px 0 #070A1C;border:none;}
+  .mode-seg button.active,.period-toggle button.active,.lang-btn.active{background:linear-gradient(180deg,#FFE08A,#F2C14E 55%,#C98A1E);color:#2A1A04;box-shadow:none;}
+  nav.tabbar{background:#0A0F26;border-top:2px solid #26346A;box-shadow:0 -4px 0 rgba(0,0,0,.35);}
+  nav.tabbar button.active{color:var(--gold-l);}
+  nav.tabbar button.active::before{border-radius:5px;background:rgba(242,193,78,.14);border:1px solid rgba(242,193,78,.35);}
+  nav.tabbar button.active svg{filter:drop-shadow(0 0 6px rgba(242,193,78,.6));}
+  .tab-btn svg{shape-rendering:crispEdges;}
+  .sheet{border-radius:10px 10px 0 0;background:linear-gradient(180deg,#24305E,#18214A);box-shadow:0 0 0 2px #070A1C, 0 -12px 40px rgba(0,0,0,.6);}
+  .toast{font-family:var(--pix);}
+  /* En-tête : la barre du héros */
+  .topbar{background:linear-gradient(180deg,rgba(10,15,38,.97),rgba(10,15,38,.9));}
+  #gHud{display:flex;align-items:center;gap:10px;padding:4px 2px 6px;}
+  body.classic #gHud{display:none;} body:not(.classic) header.top{display:none;}
+  .g-hud-portrait{width:46px;height:46px;flex:none;border-radius:6px;padding:0;border:none;background:#2A3470;box-shadow:0 0 0 2px var(--gold), 0 0 0 4px #070A1C;overflow:hidden;cursor:pointer;}
+  .g-hud-portrait img{width:100%;height:100%;image-rendering:pixelated;display:block;}
+  .g-hud-mid{flex:1;min-width:0;}
+  .g-hud-name{font-family:var(--pix);font-weight:700;font-size:16px;display:flex;gap:8px;align-items:baseline;white-space:nowrap;overflow:hidden;}
+  .g-hud-name span:first-child{overflow:hidden;text-overflow:ellipsis;}
+  .g-hud-lvl{color:var(--gold-l);font-size:14px;flex:none;}
+  .g-hud-title{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .g-hud-xp{position:relative;height:12px;margin-top:4px;background:#0A0F26;box-shadow:0 0 0 2px #070A1C;border-radius:2px;overflow:hidden;}
+  .g-hud-xp i{display:block;height:100%;width:0;background:linear-gradient(180deg,#FFE08A,#F2C14E 60%,#C98A1E);transition:width .5s steps(8);}
+  .g-hud-xp span{position:absolute;inset:0;font-family:var(--pix);font-size:10px;line-height:12px;text-align:center;color:#fff;text-shadow:0 1px 0 #000;}
+  .g-hud-res{display:flex;flex-direction:column;gap:3px;align-items:flex-end;font-family:var(--pix);font-weight:700;font-size:15px;}
+  .g-hud-res div{display:flex;align-items:center;gap:5px;}
+  .px-coin{width:12px;height:12px;background:radial-gradient(circle at 35% 35%,#FFF1A8 0 2px,#F2C14E 3px,#C98A1E 6px);box-shadow:0 0 0 1px #5A3A06;border-radius:2px;display:inline-block;}
+  .px-flame{width:12px;height:14px;display:inline-block;background:
+     linear-gradient(#FFE68A,#FFE68A) 4px 6px/4px 6px no-repeat, linear-gradient(#FFA03C,#FFA03C) 2px 3px/8px 10px no-repeat, linear-gradient(#E0501E,#E0501E) 4px 0/4px 14px no-repeat;}
+  .hud-date{display:none;}
+  /* nombres flottants */
+  .g-float{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:95;font-family:var(--pix);font-weight:700;font-size:20px;color:var(--gold-l);
+    text-shadow:0 2px 0 #000, 0 0 10px rgba(242,193,78,.6);pointer-events:none;animation:gUp 1.4s steps(14) forwards;white-space:nowrap;}
+  .g-float.neg{color:#FF9A8A;text-shadow:0 2px 0 #000;}
+  @keyframes gUp{0%{opacity:0;transform:translate(-50%,16px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-60px)}}
+  /* fenêtre du jeu */
+  #gModal{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(4,6,18,.78);}
+  #gModal.on{display:flex;}
+  .g-modal{width:100%;max-width:400px;max-height:88vh;overflow:auto;text-align:center;padding:20px 18px;border-radius:8px;
+    background:linear-gradient(180deg,#2E3C78,#1B2556);box-shadow:0 0 0 3px #070A1C, 0 0 0 5px var(--gold), 0 0 0 7px #070A1C, 0 12px 40px rgba(0,0,0,.6);animation:gPop .25s steps(5) both;}
+  @keyframes gPop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+  .g-kick{font-family:var(--pix);font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;}
+  .g-big{font-family:var(--pix);font-weight:700;font-size:40px;color:var(--gold-l);line-height:1.1;margin:4px 0;text-shadow:0 3px 0 #000;}
+  .g-h{font-family:var(--pix);font-size:22px;margin:4px 0 8px;color:#fff;}
+  .g-sub{font-family:var(--pix);font-size:14px;color:var(--gold-l);margin:12px 0 6px;}
+  .g-line{font-size:15px;line-height:1.5;color:var(--ink);margin:8px 0;}
+  .g-line.small,.small{font-size:13px;color:var(--ink-soft);}
+  .g-hero-mini img,.g-try img.g-hero-img{image-rendering:pixelated;}
+  .g-hero-mini{display:flex;justify-content:center;margin:6px 0;}
+  .g-hero-mini img{height:150px;}
+  .g-unlocks{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+  .g-unlocks .g-tile{width:52px;height:52px;}
+  .g-modal .btn{margin-top:14px;}
+  .g-chest-big{width:96px;height:80px;margin:8px auto;image-rendering:pixelated;background:
+    linear-gradient(#E0B54F,#E0B54F) 40px 30px/16px 18px no-repeat,
+    linear-gradient(#B98A2E,#B98A2E) 8px 30px/80px 6px no-repeat,
+    linear-gradient(#8A5E34,#8A5E34) 8px 30px/80px 44px no-repeat,
+    linear-gradient(#FFE08A,#FFE08A) 22px 6px/52px 10px no-repeat,
+    linear-gradient(#6E4A26,#6E4A26) 12px 14px/72px 16px no-repeat;filter:drop-shadow(0 0 12px rgba(242,193,78,.7));}
+  /* listes et lignes */
+  .g-list{display:flex;flex-direction:column;gap:2px;margin:10px 0;text-align:left;}
+  .g-row{display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:14px;}
+  .g-row b{font-family:var(--pix);color:var(--gold-l);white-space:nowrap;font-weight:700;}
+  .g-row.neg b{color:#FF9A8A;} .g-row.info span{color:var(--ink-soft);font-style:italic;}
+  .g-row i{font-style:normal;color:var(--ink-faint);font-size:12px;margin-right:4px;}
+  .g-total{font-size:14px;margin-top:6px;} .g-total b{font-family:var(--pix);color:var(--gold-l);}
+  /* scène du camp */
+  #gCamp{position:relative;margin-bottom:14px;border-radius:6px;overflow:hidden;display:flex;justify-content:center;background:#2A3470;box-shadow:var(--pxb), 0 6px 0 rgba(0,0,0,.25);cursor:pointer;}
+  #gCamp canvas{display:block;image-rendering:pixelated;}
+  .g-camp-lbl{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;}
+  .g-pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--pix);font-size:13px;padding:3px 8px;border-radius:4px;background:rgba(7,10,28,.82);box-shadow:0 0 0 1px rgba(255,255,255,.14);color:var(--ink);white-space:nowrap;}
+  .g-pill b{color:var(--gold-l);} .g-pill.warn{color:#FFB09A;}
+  /* quêtes */
+  .g-card{position:relative;}
+  .g-quest{display:flex;gap:10px;align-items:flex-start;padding:10px;margin:8px 0;border-radius:5px;background:linear-gradient(180deg,#F4E8C8,#E4D1A2);color:#2B2118;box-shadow:0 0 0 2px #5A4628, inset 0 -3px 0 rgba(0,0,0,.12);}
+  .g-quest .g-check{flex:none;width:24px;height:24px;border-radius:3px;background:#FBF4DE;box-shadow:0 0 0 2px #8A6F45;display:flex;align-items:center;justify-content:center;font-family:var(--pix);font-weight:700;color:#2E6B44;}
+  .g-quest.done .g-check{background:#2E7A48;color:#fff;box-shadow:0 0 0 2px #1C4A2C;}
+  .g-qtxt{flex:1;min-width:0;}
+  .g-qn{font-family:var(--pix);font-weight:700;font-size:15px;}
+  .g-qd{font-size:14px;line-height:1.35;color:#4A3B28;}
+  .g-qh{font-size:12px;color:#6B5A3C;margin-top:2px;}
+  .g-qr{font-family:var(--pix);font-size:12px;color:#7A5418;white-space:nowrap;padding-top:2px;}
+  .g-quest.special{background:linear-gradient(180deg,#F6D8C4,#E8BC9E);}
+  .g-quest.wk{background:var(--surface-2);color:var(--ink);box-shadow:0 0 0 2px #070A1C;}
+  .g-quest.wk .g-check{background:var(--surface-3);box-shadow:0 0 0 2px #070A1C;color:#7AE09A;}
+  .g-quest.wk.done .g-check{background:#2E7A48;color:#fff;}
+  .g-quest.wk .g-qd{color:var(--ink-soft);} .g-quest.wk .g-qh{color:var(--ink-faint);} .g-quest.wk .g-qr{color:var(--gold-l);}
+  .g-card > .g-qd,.g-gym .g-qd,.g-card .g-qd.solo{color:var(--ink-soft);}
+  .g-chest{display:flex;gap:12px;align-items:center;padding:10px;margin:10px 0;border-radius:5px;background:linear-gradient(180deg,#3B2C1F,#2A2018);box-shadow:0 0 0 2px #070A1C;}
+  .g-chest .g-qn{color:var(--gold-l);} .g-chest .g-qd{color:#D8C8A4;}
+  .g-chest.ready{box-shadow:0 0 0 2px var(--gold), 0 0 16px rgba(242,193,78,.45);animation:gGlow 1.2s steps(4) infinite alternate;}
+  @keyframes gGlow{to{box-shadow:0 0 0 2px var(--gold-l), 0 0 22px rgba(242,193,78,.7);}}
+  .g-chest-ico{flex:none;width:40px;height:34px;image-rendering:pixelated;background:
+    linear-gradient(#E0B54F,#E0B54F) 17px 13px/6px 7px no-repeat,linear-gradient(#B98A2E,#B98A2E) 2px 13px/36px 3px no-repeat,
+    linear-gradient(#8A5E34,#8A5E34) 2px 13px/36px 20px no-repeat,linear-gradient(#7A5230,#7A5230) 4px 2px/32px 11px no-repeat;}
+  .g-chest-ico.open{background:linear-gradient(#FFE08A,#FFE08A) 6px 2px/28px 6px no-repeat,linear-gradient(#E0B54F,#E0B54F) 17px 13px/6px 7px no-repeat,
+    linear-gradient(#B98A2E,#B98A2E) 2px 13px/36px 3px no-repeat,linear-gradient(#8A5E34,#8A5E34) 2px 13px/36px 20px no-repeat;}
+  .g-btn{min-height:44px;padding:8px 14px;border:none;border-radius:5px;font-family:var(--pix);font-weight:700;font-size:15px;color:var(--ink);
+    background:var(--surface-3);box-shadow:0 0 0 2px #070A1C, inset 0 2px 0 rgba(255,255,255,.1), 0 3px 0 #070A1C;cursor:pointer;}
+  .g-btn.gold{background:linear-gradient(180deg,#FFE08A,#F2C14E 55%,#C98A1E);color:#2A1A04;}
+  .g-btn:active{transform:translateY(2px);} .g-btn[disabled]{opacity:.45;}
+  .g-note{font-size:13px;line-height:1.45;padding:10px;border-radius:5px;margin:8px 0;background:rgba(255,255,255,.05);color:var(--ink-soft);}
+  .g-note.warn{background:rgba(255,138,60,.12);color:#FFD0B8;box-shadow:inset 0 0 0 1px rgba(255,138,60,.35);}
+  .g-note .g-btn{margin-top:8px;}
+  /* fioles */
+  .g-vials{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;text-align:center;}
+  .g-vial-glass{position:relative;width:30px;height:40px;margin:0 auto 4px;border-radius:3px 3px 6px 6px;background:#0A0F26;box-shadow:0 0 0 2px #7A86B0, inset 0 0 0 2px #070A1C;overflow:hidden;}
+  .g-vial-glass::before{content:"";position:absolute;top:-2px;left:9px;width:12px;height:6px;background:#8A6040;box-shadow:0 0 0 2px #070A1C;z-index:2;}
+  .g-vial-glass i{position:absolute;left:2px;right:2px;bottom:2px;display:block;max-height:calc(100% - 4px);}
+  .g-vial.ok .g-vial-glass{box-shadow:0 0 0 2px #5BD07A, inset 0 0 0 2px #070A1C;}
+  .g-vial-k{font-family:var(--pix);font-weight:700;font-size:14px;}
+  .g-vial.ok .g-vial-k{color:#7AE09A;}
+  .g-vial-v{font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .g-vial-r{font-size:12px;color:var(--ink-faint);}
+  /* festin */
+  .g-feast{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px;border:none;border-radius:5px;font-family:var(--pix);font-size:14px;color:var(--ink-soft);
+    background:rgba(255,255,255,.04);box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-sw{position:relative;width:32px;height:18px;background:#2A3470;box-shadow:0 0 0 2px #070A1C;flex:none;}
+  .g-sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;background:#9CA6CE;transition:left .15s steps(3);}
+  .g-feast.on{color:#FFD0A8;} .g-feast.on .g-sw{background:var(--ember);} .g-feast.on .g-sw::after{left:16px;background:#fff;}
+  .g-feast-note{font-size:13px;color:#FFD0A8;margin-top:8px;line-height:1.4;} .g-feast-note.warn{color:#FF9A8A;}
+  .meal-actions .g-feast{grid-column:1 / -1;justify-content:center;background:transparent;box-shadow:none;border:1px dashed rgba(255,255,255,.16);}
+  .meal-actions .g-feast.on{border-color:rgba(255,138,60,.6);background:rgba(255,138,60,.08);}
+  /* salle d'armes */
+  .g-gym{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;}
+  .g-sess{font-size:15px;} .g-sess b{font-family:var(--pix);}
+  .g-sess.m b{color:#AFC4E8;} .g-sess.k b{color:#F2B07A;}
+  .g-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:6px 0 8px;}
+  .g-day{height:30px;display:flex;align-items:center;justify-content:center;font-family:var(--pix);font-size:12px;border-radius:3px;background:#24305E;color:var(--ink-faint);}
+  .g-day.m{background:#8FA6C2;color:#0E1430;} .g-day.k{background:#C9884E;color:#1A0E04;}
+  .g-day.cur{box-shadow:0 0 0 2px var(--gold-l);} .g-day.fut{opacity:.45;}
+  .g-type{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 12px;}
+  .g-type button{min-height:80px;border:none;border-radius:6px;background:var(--surface-2);color:var(--ink);font-family:var(--pix);font-weight:700;font-size:16px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-type button[aria-pressed="true"]{box-shadow:0 0 0 2px #070A1C, 0 0 0 4px var(--gold);background:var(--surface-3);}
+  .g-ti{width:28px;height:16px;image-rendering:pixelated;}
+  .g-ti.m{background:linear-gradient(#8FA6C2,#8FA6C2) 0 2px/6px 12px no-repeat,linear-gradient(#8FA6C2,#8FA6C2) 22px 2px/6px 12px no-repeat,linear-gradient(#C6D0DC,#C6D0DC) 6px 6px/16px 4px no-repeat;}
+  .g-ti.k{background:linear-gradient(#C9884E,#C9884E) 0 10px/10px 6px no-repeat,linear-gradient(#C9884E,#C9884E) 18px 10px/10px 6px no-repeat,linear-gradient(#F2C894,#F2C894) 4px 2px/20px 8px no-repeat;}
+  .g-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px;}
+  .g-chips button{min-height:44px;min-width:56px;padding:6px 12px;border:none;border-radius:5px;background:var(--surface-2);color:var(--ink);font-family:var(--pix);font-size:14px;box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-chips button[aria-pressed="true"]{background:linear-gradient(180deg,#FFE08A,#F2C14E 55%,#C98A1E);color:#2A1A04;}
+  details.g-card.fold summary{font-size:16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
+  details.g-card.fold summary::-webkit-details-marker{display:none;}
+  .g-sum-r{font-size:13px;color:var(--ink-soft);}
+  /* onglet Héros */
+  .g-stage{padding:12px 10px;background:linear-gradient(180deg,#3A4A92 0%,#2A3672 55%,#1C2556 100%);}
+  .g-stage-grid{display:grid;grid-template-columns:64px 1fr 64px;gap:8px;align-items:center;}
+  .g-col{display:flex;flex-direction:column;gap:10px;}
+  .g-slot{position:relative;width:64px;height:64px;border:none;border-radius:6px;padding:0;background:#18214A;box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px #3A4A82;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .g-slot img{max-width:48px;max-height:48px;image-rendering:pixelated;}
+  .g-slot-e{font-family:var(--pix);font-size:11px;color:var(--ink-faint);}
+  .g-stage-hero{position:relative;display:flex;align-items:flex-end;justify-content:center;min-height:240px;background:radial-gradient(ellipse at 50% 92%,rgba(120,220,140,.35) 0 22%,transparent 23%),radial-gradient(ellipse at 50% 88%,rgba(255,255,255,.08),transparent 60%);}
+  .g-hero-img{height:240px;image-rendering:pixelated;max-width:100%;object-fit:contain;}
+  .g-pet-img{position:absolute;right:-6px;bottom:6px;height:66px;image-rendering:pixelated;animation:gBob 1.2s steps(2) infinite;}
+  @keyframes gBob{50%{transform:translateY(-3px);}}
+  .g-stage-info{text-align:center;margin-top:8px;}
+  .g-hname{font-family:var(--pix);font-weight:700;font-size:22px;color:#fff;text-shadow:0 2px 0 #000;}
+  .g-hsub{font-size:14px;color:var(--ink);} .g-hsub.small{font-size:12px;color:var(--ink-soft);}
+  .g-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 4px;}
+  .g-stats span{background:rgba(7,10,28,.45);border-radius:4px;padding:6px 2px;font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;}
+  .g-stats b{font-family:var(--pix);font-size:17px;color:var(--gold-l);}
+  .g-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+  .g-cats{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px;margin:0 0 10px;border-radius:6px;background:#121A3C;box-shadow:0 0 0 2px #070A1C;}
+  .g-cats button{min-height:52px;border:none;border-radius:4px;background:transparent;color:var(--ink-faint);font-family:var(--pix);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:2px 0;}
+  .g-cats button[aria-selected="true"]{background:var(--surface-3);color:var(--gold-l);box-shadow:inset 0 0 0 2px var(--gold);}
+  .g-cat-ico{width:26px;height:26px;background-size:contain;background-repeat:no-repeat;background-position:center;image-rendering:pixelated;}
+  .g-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .g-tile{position:relative;aspect-ratio:1;border:none;border-radius:6px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0)),#2A3164;box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--rc,#6A7090);}
+  .g-tile img{max-width:72%;max-height:72%;image-rendering:pixelated;}
+  .g-tile .g-tag{position:absolute;left:0;right:0;bottom:0;font-family:var(--pix);font-size:11px;line-height:16px;background:rgba(7,10,28,.78);color:#fff;}
+  .g-tile.locked img{filter:brightness(0) opacity(.55);} .g-tile.locked .g-tag{color:var(--ink-faint);}
+  .g-tile.eq{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--rc), 0 0 0 4px #7AE09A;}
+  .g-tile.own .g-tag{color:#7AE09A;}
+  .r-commun{--rc:var(--r-commun);} .r-rare{--rc:var(--r-rare);background-color:#24366E;} .r-epique{--rc:var(--r-epique);background-color:#36296E;}
+  .r-legendaire{--rc:var(--r-legendaire);background-color:#4A3A1C;} .r-mythique{--rc:var(--r-mythique);background-color:#4A1A2E;}
+  .g-slot.r-commun,.g-slot.r-rare,.g-slot.r-epique,.g-slot.r-legendaire,.g-slot.r-mythique{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--rc);}
+  .g-tile.r-legendaire:not(.locked) img,.g-slot.r-legendaire img{filter:drop-shadow(0 0 4px rgba(242,193,78,.75));}
+  .g-tile.r-mythique:not(.locked)::after,.g-slot.r-mythique::after{content:"";position:absolute;inset:3px;border-radius:4px;pointer-events:none;
+    background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.28) 45%,transparent 60%);background-size:260% 100%;animation:gShine 2.4s steps(12) infinite;}
+  .g-tile.r-mythique:not(.locked) img,.g-slot.r-mythique img{animation:gHue 3s steps(12) infinite;}
+  @keyframes gShine{from{background-position:120% 0}to{background-position:-160% 0}}
+  @keyframes gHue{0%{filter:drop-shadow(0 0 4px #FF5A6E)}50%{filter:drop-shadow(0 0 6px #B58CFF)}100%{filter:drop-shadow(0 0 4px #FF5A6E)}}
+  .g-stars{position:absolute;top:2px;right:4px;font-size:10px;color:var(--gold-l);text-shadow:0 1px 0 #000;letter-spacing:-1px;}
+  .g-stars.inline{position:static;font-size:16px;}
+  .g-foot{font-size:12px;color:var(--ink-faint);text-align:center;margin:14px 6px;line-height:1.5;}
+  .g-try{position:relative;display:flex;justify-content:center;align-items:flex-end;min-height:180px;margin:-4px 0 6px;border-radius:6px;background:radial-gradient(ellipse at 50% 90%,rgba(120,220,140,.3) 0 25%,transparent 26%),#2A3672;box-shadow:inset 0 0 0 2px #070A1C;}
+  .g-try .g-hero-img{height:192px;}
+  .g-try.big .g-hero-img{height:200px;}
+  .g-try .g-pet-img{right:16%;}
+  .g-rar{font-family:var(--pix);font-weight:700;color:var(--rc);}
+  .g-sheet-actions{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .g-sheet-actions .btn{margin-top:0;}
+  .g-class{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;padding:10px 12px;margin:4px 0;border:none;border-radius:5px;background:var(--surface-2);color:var(--ink);text-align:left;box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-class b{font-family:var(--pix);font-size:16px;color:var(--gold-l);} .g-class span{font-size:13px;color:var(--ink-soft);}
+  .g-class.on{box-shadow:0 0 0 2px #070A1C, 0 0 0 4px var(--gold);}
+  .g-ltabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0;padding:4px;border-radius:6px;background:#121A3C;box-shadow:0 0 0 2px #070A1C;}
+  .g-ltabs button{min-height:44px;border:none;border-radius:4px;background:transparent;color:var(--ink-faint);font-family:var(--pix);font-size:12px;cursor:pointer;padding:0 2px;}
+  .g-ltabs button[aria-selected="true"]{background:var(--surface-3);color:var(--gold-l);box-shadow:inset 0 0 0 2px var(--gold);}
+  .g-lbody{min-height:110px;}
+  .g-swatches{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0;}
+  .g-sw-b{width:44px;height:44px;border:none;border-radius:4px;box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-sw-b[aria-pressed="true"]{box-shadow:0 0 0 2px #070A1C, 0 0 0 5px var(--gold-l);}
+  .g-hairs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .g-hairs button{border:none;border-radius:5px;background:var(--surface-2);padding:4px 0;color:var(--ink-soft);font-family:var(--pix);font-size:12px;box-shadow:0 0 0 2px #070A1C;display:flex;flex-direction:column;align-items:center;cursor:pointer;min-height:44px;}
+  .g-hairs img{height:72px;image-rendering:pixelated;object-fit:cover;object-position:top;width:56px;}
+  .g-hairs button[aria-pressed="true"]{box-shadow:0 0 0 2px #070A1C, 0 0 0 4px var(--gold);color:var(--gold-l);}
+  /* carte de l'épopée */
+  .g-road{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto auto;gap:14px 6px;margin-top:10px;position:relative;}
+  .g-node{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;}
+  .g-node-ico{width:48px;height:48px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#18214A;box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px #3A4A82;}
+  .g-node-ico img{width:36px;height:36px;image-rendering:pixelated;opacity:.45;filter:grayscale(.7);}
+  .g-node.done .g-node-ico{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--gold);background:#2E3A70;} .g-node.done .g-node-ico img{opacity:1;filter:none;}
+  .g-node.next .g-node-ico{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px #7AE09A;} .g-node.next .g-node-ico img{opacity:.8;filter:none;}
+  .g-node-n{font-family:var(--pix);font-size:11px;color:var(--ink-soft);line-height:1.15;}
+  .g-node.done .g-node-n{color:var(--gold-l);}
+  .g-node-hero{position:absolute;top:-14px;right:2px;width:30px;height:30px;image-rendering:pixelated;border-radius:4px;box-shadow:0 0 0 2px var(--gold), 0 0 0 4px #070A1C;background:#2A3470;}
+  .g-start{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--ink-soft);}
+  .g-start img{width:30px;height:30px;image-rendering:pixelated;border-radius:4px;box-shadow:0 0 0 2px var(--gold);background:#2A3470;}
+  /* chroniques */
+  .g-story{font-size:15px;line-height:1.55;color:var(--ink);} .g-story b{color:var(--gold-l);font-weight:700;} .g-story p{margin:8px 0;}
+  .g-cal{display:grid;grid-template-columns:42px repeat(7,1fr);gap:4px;align-items:center;margin-top:10px;}
+  .g-cal-h{font-family:var(--pix);font-size:12px;text-align:center;color:var(--ink-faint);}
+  .g-cal-w{font-size:11px;color:var(--ink-faint);}
+  .g-cal-c{aspect-ratio:1;border-radius:3px;background:#24305E;}
+  .g-cal-c.m{background:#8FA6C2;} .g-cal-c.k{background:#C9884E;} .g-cal-c.cur{box-shadow:0 0 0 2px var(--gold-l);} .g-cal-c.fut{background:transparent;box-shadow:inset 0 0 0 1px #2A3470;}
+  .g-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-top:10px;}
+  .g-legend i{display:inline-block;width:12px;height:12px;border-radius:2px;background:#24305E;vertical-align:-1px;margin-right:5px;}
+  .g-legend i.m{background:#8FA6C2;} .g-legend i.k{background:#C9884E;}
+  .g-achs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .g-ach{padding:10px;border-radius:5px;background:var(--surface-2);box-shadow:0 0 0 2px #070A1C;font-size:12px;color:var(--ink-faint);display:flex;flex-direction:column;gap:2px;}
+  .g-ach b{font-family:var(--pix);font-size:14px;color:var(--ink-soft);}
+  .g-ach.on{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 2px var(--gold);color:var(--ink-soft);} .g-ach.on b{color:var(--gold-l);}
+  .g-ach i{font-style:normal;color:var(--gold);font-size:11px;}
+  /* réglages du jeu */
+  .g-set{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
+  .g-set.col{flex-direction:column;align-items:stretch;}
+  .g-step{display:flex;align-items:center;gap:10px;} .g-step b{font-family:var(--pix);font-size:18px;min-width:20px;text-align:center;}
+  .g-step button{width:44px;height:44px;border:none;border-radius:5px;background:var(--surface-3);color:var(--ink);font-size:20px;box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .g-days button{min-height:44px;border:none;border-radius:4px;background:var(--surface-2);color:var(--ink-soft);font-family:var(--pix);box-shadow:0 0 0 2px #070A1C;cursor:pointer;}
+  .g-days button[aria-pressed="true"]{background:linear-gradient(180deg,#FFE08A,#F2C14E 55%,#C98A1E);color:#2A1A04;}
+  .g-rules{margin-top:12px;} .g-rules summary{font-family:var(--pix);font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--gold-l);}
+  .hint{font-size:12px;color:var(--ink-faint);line-height:1.45;}
+
+  /* Jersey 10 dessine plus petit à taille égale : on agrandit les libellés pixel */
+  .card-title,.g-title{font-size:20px;letter-spacing:.02em;}
+  .meal-title{font-size:20px;}
+  .tab-btn span,nav.tabbar button span{font-size:15px;}
+  .date-label{font-size:20px;} .mode-seg button,.period-toggle button{font-size:16px;}
+  .btn{font-size:19px;} .add-btn{font-size:17px;} .gauge-lbl{font-size:15px;letter-spacing:.06em;} .hero-meta .k{font-size:14px;}
+  .kpi .lbl,.stat .lbl{font-size:14px;} .banner .bn-t{font-size:19px;} .w-add,.lang-btn{font-size:18px;}
+  .gauge-num{font-size:54px;} .gauge-num.fit{font-size:40px;} .stat .num,.kpi .num{font-size:32px;} .hero-meta .v{font-size:24px;} .water-val{font-size:20px;}
+  .g-hud-name{font-size:20px;} .g-hud-lvl{font-size:17px;} .g-hud-xp span{font-size:12px;} .g-hud-res{font-size:19px;}
+  .g-big{font-size:52px;} .g-h{font-size:26px;} .g-kick{font-size:15px;} .g-sub{font-size:17px;}
+  .g-row b{font-size:17px;} .g-total b{font-size:17px;} .g-pill{font-size:16px;}
+  .g-qn{font-size:18px;} .g-qr{font-size:15px;} .g-check{font-size:16px;}
+  .g-btn{font-size:18px;} .g-feast{font-size:17px;} .g-vial-k{font-size:17px;} .g-day{font-size:15px;}
+  .g-type button{font-size:19px;} .g-chips button{font-size:17px;}
+  .g-hname{font-size:28px;} .g-stats b{font-size:21px;} .g-cats button{font-size:14px;} .g-tile .g-tag{font-size:14px;line-height:18px;}
+  .g-class b{font-size:19px;} .g-ltabs button{font-size:15px;} .g-hairs button{font-size:15px;}
+  .g-node-n{font-size:14px;} .g-cal-h{font-size:15px;} .g-ach b{font-size:17px;} .g-step b{font-size:22px;} .g-days button{font-size:17px;}
+  .g-rules summary{font-size:19px;} .g-sum-r{font-size:16px;font-family:var(--pix);} .g-slot-e{font-size:13px;}
+  .toast{font-size:17px;}
+  .banner .bn-a button.primary{background:linear-gradient(180deg,#FFE08A,#F2C14E 55%,#C98A1E);border-color:#3A2606;color:#2A1A04;font-family:var(--pix);font-size:18px;}
+  .banner .bn-a button{font-family:var(--pix);font-size:18px;border-radius:5px;}
+  /* mode classique : le jeu disparaît, le suivi reste */
+  body.classic .g-only, body.classic #gCamp, body.classic #gQuests, body.classic #gGym, body.classic #gWeek, body.classic #gEpic, body.classic .meal-actions .g-feast, body.classic .g-feast-note, body.classic [data-view="hero"], body.classic [data-prog="chron"]{display:none !important;}
+  @media (prefers-reduced-motion:reduce){ .g-float,.g-pet-img,.g-chest.ready,.g-tile::after,.g-tile img,.g-slot img,.g-slot::after{animation:none !important;} }
+  @media (max-width:360px){ .g-stage-grid{grid-template-columns:56px 1fr 56px;} .g-slot{width:56px;height:56px;} .g-hero-img{height:200px;} .g-stage-hero{min-height:200px;} }
 </style>
 </head>
 <body>
@@ -804,6 +1112,15 @@
 <div id="scrollBar" aria-hidden="true"></div>
 <div id="app">
  <div class="topbar">
+  <div id="gHud" class="g-only">
+    <button class="g-hud-portrait" id="gHudPortrait" aria-label="Héros"><img id="gHudImg" alt=""></button>
+    <div class="g-hud-mid">
+      <div class="g-hud-name"><span id="gHudName"></span><span class="g-hud-lvl" id="gHudLvl"></span></div>
+      <div class="g-hud-title" id="gHudTitle"></div>
+      <div class="g-hud-xp" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Expérience" id="gHudXpBar"><i id="gHudXp"></i><span id="gHudXpTxt"></span></div>
+    </div>
+    <div class="g-hud-res"><div><i class="px-coin" aria-hidden="true"></i><span id="gHudGold">0</span></div><div id="gHudFlameBox"><i class="px-flame" aria-hidden="true"></i><span id="gHudFlame">0</span></div></div>
+  </div>
   <header class="top"><h1>Suivi calories</h1><span class="today" id="headerDate"></span></header>
  </div>
 
@@ -811,6 +1128,7 @@
     <!-- ============ AUJOURD'HUI ============ -->
     <div class="view active" id="view-day">
       <div id="dayBanners"></div>
+      <div id="gCamp" class="g-only" role="button" tabindex="0" aria-label="Voir mon héros"></div>
       <div class="date-nav">
         <button id="prevDay" aria-label="Jour précédent">‹</button>
         <div class="date-center">
@@ -841,7 +1159,10 @@
         <div class="adjusted-note" id="adjustedNote"></div>
       </div>
 
+      <div id="gQuests" class="g-only"></div>
       <div id="mealsContainer"></div>
+      <div id="gGym" class="g-only"></div>
+      <div id="gWeek" class="g-only"></div>
 
       <div class="card">
         <div class="card-head"><div class="card-title">Macros du jour</div><div class="right">grammes / objectif</div></div>
@@ -862,6 +1183,7 @@
 
     <!-- ============ POIDS ============ -->
     <div class="view" id="view-weight">
+      <div id="gEpic" class="g-only"></div>
       <div class="card hero"><span class="glow"></span><span class="glow b"></span>
         <div class="card-title">Poids actuel</div>
         <div class="card-sub" id="wHeroSub">Aucune pesée enregistrée</div>
@@ -937,11 +1259,15 @@
       </div>
     </div>
 
+    <!-- ============ HÉROS (jeu) ============ -->
+    <div class="view" id="view-hero"><div id="gHero"></div></div>
+
     <!-- ============ PROGRÈS ============ -->
     <div class="view" id="view-progress">
       <div class="mode-seg" id="progSeg">
         <button data-prog="stats" class="active">Statistiques</button>
         <button data-prog="photos">Photos</button>
+        <button data-prog="chron">Chroniques</button>
       </div>
 
       <div id="prog-stats">
@@ -1003,6 +1329,7 @@
         </details>
       </div>
 
+      <div id="prog-chron" style="display:none"></div>
       <div id="prog-photos" style="display:none">
         <div class="card">
           <div class="card-head"><div class="card-title">Mes photos</div><div class="right" id="phCount">0</div></div>
@@ -1060,6 +1387,8 @@
         <button class="btn primary" id="saveSettings">Enregistrer</button>
         <div class="note" id="saveNote"></div>
       </div>
+
+      <div class="card" id="gSettings"></div>
 
       <div class="card" id="dataCard">
         <div class="meal-title" style="margin-bottom:10px">Mes données</div>
@@ -1370,23 +1699,13 @@
 
 
   <nav class="tabbar" id="tabbar">
-    <button class="tab-btn active" data-view="day">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-      <span>Aujourd'hui</span>
-    </button>
-    <button class="tab-btn" data-view="weight">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21h16l-2.5-12H6.5L4 21z"/><circle cx="12" cy="5" r="2.5"/></svg>
-      <span>Poids</span>
-    </button>
-    <button class="tab-btn" data-view="progress">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/></svg>
-      <span>Progrès</span>
-    </button>
-    <button class="tab-btn" data-view="settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
-      <span>Réglages</span>
-    </button>
+    <button class="tab-btn active" data-view="day"><svg viewBox="0 0 12 12" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><rect x="5" y="0" width="1" height="1"/><rect x="5" y="1" width="2" height="1"/><rect x="5" y="2" width="1" height="1"/><rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="5" height="1"/><rect x="2" y="5" width="3" height="1"/><rect x="6" y="5" width="3" height="1"/><rect x="1" y="6" width="3" height="1"/><rect x="7" y="6" width="3" height="1"/><rect x="0" y="7" width="3" height="1"/><rect x="5" y="7" width="1" height="1"/><rect x="8" y="7" width="3" height="1"/><rect x="0" y="8" width="2" height="1"/><rect x="4" y="8" width="3" height="1"/><rect x="9" y="8" width="2" height="1"/><rect x="0" y="9" width="1" height="1"/><rect x="3" y="9" width="5" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="0" y="10" width="12" height="1"/></svg><span>Aujourd'hui</span></button>
+    <button class="tab-btn" data-view="weight"><svg viewBox="0 0 12 12" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><rect x="0" y="1" width="3" height="1"/><rect x="6" y="1" width="2" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="3" y="2" width="3" height="1"/><rect x="8" y="2" width="4" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="8" y="3" width="1" height="1"/><rect x="11" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="8" y="5" width="1" height="1"/><rect x="11" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="8" y="6" width="2" height="1"/><rect x="11" y="6" width="1" height="1"/><rect x="0" y="7" width="1" height="1"/><rect x="4" y="7" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="11" y="7" width="1" height="1"/><rect x="0" y="8" width="4" height="1"/><rect x="6" y="8" width="3" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="4" y="9" width="3" height="1"/><rect x="9" y="9" width="3" height="1"/></svg><span>Poids</span></button>
+    <button class="tab-btn" data-view="hero"><svg viewBox="0 0 12 12" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><rect x="1" y="1" width="10" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="5" y="2" width="2" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="5" y="3" width="2" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="3" y="4" width="6" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="5" y="5" width="2" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="5" y="6" width="2" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="2" y="7" width="1" height="1"/><rect x="5" y="7" width="2" height="1"/><rect x="9" y="7" width="1" height="1"/><rect x="2" y="8" width="1" height="1"/><rect x="5" y="8" width="2" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="3" y="9" width="1" height="1"/><rect x="5" y="9" width="2" height="1"/><rect x="8" y="9" width="1" height="1"/><rect x="4" y="10" width="4" height="1"/><rect x="5" y="11" width="2" height="1"/></svg><span>Héros</span></button>
+    <button class="tab-btn" data-view="progress"><svg viewBox="0 0 12 12" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="0" width="9" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="10" y="1" width="1" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="3" y="2" width="6" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="3" y="4" width="5" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="3" y="6" width="6" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="1" y="7" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="1" y="8" width="10" height="1"/><rect x="1" y="9" width="1" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="2" y="10" width="9" height="1"/></svg><span>Progrès</span></button>
+    <button class="tab-btn" data-view="settings"><svg viewBox="0 0 12 12" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><rect x="5" y="0" width="2" height="1"/><rect x="2" y="1" width="1" height="1"/><rect x="4" y="1" width="4" height="1"/><rect x="9" y="1" width="1" height="1"/><rect x="1" y="2" width="10" height="1"/><rect x="2" y="3" width="3" height="1"/><rect x="7" y="3" width="3" height="1"/><rect x="1" y="4" width="3" height="1"/><rect x="8" y="4" width="3" height="1"/><rect x="0" y="5" width="4" height="1"/><rect x="8" y="5" width="4" height="1"/><rect x="0" y="6" width="4" height="1"/><rect x="8" y="6" width="4" height="1"/><rect x="1" y="7" width="3" height="1"/><rect x="8" y="7" width="3" height="1"/><rect x="2" y="8" width="3" height="1"/><rect x="7" y="8" width="3" height="1"/><rect x="1" y="9" width="10" height="1"/><rect x="2" y="10" width="1" height="1"/><rect x="4" y="10" width="4" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="5" y="11" width="2" height="1"/></svg><span>Réglages</span></button>
   </nav>
+  <div id="gModal"></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -1394,8 +1713,8 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "53";                 // numéro affiché dans les réglages
-  const APP_DATE = "2026-10-04";             // date de cette version
+  const APP_VERSION = "54";                 // numéro affiché dans les réglages
+  const APP_DATE = "2026-10-10";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
     {key:"breakfast", label:"Petit-déjeuner"},
@@ -2186,6 +2505,7 @@
   }
   function renderDay(){
     if(currentDate>todayISO()) currentDate=todayISO();
+    const gS = G ? gRefresh() : null;
     document.getElementById("dayLabel").textContent=labelForDate(currentDate);
     document.getElementById("nextDay").disabled=currentDate===todayISO();
     const picker=document.getElementById("datePicker"); picker.value=currentDate; picker.max=todayISO();
@@ -2224,8 +2544,8 @@
         (rows?`<div class="food-list">${rows}</div>`:"")+`${detail}${note}`+
         `<div class="meal-actions${copy?" two":""}">`+
           `<button class="add-btn" data-additem="${m.key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter</button>`+
-          copy+
-        `</div></div>`; }).join("");
+          copy+gFeastBtn(m.key, items.length>0)+
+        `</div>`+gFeastNote(m.key)+`</div>`; }).join("");
     container.querySelectorAll("textarea").forEach(inp=>inp.addEventListener("input", onNoteInput));
     container.querySelectorAll("[data-additem]").forEach(b=>b.addEventListener("click",()=>openAddSheet(b.dataset.additem)));
     container.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>copyYesterday(b.dataset.copy)));
@@ -2249,6 +2569,7 @@
         const d2=getDay(iso); d2[parts[0]].items.splice(idx,0,removed); setDay(iso,d2); renderDay(); });
     }));
     updateDayCards(day);
+    gAfterDay(gS, container);
     renderBanners();
     applyI18n();
   }
@@ -2420,6 +2741,7 @@
     document.getElementById("appVersion").textContent="v"+APP_VERSION;
     document.getElementById("appVersionDate").textContent=fromISO(APP_DATE).toLocaleDateString(loc(),{day:"numeric",month:"long",year:"numeric"});
     document.getElementById("versionNote").textContent="L'application se met à jour toute seule à l'ouverture.";
+    if(G){ gRefresh({silent:true}); gRenderSettings(); }
   }
   function renderFoodLib(){
     const el=document.getElementById("foodLib"); if(!el) return;
@@ -2555,7 +2877,7 @@
       persistNow();
       const withPhotos = !!(document.getElementById("exportPhotos")||{}).checked;
       const payload={app:"suivi-calories", version:7, exportedAt:new Date().toISOString(),
-                     settings:db.settings, days:db.days, weights:db.weights, foods:db.foods};
+                     settings:db.settings, days:db.days, weights:db.weights, foods:db.foods, game:G};
       if(withPhotos){
         let list=exportPhotoCache || (phList.length ? phList : null);
         if(!list){ try{ list=await phGetAll(); }catch(e){ list=[]; } }
@@ -2596,6 +2918,7 @@
         if(Array.isArray(parsed.foods)) db.foods=parsed.foods;
         if(parsed.settings) db.settings={...DEFAULT_SETTINGS, ...parsed.settings};
         persistNow();
+        if(parsed.game && typeof parsed.game==="object"){ try{ localStorage.setItem(GAME_KEY, JSON.stringify(parsed.game)); }catch(e){} loadGame(); gPrev=null; }
         let pAdded=0;
         if(Array.isArray(parsed.photos)){
           for(const p of parsed.photos){
@@ -3403,6 +3726,10 @@
   const DEC_COMMA=["fr"];                 // la virgule décimale ne concerne plus que le français
   const DICT={
     "Nutrition":{en:"Nutrition"},
+    "Chroniques":{en:"Chronicles"},
+    "Héros":{en:"Hero"},
+    "Voir mon héros":{en:"See my hero"},
+    "Expérience":{en:"Experience"},
     "Poids":{en:"Weight"},
     "Jour":{en:"Day"},
     "Stats":{en:"Stats"},
@@ -4140,6 +4467,7 @@
     db.settings.lang=l; persistNow();
     document.querySelectorAll("[data-lang]").forEach(b=>b.classList.toggle("active", b.dataset.lang===l));
     setHeaderDate();
+    gRenderTabbar();
     showView(currentView);
     flash("langNote","Langue enregistrée ✓");
   }
@@ -4682,6 +5010,7 @@
     document.getElementById("tuto").style.display="none";
     document.body.style.overflow="";
     renderDay();
+    setTimeout(gMaybeWelcome, 250);
   }
   function refreshTutoCalc(){
     const p=num(document.getElementById("tProt").value),
@@ -4763,7 +5092,7 @@
 
   // ---------- navigation ----------
   // Une seule barre de quatre onglets fixes : plus de second niveau qui change selon la section.
-  const VIEWS=["day","weight","progress","settings"];
+  const VIEWS=["day","weight","hero","progress","settings"];
   function showView(name){
     if(!VIEWS.includes(name)) name="day";
     currentView=name;
@@ -4771,17 +5100,20 @@
     document.querySelectorAll("#tabbar .tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
     window.scrollTo(0,0);
     if(name==="day") renderDay();
-    else if(name==="weight"){ renderWeight(); renderWeightList(); }
+    else if(name==="weight"){ renderWeight(); renderWeightList(); if(G){ gRefresh({silent:true}); gRenderEpic(); } }
+    else if(name==="hero"){ if(G) gRefresh({silent:true}); gRenderHero(); }
     else if(name==="progress") showProg(progTab);
     else if(name==="settings") renderSettings();
     applyI18n();
   }
   function showProg(tab){
-    progTab = tab==="photos" ? "photos" : "stats";
+    progTab = (tab==="photos"||tab==="chron") ? tab : "stats";
+    if(progTab==="chron" && G && G.classic) progTab="stats";
     document.getElementById("prog-stats").style.display = progTab==="stats" ? "" : "none";
     document.getElementById("prog-photos").style.display = progTab==="photos" ? "" : "none";
+    document.getElementById("prog-chron").style.display = progTab==="chron" ? "" : "none";
     document.querySelectorAll("#progSeg [data-prog]").forEach(b=>b.classList.toggle("active", b.dataset.prog===progTab));
-    if(progTab==="stats") renderStats(); else { loadPhotos(); renderCompare(); }
+    if(progTab==="stats") renderStats(); else if(progTab==="chron") gRenderChron(); else { loadPhotos(); renderCompare(); }
     applyI18n();
   }
   document.querySelectorAll("#tabbar .tab-btn").forEach(btn=>btn.addEventListener("click",()=>showView(btn.dataset.view)));
@@ -4801,7 +5133,7 @@
     const existed = db.weights[iso]!=null;
     setWeight(iso,kg);
     kEl.value="";
-    renderWeightList(); renderWeight(); renderBanners(); applyI18n();
+    renderWeightList(); renderWeight(); renderBanners(); if(G){ gRefresh(); gRenderEpic(); } applyI18n();
     flash("wNote", existed ? "Pesée du "+fromISO(iso).toLocaleDateString(loc())+" mise à jour" : "Pesée enregistrée ✓");
   });
   const sheetRoot=document.getElementById("sheetRoot");
@@ -5024,6 +5356,857 @@
     // de moins de 320 ms : deux « +250 ml » rapides n'en comptaient qu'un.
   })();
 
+  // =====================================================================
+  //  LA QUÊTE DU ROYAUME : moteur de jeu
+  //  Deux ressources : l'expérience (XP), qui fait monter de niveau et ne se
+  //  dépense jamais, et l'or, qui achète et améliore l'équipement.
+  //  Tout est recalculé à partir de l'historique (repas, eau, pesées) et des
+  //  quelques données propres au jeu (séances, festins, achats) : un repas
+  //  corrigé après coup corrige aussi les récompenses. Les journées passées
+  //  sont « closes » ; la journée en cours ne reçoit que les gains immédiats.
+  // =====================================================================
+  const GAME_KEY="suivi-calories:game";
+  const G_XP={meal:10, complete:20, range:30, prot:20, lip:15, water:15, triple:25, sess:40, sessShort:20, weigh:15, honest:5, quest:20, wquest:100, regiment:120, epic:150};
+  const G_GOLD={meal:3, complete:8, range:15, prot:8, lip:5, water:5, triple:15, sess:20, sessShort:10, weigh:5, quest:10, wquest:60, regiment:80, epic:100, disc:50};
+  const G_PEN={surplus:[60,60], heavy:[90,90], feast:[[40,40],[60,60],[80,80]], capXp:300, capGold:300};
+  const REPAIR_COST=100, MAX_LVL=50;
+  function stepCost(n){ return Math.round((100+26*Math.pow(n-1,1.38))/10)*10; }
+  const LVL_TH=(()=>{ const a=[0,0]; let t=0; for(let n=1;n<=MAX_LVL;n++){ t+=stepCost(n); a.push(t); } return a; })();
+  function levelOf(xp){ let L=1; while(L<MAX_LVL && xp>=LVL_TH[L+1]) L++; return L; }
+  function gl(){ return currentLang()==="en" ? 1 : 0; }
+  function L2(fr,en){ return gl() ? en : fr; }
+  function nm(pair){ return Array.isArray(pair) ? (pair[gl()]||pair[0]) : pair; }
+
+  const TITLES=[[1,"Vagabond","Vagabonde","Wanderer","Wanderer"],[5,"Écuyer","Écuyère","Squire","Squire"],
+    [10,"Homme d'armes","Femme d'armes","Man-at-arms","Woman-at-arms"],[15,"Chevalier","Chevalière","Knight","Knight"],
+    [20,"Chevalier banneret","Chevalière banneret","Knight banneret","Knight banneret"],[25,"Baron","Baronne","Baron","Baroness"],
+    [30,"Comte","Comtesse","Count","Countess"],[40,"Duc","Duchesse","Duke","Duchess"],[50,"Légende du Royaume","Légende du Royaume","Legend of the Realm","Legend of the Realm"]];
+  function titleOf(L){ let t=TITLES[0]; TITLES.forEach(x=>{ if(L>=x[0]) t=x; }); const f=G&&G.hero&&G.hero.fem; return gl() ? (f?t[4]:t[3]) : (f?t[2]:t[1]); }
+  function actOf(L){ return L>=35 ? L2("IV. La Seigneurie","IV. Lordship") : L>=20 ? L2("III. La Chevalerie","III. Knighthood") : L>=10 ? L2("II. L'Apprentissage","II. Apprenticeship") : L2("I. Le Départ","I. Departure"); }
+  const CLASSES={
+    guerrier:{n:["Guerrier","Guerrière","Warrior"], fam:["prot","muscu"], d:["Protéines et musculation","Protein and weight training"]},
+    rodeur:{n:["Rôdeur","Rôdeuse","Ranger"], fam:["cardio","regul"], d:["Cardio et régularité (repas notés, journées complètes)","Cardio and consistency (meals logged, full days)"]},
+    mage:{n:["Mage","Mage","Mage"], fam:["eau","lip"], d:["Eau et lipides dans la cible","Water and fat on target"]},
+    paladin:{n:["Paladin","Paladine","Paladin"], fam:["ration"], d:["La juste mesure et le triplé","On-target days and the triple"]},
+    eclaireur:{n:["Éclaireur","Éclaireuse","Scout"], fam:["pesee","festin","epopee"], d:["Pesées, épopée et festins maîtrisés","Weigh-ins, the epic and controlled feasts"]}
+  };
+  function className(id){ const c=CLASSES[id]; if(!c) return ""; return gl() ? c.n[2] : (G.hero.fem?c.n[1]:c.n[0]); }
+
+  // Quêtes du jour : 3 tirées chaque matin dans cette réserve (tirage déterministe par date)
+  const DQ={
+    ravit:{n:["Le ravitaillement","Supplies"], d:["Noter le petit-déjeuner, le déjeuner et le dîner","Log breakfast, lunch and dinner"], fam:"regul", live:true, ok:c=>c.full},
+    aube:{n:["L'appel de l'aube","Dawn call"], d:["Noter un petit-déjeuner","Log a breakfast"], fam:"regul", live:true, ok:c=>c.hasBreakfast},
+    mesure:{n:["La juste mesure","Just right"], d:["Finir la journée entre 90 et 110 % de son objectif calorique","End the day at 90–110 % of your calorie goal"], fam:"ration", live:false, need:c=>c.goal>0, ok:c=>c.inRange},
+    force:{n:["La force du guerrier","Warrior's strength"], d:["Atteindre au moins 90 % de ses protéines","Reach at least 90 % of your protein"], fam:"prot", live:true, need:c=>c.P>0, ok:c=>c.protOk},
+    graisse:{n:["La juste graisse","Fat on target"], d:["Finir entre 80 et 110 % de ses lipides","End at 80–110 % of your fat goal"], fam:"lip", live:false, need:c=>c.F>0, ok:c=>c.fatOk},
+    source:{n:["La source claire","Clear spring"], d:["Atteindre son objectif d'eau","Reach your water goal"], fam:"eau", live:true, need:c=>c.W>0, ok:c=>c.waterOk},
+    triple:{n:["Le triplé","The triple"], d:["Protéines, lipides et eau atteints le même jour","Protein, fat and water on the same day"], fam:"ration", live:false, need:c=>c.P>0&&c.F>0&&c.W>0, ok:c=>c.protOk&&c.fatOk&&c.waterOk},
+    salle:{n:["La salle d'armes","The armoury"], d:["Faire une séance d'au moins 30 minutes","Train for at least 30 minutes"], fam:["muscu","cardio"], live:true, need:c=>c.trainDay, ok:c=>c.sessMin>=30},
+    balance:{n:["La balance du roi","The king's scales"], d:["Se peser aujourd'hui","Weigh in today"], fam:"pesee", live:true, ok:c=>c.weighed}
+  };
+  // Quêtes de la semaine : 2 permanentes + 2 tirées le lundi
+  const WQ={
+    regiment:{n:["Le régiment","The regiment"], d:["Atteindre son objectif de séances de la semaine","Hit your weekly training goal"], fam:["muscu","cardio"]},
+    banquet:{n:["Le banquet maîtrisé","The controlled banquet"], d:["Pas plus de 2 festins dans la semaine","No more than 2 feasts this week"], fam:"festin"},
+    garde:{n:["La garde de sept jours","The seven-day watch"], d:["Noter au moins un repas chaque jour","Log at least one meal every day"], fam:"regul", goal:7, key:"mealDays"},
+    tour:{n:["Le tour du château","Round the castle"], d:["5 journées dans sa fourchette","5 on-target days"], fam:"ration", goal:5, key:"inRange", need:c=>c.goal>0},
+    semguer:{n:["La semaine du guerrier","Warrior's week"], d:["5 journées avec les protéines atteintes","5 days with protein reached"], fam:"prot", goal:5, key:"prot", need:c=>c.P>0},
+    pesees:{n:["Les trois pesées","Three weigh-ins"], d:["3 pesées dans la semaine","3 weigh-ins this week"], fam:"pesee", goal:3, key:"weigh"},
+    cave:{n:["La cave pleine","The full cellar"], d:["Atteindre l'objectif d'eau 5 jours","Reach your water goal on 5 days"], fam:"eau", goal:5, key:"water", need:c=>c.W>0},
+    complet:{n:["Le complet","All-rounder"], d:["Au moins une séance de musculation et une de cardio","At least one weight and one cardio session"], fam:["muscu","cardio"]}
+  };
+  const ACH=[
+    ["premierfeu",["Premier feu","First fire"],["Noter son premier repas","Log your first meal"],S=>S.stats.meals>=1],
+    ["sept",["Sept soleils","Seven suns"],["7 jours de flamme","A 7-day flame"],S=>S.flameBest>=7],
+    ["lune",["La lune entière","Full moon"],["30 jours de flamme","A 30-day flame"],S=>S.flameBest>=30],
+    ["centenaire",["Le centenaire","The centenarian"],["100 jours de flamme","A 100-day flame"],S=>S.flameBest>=100],
+    ["lame",["Première lame","First blade"],["Noter une première séance","Log a first session"],S=>S.stats.sess>=1],
+    ["pilier",["Le pilier","The pillar"],["4 semaines d'affilée à son objectif de séances","4 weeks in a row at your training goal"],S=>S.discBest>=4],
+    ["combats",["Cent combats","A hundred fights"],["100 séances","100 sessions"],S=>S.stats.sess>=100],
+    ["fer",["Cœur de fer","Iron heart"],["50 séances de musculation","50 weight sessions"],S=>S.stats.muscu>=50],
+    ["coureur",["Le coureur des landes","Moor runner"],["50 séances de cardio","50 cardio sessions"],S=>S.stats.cardio>=50],
+    ["complet",["Le complet","All-rounder"],["4 séances de musculation et 4 de cardio dans le même mois","4 weight and 4 cardio sessions in one month"],S=>S.stats.monthBoth],
+    ["carto",["Le cartographe","The cartographer"],["20 pesées","20 weigh-ins"],S=>S.stats.weigh>=20],
+    ["equi",["L'équilibriste","The tightrope walker"],["20 journées dans la fourchette","20 on-target days"],S=>S.stats.inRange>=20],
+    ["gourmet",["Le gourmet curieux","Curious gourmet"],["50 aliments différents notés","50 different foods logged"],S=>S.stats.foods.size>=50],
+    ["honnete",["Cœur honnête","Honest heart"],["Déclarer 10 festins","Declare 10 feasts"],S=>S.stats.feasts>=10],
+    ["pelerin",["Le pèlerin","The pilgrim"],["Atteindre le Château de l'épopée","Reach the Castle of the epic"],S=>S.epic>=10],
+    ["collection",["Le collectionneur","The collector"],["Posséder 20 objets","Own 20 items"],()=>ownedCount()>=20]
+  ];
+  const PLACES=[["Le Village","The Village"],["La Forêt","The Forest"],["Le Gué","The Ford"],["Le Moulin","The Mill"],["Les Collines","The Hills"],
+    ["L'Abbaye","The Abbey"],["Le Col","The Pass"],["La Citadelle","The Citadel"],["Les Remparts","The Ramparts"],["Le Château","The Castle"]];
+
+  // ---------- objets ----------
+  const ITEMS=(window.PX_ITEMS||[]).slice();
+  const ITEM=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+  const SLOT_ORDER=["head","chest","legs","feet","weapon","pet"];
+  const SLOT_NAMES={head:["Casque","Helmet"],chest:["Plastron","Chest"],legs:["Jambes","Legs"],feet:["Bottes","Boots"],weapon:["Arme","Weapon"],pet:["Familier","Companion"]};
+  const DEFAULT_EQ={chest:"c_tunique",legs:"l_braies",feet:"b_sandales",weapon:"w_baton"};
+  function rarityOf(it){ const l=it.lvl; return l>=50?"mythique":l>=35?"legendaire":l>=20?"epique":l>=10?"rare":"commun"; }
+  const RARITY={commun:["Commun","Common"],rare:["Rare","Rare"],epique:["Épique","Epic"],legendaire:["Légendaire","Legendary"],mythique:["Mythique","Mythic"]};
+  const GLORY={commun:10,rare:30,epique:80,legendaire:200,mythique:500};
+  function owns(id){ const it=ITEM[id]; if(!it) return false; if(it.starter) return true; if(it.gift && lastState && lastState.level>=it.gift) return true; return !!G.inv[id]; }
+  function ownedCount(){ return ITEMS.filter(i=>owns(i.id)).length; }
+  function stars(id){ return (G.inv[id]&&G.inv[id].stars)||0; }
+  function upCost(id){ const it=ITEM[id], s=stars(id); if(s>=3) return 0; return Math.max(50, Math.round(((it.price||100)*[0.5,1,1.5][s])/10)*10); }
+  function equipped(slot){ const id=G.eq[slot]!==undefined ? G.eq[slot] : DEFAULT_EQ[slot]; return id && ITEM[id] && owns(id) ? id : (DEFAULT_EQ[slot]||null); }
+  function gloryScore(){ let g=0; SLOT_ORDER.forEach(s=>{ const id=equipped(s); if(id){ const r=rarityOf(ITEM[id]); g+=GLORY[r]*(1+stars(id)*0.5); } }); return Math.round(g); }
+
+  // ---------- état propre au jeu ----------
+  let G=null, lastState=null;
+  function freshGame(){
+    return {v:1, start:todayISO(), created:false, hero:{name:"", skin:1, hair:"court", hairc:1, eyes:0, beard:false, fem:false},
+      cls:[], sessions:{}, feasts:{}, spend:[], inv:{}, eq:{}, chests:{}, penPauses:[], sessGoal:3, trainDays:[0,2,4],
+      seen:{lvl:0, ach:{}, bilan:""}, classic:false};
+  }
+  function loadGame(){
+    G=freshGame();
+    try{
+      const raw=localStorage.getItem(GAME_KEY);
+      if(raw){ const p=JSON.parse(raw);
+        if(p && typeof p==="object"){ const f=freshGame();
+          G=Object.assign(f, p);
+          G.hero=Object.assign(f.hero, p.hero||{}); G.seen=Object.assign({lvl:0,ach:{},bilan:""}, p.seen||{});
+          ["sessions","feasts","inv","eq","chests"].forEach(k=>{ if(!G[k]||typeof G[k]!=="object"||Array.isArray(G[k])) G[k]={}; });
+          ["spend","cls","penPauses","trainDays"].forEach(k=>{ if(!Array.isArray(G[k])) G[k]=f[k]; });
+        } }
+    }catch(e){ console.error("Lecture du jeu impossible", e); }
+  }
+  function saveGame(){ try{ localStorage.setItem(GAME_KEY, JSON.stringify(G)); }catch(e){ console.error("Écriture du jeu impossible", e); } }
+  function penPaused(iso){ return G.penPauses.some(p=>iso>=p.from && (!p.to || iso<p.to)); }
+  function penaltiesOn(){ return !G.penPauses.some(p=>!p.to); }
+  function classAt(iso){ let c=null; G.cls.forEach(x=>{ if(x.from<=iso) c=x.id; }); return c; }
+  function flameBonus(f){ return f>=30?.5:f>=7?.25:f>=3?.1:0; }
+  function discBonus(d){ return d>=8?.5:d>=4?.25:d>=2?.1:0; }
+  function dowOf(iso){ return (fromISO(iso).getDay()+6)%7; }
+
+  // hasard reproductible : même date, même tirage
+  function seedOf(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+  function rngOf(str){ let a=seedOf(str); return ()=>{ a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+  function pickN(arr,n,r){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); const x=a[i]; a[i]=a[j]; a[j]=x; } return a.slice(0,n); }
+  function drawQuests(iso, c, low){
+    let pool=Object.keys(DQ).filter(q=>!DQ[q].need || DQ[q].need(c));
+    if(low) pool=pool.filter(q=>q!=="mesure" && q!=="triple");
+    return pickN(pool, 3, rngOf("q"+iso));
+  }
+  function weekQuests(wk, c){
+    const pool=["garde","tour","semguer","pesees","cave","complet"].filter(q=>!WQ[q].need || WQ[q].need(c));
+    return ["regiment","banquet"].concat(pickN(pool, 2, rngOf("w"+wk)));
+  }
+  function chestOf(iso){ const r=rngOf("c"+iso); const gold=30+Math.floor(r()*61), x=r(); return {gold: x<0.05 ? gold*3 : gold, jackpot:x<0.05, shield:x>=0.05 && x<0.30}; }
+
+  // ---------- le rejeu ----------
+  function replayGame(){
+    const today=todayISO();
+    const goal=calGoal(), P=num(db.settings.proteinGoal), F=num(db.settings.fatGoal), W=num(db.settings.waterGoal);
+    const dir=goalDir(), wl=weightEntries(), goalW=num(db.settings.weightGoal);
+    let first=today;
+    const cand=[loggedDates()[0], wl.length?wl[0].iso:null, Object.keys(G.sessions).sort()[0], Object.keys(G.feasts).sort()[0], G.start];
+    cand.forEach(x=>{ if(x && /^\d{4}-\d{2}-\d{2}$/.test(x) && x<first) first=x; });
+    const minFirst=addDays(today,-1100); if(first<minFirst) first=minFirst;
+    const S={xp:0, gold:0, flame:0, flameBest:0, shields:1, disc:0, discBest:0, epic:0, chipped:null, lowRun:0, low:false,
+      days:{}, weeks:{}, log:[], ach:{}, stats:{meals:0, sess:0, muscu:0, cardio:0, weigh:0, inRange:0, feasts:0, foods:new Set(), months:{}, monthBoth:false}};
+    const spendBy={}; G.spend.forEach(s=>{ if(s && s.d) (spendBy[s.d]=spendBy[s.d]||[]).push(s); });
+    const startW = wl.length ? wl[0].kg : 0;
+    let prevPen=null, wk=null, wi=0;
+    const recent=[];
+    for(let iso=first; iso<=today; iso=addDays(iso,1)){
+      const isToday = iso===today, d=dowOf(iso);
+      const wkKey=weekStart(iso);
+      const base={goal,P,F,W};
+      if(!wk || wk.key!==wkKey){
+        wk={key:wkKey, quests:weekQuests(wkKey, base), done:{}, feasts:0, mealDays:0, inRange:0, prot:0, water:0, weigh:0, sess:0, muscu:0, cardio:0, penXp:0, penGold:0, closed:false};
+        S.weeks[wkKey]=wk; if(iso>first) S.shields=Math.min(3, S.shields+1);
+      }
+      (spendBy[iso]||[]).forEach(s=>{ S.gold=Math.max(0, S.gold-num(s.gold)); if(s.kind==="repair") S.chipped=null; });
+      const day=getDay(iso), t=totalsOf(day), water=num(day.water);
+      const logged=MEALS.filter(m=>((day[m.key]||{}).items||[]).length>0).map(m=>m.key);
+      const ate=logged.length>0;
+      const sess=G.sessions[iso]||null, sessMin=sess?num(sess.min):0, sessType=sess&&sess.type==="cardio"?"cardio":"muscu";
+      const weighed=Number(db.weights[iso])>0;
+      while(wi<wl.length && wl[wi].iso<=iso){ recent.push(wl[wi].kg); if(recent.length>5) recent.shift(); wi++; }
+      const feastMeals=(G.feasts[iso]||[]).filter(k=>logged.includes(k));
+      const maint=effectiveMaintenance(iso);
+      const c={goal,P,F,W, ate, cal:t.cal, prot:t.protein, fat:t.fat, water, maint,
+        inRange: ate && goal>0 && t.cal>=0.9*goal && t.cal<=1.1*goal,
+        protOk: P>0 && t.protein>=0.9*P, fatOk: F>0 && t.fat>=0.8*F && t.fat<=1.1*F, waterOk: W>0 && water>=W,
+        full:["breakfast","lunch","dinner"].every(k=>logged.includes(k)), hasBreakfast:logged.includes("breakfast"),
+        sessMin, sessType, weighed, trainDay:G.trainDays.includes(d)};
+      const rec={iso, ev:[], xp:0, gold:0, c, quests:drawQuests(iso, c, S.low), penalty:null, chest:null, redeem:null, feastInfo:[]};
+      S.days[iso]=rec;
+      const lvlStart=levelOf(S.xp), cls=classAt(iso);
+      const rulesOn = iso>=G.start && lvlStart>=10 && !penPaused(iso);
+      const mult=(fam)=>{ const fams=[].concat(fam||[]); const cb = cls && fams.some(f=>CLASSES[cls].fam.includes(f)) ? 0.2 : 0; return 1+Math.min(0.6, flameBonus(S.flame)+cb); };
+      const gain=(key,xp,gold,fam,label)=>{ const x=Math.round(xp*mult(fam)); S.xp+=x; S.gold+=gold; rec.xp+=x; rec.gold+=gold; rec.ev.push({k:key,l:label,xp:x,gold}); };
+      const penal=(xp,gold,label)=>{
+        const ax=Math.max(0,Math.min(xp, G_PEN.capXp-wk.penXp)), ag=Math.max(0,Math.min(gold, G_PEN.capGold-wk.penGold));
+        const floor=LVL_TH[levelOf(S.xp)];
+        const rx=Math.min(ax, Math.max(0,S.xp-floor)), rg=Math.min(ag, S.gold);
+        S.xp-=rx; S.gold-=rg; wk.penXp+=ax; wk.penGold+=ag;
+        rec.penalty=rec.penalty||{xp:0,gold:0}; rec.penalty.xp+=rx; rec.penalty.gold+=rg;
+        rec.ev.push({k:"pen",l:label,xp:-rx,gold:-rg,pen:true});
+        if(rx<xp || rg<gold) rec.ev.push({k:"cap",l:L2("Pénalité limitée (plafond de la semaine, plancher du niveau ou or à zéro)","Penalty limited (weekly cap, level floor or no gold left)"),xp:0,gold:0,info:true});
+      };
+      // --- gains immédiats (aussi pour aujourd'hui) ---
+      logged.forEach(k=>{ const m=MEALS.find(x=>x.key===k); gain("meal_"+k, G_XP.meal, G_GOLD.meal, "regul", L2("Repas noté : ","Meal logged: ")+tr(m.label)); });
+      if(c.full) gain("complete", G_XP.complete, G_GOLD.complete, "regul", L2("Journée complète","Full day"));
+      if(c.protOk) gain("prot", G_XP.prot, G_GOLD.prot, "prot", L2("Protéines atteintes","Protein reached"));
+      if(c.waterOk) gain("water", G_XP.water, G_GOLD.water, "eau", L2("Gourde pleine","Water goal reached"));
+      if(weighed) gain("weigh", G_XP.weigh, G_GOLD.weigh, "pesee", L2("Halte à la balance","Weigh-in"));
+      if(sessMin>=20){
+        const long=sessMin>=30, db_=1+discBonus(S.disc);
+        gain("sess", (long?G_XP.sess:G_XP.sessShort)*db_, long?G_GOLD.sess:G_GOLD.sessShort, sessType,
+          (sessType==="cardio"?L2("Séance de cardio","Cardio session"):L2("Séance de musculation","Weight session"))+" · "+sessMin+" min");
+        S.stats.sess++; S.stats[sessType]++; wk.sess++; wk[sessType]++;
+        const mo=iso.slice(0,7); S.stats.months[mo]=S.stats.months[mo]||{muscu:0,cardio:0}; S.stats.months[mo][sessType]++;
+        if(S.stats.months[mo].muscu>=4 && S.stats.months[mo].cardio>=4) S.stats.monthBoth=true;
+      }
+      feastMeals.forEach(k=>{ wk.feasts++; S.stats.feasts++; const ord=wk.feasts; rec.feastInfo.push({k,ord});
+        if(ord<=2) gain("honest", G_XP.honest, 0, "festin", L2("Festin déclaré (n° ","Feast declared (no. ")+ord+L2(", sans frais)",", free)")); });
+      rec.quests.forEach(q=>{ const Q=DQ[q]; if(Q.live && Q.ok(c)) gain("q_"+q, G_XP.quest, G_GOLD.quest, Q.fam, L2("Quête : ","Quest: ")+nm(Q.n)); });
+      // statistiques
+      if(ate){ S.stats.meals+=logged.length; wk.mealDays++; MEALS.forEach(m=>((day[m.key]||{}).items||[]).forEach(it=>{ if(it&&it.name) S.stats.foods.add(String(it.name).trim().toLowerCase()); })); }
+      if(c.protOk) wk.prot++;
+      if(c.waterOk) wk.water++;
+      if(weighed){ wk.weigh++; S.stats.weigh++; }
+      // --- clôture des journées passées ---
+      let surplus=false;
+      if(!isToday){
+        if(c.inRange){ gain("range", G_XP.range, G_GOLD.range, "ration", L2("La juste mesure : ","Just right: ")+fmtInt(t.cal)+" kcal"); S.stats.inRange++; wk.inRange++; }
+        if(c.fatOk) gain("lip", G_XP.lip, G_GOLD.lip, "lip", L2("Lipides dans la cible","Fat on target"));
+        if(c.protOk && c.fatOk && c.waterOk) gain("triple", G_XP.triple, G_GOLD.triple, "ration", L2("Le triplé","The triple"));
+        rec.quests.forEach(q=>{ const Q=DQ[q]; if(!Q.live && Q.ok(c)) gain("q_"+q, G_XP.quest, G_GOLD.quest, Q.fam, L2("Quête : ","Quest: ")+nm(Q.n)); });
+        if(rec.quests.every(q=>DQ[q].ok(c))){
+          const ch=chestOf(iso); rec.chest=ch; S.gold+=ch.gold; rec.gold+=ch.gold;
+          rec.ev.push({k:"chest",l:ch.jackpot?L2("Coffre du jour : trésor !","Daily chest: treasure!"):L2("Coffre du jour","Daily chest"),xp:0,gold:ch.gold});
+          if(ch.shield){ S.shields=Math.min(3,S.shields+1); rec.ev.push({k:"shield",l:L2("Bouclier de flamme trouvé dans le coffre","Flame shield found in the chest"),xp:0,gold:0,info:true}); }
+        }
+        if(ate && rulesOn){
+          if(rec.feastInfo.length){
+            rec.feastInfo.forEach(f=>{ if(f.ord>=3){ const p=G_PEN.feast[Math.min(f.ord-3,2)]; penal(p[0],p[1], L2("Festin n° ","Feast no. ")+f.ord+L2(" de la semaine"," this week")); } });
+          } else {
+            let lvl=0, label="";
+            if(dir===1){ const under=maint-t.cal; if(maint>0 && under>500){ lvl=2; } else if(maint>0 && under>250){ lvl=1; }
+              label=L2("Journée nettement sous le maintien (prise de masse)","Day well below maintenance (bulking)"); }
+            else { const over=t.cal-maint, tol = dir===0 ? Math.max(150, maint*0.10) : 0;
+              if(maint>0 && over>500) lvl=2; else if(maint>0 && over>tol) lvl=1;
+              label=L2("Surplus non déclaré : ","Undeclared surplus: ")+fmtInt(Math.max(0,over))+L2(" kcal au-dessus du maintien"," kcal over maintenance"); }
+            if(lvl){ surplus=true; penal(G_PEN[lvl===2?"heavy":"surplus"][0], G_PEN[lvl===2?"heavy":"surplus"][1], label);
+              if(lvl===2){ S.chipped=iso; rec.ev.push({k:"chip",l:L2("Armure ébréchée : la rédemption ou le forgeron la répareront","Armour chipped: redemption or the smith will fix it"),xp:0,gold:0,info:true}); } }
+          }
+        }
+        if(prevPen && c.inRange && c.protOk){
+          const rx=Math.floor(prevPen.xp/2), rg=Math.floor(prevPen.gold/2);
+          S.xp+=rx; S.gold+=rg; rec.xp+=rx; rec.gold+=rg; S.chipped=null; rec.redeem={xp:rx,gold:rg};
+          rec.ev.push({k:"redeem",l:L2("La rédemption : moitié de la pénalité rendue, armure réparée","Redemption: half the penalty returned, armour repaired"),xp:rx,gold:rg});
+        }
+        // flamme du foyer
+        if(ate){ if(!(surplus && rulesOn)) S.flame++; else rec.ev.push({k:"flamestay",l:L2("La flamme ne grandit pas ce jour-là","The flame did not grow that day"),xp:0,gold:0,info:true}); }
+        else if(S.shields>0 && S.flame>0){ S.shields--; rec.ev.push({k:"shielduse",l:L2("Un bouclier de flamme a protégé la série","A flame shield protected the streak"),xp:0,gold:0,info:true}); }
+        else S.flame=0;
+        S.flameBest=Math.max(S.flameBest, S.flame);
+        S.lowRun = (ate && t.cal<1200) ? S.lowRun+1 : 0; S.low = S.lowRun>=3;
+        prevPen = rec.penalty && (rec.penalty.xp||rec.penalty.gold) ? rec.penalty : null;
+      } else {
+        rec.redeemPending = prevPen ? {xp:Math.floor(prevPen.xp/2), gold:Math.floor(prevPen.gold/2)} : null;
+        const ch=chestOf(iso);
+        rec.chestReady = rec.quests.every(q=>DQ[q].live && DQ[q].ok(c));
+        if(rec.chestReady && G.chests[iso]){ rec.chest=ch; S.gold+=ch.gold; rec.gold+=ch.gold; rec.ev.push({k:"chest",l:L2("Coffre du jour","Daily chest"),xp:0,gold:ch.gold}); if(ch.shield) S.shields=Math.min(3,S.shields+1); }
+      }
+      // --- épopée du poids : la tendance (moyenne des 5 dernières pesées) fait avancer, jamais reculer ---
+      if(goalW>0 && startW>0 && recent.length && Math.abs(startW-goalW)>0.05){
+        const tr_=recent.reduce((a,b)=>a+b,0)/recent.length;
+        const prog=Math.max(0, Math.min(1, (startW-tr_)/(startW-goalW)));
+        const step=Math.min(10, Math.floor(prog*10+1e-9));
+        while(S.epic<step){ S.epic++; gain("epic", G_XP.epic, G_GOLD.epic, "epopee", L2("Épopée : arrivée à ","Epic: reached ")+nm(PLACES[S.epic-1])); }
+      }
+      // --- quêtes de la semaine ---
+      wk.quests.forEach(q=>{
+        if(wk.done[q] || q==="banquet") return;
+        let ok=false;
+        if(q==="regiment") ok = wk.sess>=num(G.sessGoal||3);
+        else if(q==="complet") ok = wk.muscu>=1 && wk.cardio>=1;
+        else { const Q=WQ[q]; ok = wk[Q.key]>=Q.goal; }
+        if(ok){ wk.done[q]=iso; const big=q==="regiment"; gain("w_"+q, big?G_XP.regiment:G_XP.wquest, big?G_GOLD.regiment:G_GOLD.wquest, WQ[q].fam, L2("Quête de la semaine : ","Weekly quest: ")+nm(WQ[q].n)); }
+      });
+      if(d===6 && !isToday){
+        if(wk.quests.includes("banquet") && wk.feasts<=2 && iso>=G.start){ wk.done.banquet=iso; gain("w_banquet", G_XP.wquest, G_GOLD.wquest, "festin", L2("Quête de la semaine : ","Weekly quest: ")+nm(WQ.banquet.n)); }
+        if(wk.sess>=num(G.sessGoal||3)){ S.disc++; S.discBest=Math.max(S.discBest,S.disc);
+          if([2,4,8,12,16].includes(S.disc)) gain("disc", 0, G_GOLD.disc, "muscu", L2("Discipline de fer : ","Iron discipline: ")+S.disc+L2(" semaines"," weeks")); }
+        else S.disc=0;
+        wk.closed=true;
+      }
+      // --- hauts faits (date de première obtention) ---
+      ACH.forEach(a=>{ if(!S.ach[a[0]] && a[3](S)) S.ach[a[0]]=iso; });
+    }
+    const tRec=S.days[today];
+    S.level=levelOf(S.xp);
+    S.flameShown = S.flame + (tRec && tRec.c.ate ? 1 : 0);
+    S.week=S.weeks[weekStart(today)];
+    S.today=tRec;
+    return S;
+  }
+  // =====================================================================
+  //  LA QUÊTE DU ROYAUME : interface
+  // =====================================================================
+  const PXOK = !!(window.PX && window.PX.hero);
+  const gReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pxCache={};
+  function gEsc(x){ return escHtml(x); }
+  function lookOf(){ const h=G.hero; return {skin:h.skin, hair:h.hair, hairc:h.hairc, eyes:h.eyes, beard:h.beard}; }
+  function eqDefs(over){ const o={}; ["head","chest","legs","feet","weapon"].forEach(s=>{ const id=(over && over[s]!==undefined) ? over[s] : equipped(s); o[s]= id ? ITEM[id] : null; }); return o; }
+  function heroURL(scale, over, look){
+    if(!PXOK) return "";
+    const lk=look||lookOf(), eq=eqDefs(over);
+    const key="h"+scale+JSON.stringify(lk)+Object.values(eq).map(i=>i?i.id:"-").join(",");
+    if(pxCache[key]) return pxCache[key];
+    const u=PX.upscale(PX.hero(lk, eq), scale).toDataURL(); pxCache[key]=u; return u;
+  }
+  function headURL(scale){
+    if(!PXOK) return "";
+    const key="p"+scale+JSON.stringify(lookOf())+equipped("head");
+    if(pxCache[key]) return pxCache[key];
+    const full=PX.hero(lookOf(), eqDefs());
+    const [c,x]=PX.canvas(24,24); x.drawImage(full,8,0,24,24,0,0,24,24);
+    const u=PX.upscale(c,scale).toDataURL(); pxCache[key]=u; return u;
+  }
+  function iconURL(id, box){
+    if(!PXOK) return "";
+    const it=ITEM[id]; if(!it) return "";
+    const key="i"+id+box+(it.slot==="head"?JSON.stringify(lookOf()):"");
+    if(pxCache[key]) return pxCache[key];
+    const c=PX.icon(it, lookOf()); const s=Math.max(1, Math.floor(box/Math.max(c.width,c.height)));
+    const u=PX.upscale(c,s).toDataURL(); pxCache[key]=u; return u;
+  }
+  function petURL(id, scale){
+    if(!PXOK) return ""; const it=ITEM[id]; if(!it) return "";
+    const key="pet"+id+scale; if(pxCache[key]) return pxCache[key];
+    const u=PX.upscale(PX.pet(it,0), scale).toDataURL(); pxCache[key]=u; return u;
+  }
+  function placeURL(i, scale){
+    if(!PXOK || !PX.place) return ""; const key="pl"+i+scale; if(pxCache[key]) return pxCache[key];
+    const u=PX.upscale(PX.place(i), scale).toDataURL(); pxCache[key]=u; return u;
+  }
+  function px(n){ return fmtInt(n); }
+  function rewardTxt(x,g){ return (x?"+"+x+" XP":"")+(x&&g?" · ":"")+(g?"+"+g+" "+L2("or","gold"):""); }
+  function signedTxt(x,g){ const a=[]; if(x) a.push((x>0?"+":"−")+Math.abs(x)+" XP"); if(g) a.push((g>0?"+":"−")+Math.abs(g)+" "+L2("or","gold")); return a.join(" · "); }
+
+  // ---------- rafraîchissement central ----------
+  let gPrev=null, gToday=todayISO();
+  function gRefresh(opts){
+    if(!G) loadGame();
+    const S=replayGame(); lastState=S;
+    document.body.classList.toggle("classic", !!G.classic);
+    gRenderHud(S);
+    if(gPrev && !(opts&&opts.silent) && gToday===todayISO()){
+      const dx=S.xp-gPrev.xp, dg=S.gold-gPrev.gold;
+      if((dx||dg) && Math.abs(dx)<=400) gFloat(signedTxt(dx,dg), dx<0||dg<0);
+    }
+    gPrev={xp:S.xp, gold:S.gold}; gToday=todayISO();
+    gCheckEvents(S);
+    return S;
+  }
+  function gRenderHud(S){
+    const hud=document.getElementById("gHud"); if(!hud) return;
+    const L=S.level, t0=LVL_TH[L], t1=L>=MAX_LVL?t0+1:LVL_TH[L+1], pct=L>=MAX_LVL?100:Math.max(0,Math.min(100,Math.round((S.xp-t0)/(t1-t0)*100)));
+    const img=document.getElementById("gHudImg"); if(img && PXOK) img.src=headURL(3);
+    document.getElementById("gHudName").textContent = G.hero.name || L2("Héros","Hero");
+    document.getElementById("gHudLvl").textContent = L2("Niv. ","Lv. ")+L;
+    document.getElementById("gHudTitle").textContent = titleOf(L) + (classAt(todayISO()) ? " · "+className(classAt(todayISO())) : "");
+    document.getElementById("gHudXp").style.width=pct+"%";
+    document.getElementById("gHudXpTxt").textContent = L>=MAX_LVL ? L2("Niveau maximum","Max level") : px(S.xp-t0)+" / "+px(t1-t0)+" XP";
+    const bar=document.getElementById("gHudXpBar"); bar.setAttribute("aria-valuenow",pct); bar.setAttribute("aria-valuetext",pct+" %");
+    document.getElementById("gHudGold").textContent=px(S.gold);
+    document.getElementById("gHudFlame").textContent=S.flameShown;
+    document.getElementById("gHudFlameBox").setAttribute("aria-label", L2("Flamme du foyer : ","Hearth flame: ")+S.flameShown+L2(" jours"," days"));
+  }
+  function gFloat(text, neg){
+    if(gReduce) return;
+    const el=document.createElement("div"); el.className="g-float"+(neg?" neg":""); el.textContent=text;
+    document.body.appendChild(el); setTimeout(()=>el.remove(), 1500);
+  }
+  // ---------- événements : niveau, hauts faits, cadeau, bilan ----------
+  function gCheckEvents(S){
+    if(!G.created){ return; }
+    let changed=false;
+    if(S.level>G.seen.lvl){
+      if(G.seen.lvl>0) gLevelUp(G.seen.lvl, S.level);
+      G.seen.lvl=S.level; changed=true;
+    } else if(S.level<G.seen.lvl){ G.seen.lvl=S.level; changed=true; }
+    // le chien rejoint le camp au niveau 3
+    if(S.level>=3 && !G.inv.p_chien){ G.inv.p_chien={d:todayISO(),stars:0,gift:true}; if(!G.eq.pet) G.eq.pet="p_chien"; changed=true;
+      showToast(L2("Un chien de berger rejoint ton camp !","A sheepdog joins your camp!")); }
+    const newAch=Object.keys(S.ach).filter(k=>!G.seen.ach[k]);
+    if(newAch.length){ newAch.forEach(k=>{ G.seen.ach[k]=S.ach[k]; }); changed=true;
+      if(newAch.length<=2) newAch.forEach(k=>{ const a=ACH.find(x=>x[0]===k); showToast(L2("Haut fait : ","Achievement: ")+nm(a[1])); }); }
+    const y=addDays(todayISO(),-1);
+    if(G.seen.bilan<y){
+      const r=S.days[y]; G.seen.bilan=y; changed=true;
+      if(r && (r.ev.length || r.penalty)) gBilan(r);
+    }
+    if(changed) saveGame();
+  }
+
+  // ---------- fenêtres du jeu ----------
+  const gQueue=[];
+  function gModal(html, onBind){ gQueue.push({html,onBind}); if(!document.querySelector("#gModal.on")) gNextModal(); }
+  function gNextModal(){
+    const root=document.getElementById("gModal"); const m=gQueue.shift();
+    if(!m){ root.classList.remove("on"); root.innerHTML=""; return; }
+    root.innerHTML=`<div class="g-modal" role="dialog" aria-modal="true">${m.html}</div>`; root.classList.add("on");
+    root.querySelectorAll("[data-gclose]").forEach(b=>b.addEventListener("click",()=>gNextModal()));
+    if(m.onBind) m.onBind(root);
+    const b=root.querySelector("button"); if(b) b.focus({preventScroll:true});
+  }
+  function gLevelUp(from, to){
+    const lines=[];
+    for(let l=from+1;l<=to;l++){ const t=TITLES.find(x=>x[0]===l); if(t) lines.push(L2("Nouveau titre : ","New title: ")+titleOf(l)); if(l===10) lines.push(L2("Tu peux choisir une classe (Héros).","You can pick a class (Hero).")); if(l===10) lines.push(L2("Les festins en trop et les surplus coûtent désormais de l'XP et de l'or.","Extra feasts and surpluses now cost XP and gold.")); }
+    const unlocked=ITEMS.filter(i=>i.lvl>from && i.lvl<=to && !i.starter && !i.gift);
+    gModal(`<div class="g-kick">${L2("Montée de niveau","Level up")}</div><div class="g-big">${L2("Niveau ","Level ")+to}</div><h3 class="g-h">${gEsc(titleOf(to))}</h3>
+      <div class="g-hero-mini"><img src="${heroURL(4)}" alt=""></div>
+      ${lines.map(l=>`<p class="g-line">${gEsc(l)}</p>`).join("")}
+      ${unlocked.length?`<div class="g-sub">${L2("Nouveaux objets en boutique","New items in the shop")}</div><div class="g-unlocks">${unlocked.slice(0,8).map(i=>`<span class="g-tile r-${rarityOf(i)}"><img src="${i.slot==="pet"?petURL(i.id,2):iconURL(i.id,40)}" alt="${gEsc(nm(i.n))}"></span>`).join("")}</div>`:""}
+      <button class="btn primary" data-gclose>${L2("Continuer","Continue")}</button>`);
+  }
+  function gBilan(r){
+    const rows=r.ev.filter(e=>!e.k.startsWith("meal_")).map(e=>`<div class="g-row${e.pen?" neg":""}${e.info?" info":""}"><span>${gEsc(e.l)}</span><b>${e.info?"":signedTxt(e.xp,e.gold)}</b></div>`).join("");
+    const meals=r.ev.filter(e=>e.k.startsWith("meal_")); const mx=meals.reduce((a,e)=>a+e.xp,0), mg=meals.reduce((a,e)=>a+e.gold,0);
+    gModal(`<div class="g-kick">${L2("Bilan d'hier","Yesterday's report")}</div><h3 class="g-h">${gEsc(capFirst(fromISO(r.iso).toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long"})))}</h3>
+      <div class="g-list">${meals.length?`<div class="g-row"><span>${L2("Repas notés","Meals logged")} (${meals.length})</span><b>${signedTxt(mx,mg)}</b></div>`:""}${rows}</div>
+      <div class="g-total">${L2("Total de la journée : ","Day total: ")}<b>${signedTxt(r.xp-(r.penalty?r.penalty.xp:0), r.gold-(r.penalty?r.penalty.gold:0))||"0"}</b></div>
+      <button class="btn primary" data-gclose>${L2("Au camp !","To the camp!")}</button>`);
+  }
+  function capFirst(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+
+  // ---------- accueil et création du héros ----------
+  function gMaybeWelcome(){
+    if(G.created) return;
+    const tuto=document.getElementById("tuto"); if(tuto && tuto.style.display!=="none") return;
+    const S=lastState||gRefresh({silent:true});
+    const n=loggedDates().length;
+    gModal(`<div class="g-kick">${L2("Nouveau","New")}</div><h3 class="g-h">${L2("La Quête du Royaume","The Quest of the Realm")}</h3>
+      <div class="g-hero-mini"><img src="${heroURL(4)}" alt=""></div>
+      <p class="g-line">${L2("Ton suivi devient un jeu. Chaque repas noté, chaque quota atteint, chaque séance de musculation ou de cardio rapporte de l'XP et de l'or. L'XP fait monter ton héros de niveau ; l'or achète son équipement.","Your tracking becomes a game. Every meal logged, every target reached, every weight or cardio session earns XP and gold. XP levels your hero up; gold buys gear.")}</p>
+      ${n?`<p class="g-line">${L2("Tes ","Your ")+n+L2(" journées déjà enregistrées ont été rejouées : tu commences au niveau "," logged days have been replayed: you start at level ")}<b>${S.level}</b>${L2(" avec "," with ")}<b>${px(S.gold)} ${L2("or","gold")}</b>.</p>`:""}
+      <p class="g-line small">${L2("Rien ne change dans ton suivi : les chiffres réels restent affichés partout. Le jeu peut être masqué dans les Réglages.","Nothing changes in your tracking: the real numbers stay visible everywhere. The game can be hidden in Settings.")}</p>
+      <button class="btn primary" data-gcreate>${L2("Créer mon héros","Create my hero")}</button>`, root=>{
+        root.querySelector("[data-gcreate]").addEventListener("click",()=>{ gNextModal(); gOpenLook(true); });
+      });
+  }
+
+  // ---------- scène du camp ----------
+  let gFireT=null;
+  function gRenderCamp(S){
+    const box=document.getElementById("gCamp"); if(!box || !PXOK) return;
+    const cw=box.clientWidth||340, sc=cw>=300?3:2, W=Math.floor(cw/sc), H=46;
+    const [c,ctx]=PX.canvas(W,H);
+    // ciel nocturne, étoiles fixes, lune, collines, sol
+    const sky=["#141B3A","#1A2350","#212C60","#2A3470"]; sky.forEach((col,i)=>{ ctx.fillStyle=col; ctx.fillRect(0,Math.floor(i*H/8),W,Math.ceil(H/8)+1); });
+    ctx.fillStyle="#2A3470"; ctx.fillRect(0,Math.floor(H/2),W,H);
+    const r=rngOf("stars"); ctx.fillStyle="#DDE6FF"; for(let i=0;i<W/4;i++){ ctx.fillRect(Math.floor(r()*W), Math.floor(r()*22), 1, 1); }
+    ctx.fillStyle="#FFF4C8"; ctx.fillRect(W-18,4,4,4); ctx.fillRect(W-19,5,1,2); ctx.fillRect(W-14,5,1,2); ctx.fillStyle="#E8DDB0"; ctx.fillRect(W-17,5,1,1);
+    ctx.fillStyle="#1C2A44"; for(let x=0;x<W;x++){ const h=Math.round(6+4*Math.sin(x/9)+3*Math.sin(x/4.3)); ctx.fillRect(x,H-14-h,1,h); }
+    ctx.fillStyle="#2E5A3A"; ctx.fillRect(0,H-14,W,14); ctx.fillStyle="#264C31"; for(let x=0;x<W;x+=3) ctx.fillRect(x,H-14+(x%2),1,1);
+    ctx.fillStyle="#3A6E46"; ctx.fillRect(0,H-14,W,1);
+    // tente et étendard
+    const tx=W-30, ty=H-30;
+    const tent=["......k......",".....kak.....","....kaabk....","...kaabbbk...","..kaabkbbbk..",".kaabkkkbbbk.","kaaabkkkbbbbk","kkkkkkkkkkkkk"];
+    PX.drawArt(ctx,{rows:tent},{a:"#E8D2A0",b:"#B89A68"},tx,ty+9);
+    ctx.fillStyle="#7A5230"; ctx.fillRect(tx+6,ty,1,10); ctx.fillStyle="#D8402E"; ctx.fillRect(tx+7,ty,5,3); ctx.fillStyle="#9A2A20"; ctx.fillRect(tx+7,ty+3,3,1);
+    // héros et familier
+    const hero=PX.hero(lookOf(), eqDefs());
+    ctx.drawImage(hero, 4, H-46);
+    const pid=equipped("pet");
+    if(pid){ const p=PX.pet(ITEM[pid],0); ctx.drawImage(p, 40, H-6-p.height+2); }
+    // feu : sa taille suit la flamme du foyer ; le décor est figé, seul le feu est redessiné
+    const base=PX.canvas(W,H)[0]; base.getContext("2d").drawImage(c,0,0);
+    const fl=Math.min(30,S.flameShown), fs=fl>=30?3:fl>=7?2:fl>=1?1:0;
+    const fx=Math.floor(W/2)+6, fy=H-12;
+    function fire(frame){
+      ctx.clearRect(0,0,W,H); ctx.drawImage(base,0,0);
+      ctx.fillStyle="#6B4A2A"; ctx.fillRect(fx-4,fy,9,2); ctx.fillStyle="#4A3018"; ctx.fillRect(fx-3,fy+1,7,1);
+      if(fs===0){ ctx.fillStyle="#5A5A6A"; ctx.fillRect(fx-1,fy-1,3,1); return; }
+      const hgt=[0,6,9,12][fs], wob=frame?1:0;
+      for(let y=0;y<hgt;y++){ const w=Math.max(1,Math.round((hgt-y)/hgt*([0,2,3,4][fs]))); const off=(y%3===1?wob:0);
+        ctx.fillStyle= y<hgt*0.4 ? "#FFE68A" : y<hgt*0.72 ? "#FFA03C" : "#E0501E";
+        ctx.fillRect(fx-w+off, fy-1-y, w*2, 1); }
+      ctx.fillStyle="#FFF4C8"; ctx.fillRect(fx+(frame?-2:2), fy-hgt-2, 1, 1);
+    }
+    fire(0);
+    const img=box.querySelector("canvas") || document.createElement("canvas");
+    img.width=W*sc; img.height=H*sc; img.style.width=(W*sc)+"px"; img.style.height=(H*sc)+"px";
+    const ictx=img.getContext("2d"); ictx.imageSmoothingEnabled=false; ictx.drawImage(c,0,0,W*sc,H*sc);
+    if(!img.parentNode){ box.innerHTML=""; box.appendChild(img); const lbl=document.createElement("div"); lbl.className="g-camp-lbl"; box.appendChild(lbl); }
+    const lbl=box.querySelector(".g-camp-lbl");
+    lbl.innerHTML = `<span class="g-pill">${L2("Flamme ","Flame ")}<b>${S.flameShown}</b> · ×${(1+flameBonus(S.flame)).toFixed(2).replace(".",decSep())} XP</span>`+
+      (S.shields?`<span class="g-pill">${L2("Boucliers ","Shields ")}<b>${S.shields}</b></span>`:"")+
+      (S.chipped?`<span class="g-pill warn">${L2("Armure ébréchée","Armour chipped")}</span>`:"");
+    img.setAttribute("role","img"); img.setAttribute("aria-label", L2("Le camp : ton héros devant le feu","The camp: your hero by the fire"));
+    clearInterval(gFireT);
+    if(!gReduce && fs>0){ let f=0; gFireT=setInterval(()=>{ if(document.hidden || currentView!=="day") return; f=1-f; fire(f); ictx.drawImage(c,0,0,W*sc,H*sc); }, 420); }
+  }
+
+  // ---------- quêtes, quotas, coffre (onglet Camp) ----------
+  function gFeastLabel(rec, k){ const f=(rec.feastInfo||[]).find(x=>x.k===k); return f; }
+  function gRenderDayPanels(S){
+    const qBox=document.getElementById("gQuests"), gym=document.getElementById("gGym"), wkBox=document.getElementById("gWeek");
+    if(!qBox) return;
+    const iso=currentDate, today=todayISO(), rec=S.days[iso];
+    const wkKey=weekStart(iso), wk=S.weeks[wkKey];
+    const feasts = wk ? wk.feasts : 0;
+    if(!rec){ qBox.innerHTML=""; gym.innerHTML=""; wkBox.innerHTML=""; return; }
+    const c=rec.c;
+    // quotas
+    const vial=(lbl,real,v,goal,ok,col,unit,lo,hi)=>{ const pct=goal>0?Math.min(1,v/goal):0;
+      return `<div class="g-vial${ok?" ok":""}"><div class="g-vial-glass"><i style="height:${Math.round(pct*100)}%;background:${col}"></i></div>
+        <div class="g-vial-k">${lbl}</div><div class="g-vial-v">${goal>0?fmtInt(v)+" / "+fmtInt(goal)+" "+unit:"—"}</div><div class="g-vial-r">${real}</div></div>`; };
+    const quotas=`<div class="g-vials">
+      ${vial(L2("Force","Strength"),L2("protéines ≥ 90 %","protein ≥ 90 %"),c.prot,c.P,c.protOk,"var(--protein)","g")}
+      ${vial(L2("Réserves","Reserves"),L2("lipides 80–110 %","fat 80–110 %"),c.fat,c.F,c.fatOk,"var(--fat)","g")}
+      ${vial(L2("Gourde","Flask"),L2("eau 100 %","water 100 %"),c.water,c.W,c.waterOk,"#4CC3E6","ml")}</div>`;
+    if(iso===today){
+      const qrows=rec.quests.map(q=>{ const Q=DQ[q], done=Q.live&&Q.ok(c), hint=!Q.live ? (Q.ok(c)?L2("En bonne voie · validée à minuit si ça tient","On track · confirmed at midnight if it holds"):L2("Validée à minuit","Confirmed at midnight")) : "";
+        return `<div class="g-quest${done?" done":""}"><span class="g-check" aria-hidden="true">${done?"✓":""}</span><div class="g-qtxt"><div class="g-qn">${nm(Q.n)}</div><div class="g-qd">${nm(Q.d)}</div>${hint?`<div class="g-qh">${hint}</div>`:""}</div><span class="g-qr">${done?L2("Réussie","Done"):"+20 XP"}</span></div>`; }).join("");
+      const red = rec.redeemPending ? `<div class="g-quest special"><span class="g-check" aria-hidden="true">↺</span><div class="g-qtxt"><div class="g-qn">${L2("La rédemption","Redemption")}</div><div class="g-qd">${L2("Finir dans ta fourchette avec les protéines atteintes : la moitié de la pénalité d'hier te sera rendue (","End on target with protein reached: half of yesterday's penalty comes back (")+signedTxt(rec.redeemPending.xp,rec.redeemPending.gold)+L2(") et l'armure réparée.",") and the armour is repaired.")}</div><div class="g-qh">${L2("Validée à minuit","Confirmed at midnight")}</div></div></div>` : "";
+      const opened=!!G.chests[iso] && rec.chestReady;
+      const chest=`<div class="g-chest${rec.chestReady&&!opened?" ready":""}"><span class="g-chest-ico${opened?" open":""}" aria-hidden="true"></span><div class="g-qtxt">
+        ${opened?`<div class="g-qn">${L2("Coffre ouvert","Chest opened")}</div><div class="g-qd">+${rec.chest?rec.chest.gold:0} ${L2("or","gold")}${rec.chest&&rec.chest.shield?L2(" et un bouclier de flamme"," and a flame shield"):""}</div>`
+          : rec.chestReady ? `<div class="g-qn">${L2("Le coffre du jour est prêt !","Today's chest is ready!")}</div><div class="g-qd">${L2("Les 3 quêtes sont faites.","All 3 quests are done.")}</div>`
+          : `<div class="g-qn">${L2("Coffre du jour","Daily chest")}</div><div class="g-qd">${L2("Il s'ouvre avec les 3 quêtes : 30 à 90 or, parfois un bouclier de flamme, rarement un trésor. Les quêtes validées à minuit l'ouvrent au bilan.","It opens with the 3 quests: 30–90 gold, sometimes a flame shield, rarely a treasure. Quests confirmed at midnight open it in the report.")}</div>`}
+        </div>${rec.chestReady&&!opened?`<button class="g-btn gold" data-gchest>${L2("Ouvrir","Open")}</button>`:""}</div>`;
+      const low = S.low ? `<div class="g-note warn">${L2("Un voyageur a besoin de provisions : tes apports notés sont restés sous 1 200 kcal trois jours de suite. Les quêtes de calories sont suspendues.","A traveller needs supplies: your logged intake stayed under 1,200 kcal three days in a row. Calorie quests are paused.")}</div>` : "";
+      qBox.innerHTML=`<div class="card g-card"><div class="card-head"><div class="card-title g-title">${L2("Quêtes du jour","Daily quests")}</div><div class="right"><span class="g-pill${feasts>2?" warn":""}">${L2("Festins ","Feasts ")}${feasts} / 2</span></div></div>
+        ${low}${qrows}${red}${chest}${quotas}</div>`;
+      const cb=qBox.querySelector("[data-gchest]"); if(cb) cb.addEventListener("click",gOpenChest);
+    } else {
+      const evs=rec.ev.filter(e=>!e.info);
+      const list=rec.ev.length ? rec.ev.map(e=>`<div class="g-row${e.pen?" neg":""}${e.info?" info":""}"><span>${gEsc(e.l)}</span><b>${e.info?"":signedTxt(e.xp,e.gold)}</b></div>`).join("") : `<div class="g-qd">${L2("Aucune récompense ce jour-là.","No rewards that day.")}</div>`;
+      const net=evs.reduce((a,e)=>a+e.xp,0), netg=evs.reduce((a,e)=>a+e.gold,0);
+      qBox.innerHTML=`<div class="card g-card"><div class="card-head"><div class="card-title g-title">${L2("Bilan de cette journée","This day's report")}</div><div class="right">${signedTxt(net,netg)||"—"}</div></div>
+        <div class="g-list">${list}</div>${quotas}</div>`;
+    }
+    // salle d'armes
+    const sess=G.sessions[iso];
+    const days=[...Array(7)].map((_,i)=>{ const d=addDays(wkKey,i), s=G.sessions[d]; const cls=s&&num(s.min)>=20?(s.type==="cardio"?"k":"m"):""; return `<span class="g-day ${cls}${d===iso?" cur":""}${d>today?" fut":""}">${["L","M","M","J","V","S","D"][i]}</span>`; }).join("");
+    const goal=num(G.sessGoal||3);
+    gym.innerHTML=`<div class="card g-card"><div class="card-head"><div class="card-title g-title">${L2("Salle d'armes","Armoury")}</div><div class="right">${L2("Régiment ","Regiment ")}${wk?wk.sess:0} / ${goal}</div></div>
+      <div class="g-gym">${sess?`<div class="g-sess ${sess.type==="cardio"?"k":"m"}"><b>${sess.type==="cardio"?L2("Cardio","Cardio"):L2("Musculation","Weight training")}</b> · ${num(sess.min)} min</div>`:`<div class="g-qd">${iso===today?L2("Pas encore de séance aujourd'hui.","No session yet today."):L2("Aucune séance notée ce jour-là.","No session logged that day.")}</div>`}
+      <button class="g-btn${sess?"":" gold"}" data-gsess>${sess?L2("Modifier","Edit"):L2("J'ai fait ma séance","I trained")}</button></div>
+      <div class="g-week">${days}</div>
+      <div class="g-qd">${L2("Séance de 30 min ou plus : +40 XP, +20 or. De 20 à 29 min : +20 XP, +10 or.","30+ min session: +40 XP, +20 gold. 20–29 min: +20 XP, +10 gold.")} ${S.disc?L2("Discipline de fer : ","Iron discipline: ")+S.disc+L2(" semaine(s), +"," week(s), +")+Math.round(discBonus(S.disc)*100)+L2(" % d'XP de séance."," % session XP."):""}</div></div>`;
+    gym.querySelector("[data-gsess]").addEventListener("click",()=>gOpenSession(iso));
+    // quêtes de la semaine
+    if(wk){
+      const rows=wk.quests.map(q=>{ const Q=WQ[q]; const done=!!wk.done[q];
+        let prog="";
+        if(q==="regiment") prog=wk.sess+" / "+goal;
+        else if(q==="banquet") prog=(feasts>2?L2("Manquée cette semaine","Missed this week"):L2("Festins ","Feasts ")+feasts+" / 2 · "+L2("validée dimanche soir","confirmed Sunday night"));
+        else if(q==="complet") prog=(wk.muscu?"✓":"·")+" "+L2("muscu","weights")+"  "+(wk.cardio?"✓":"·")+" cardio";
+        else prog=wk[Q.key]+" / "+Q.goal;
+        const rw=q==="regiment"?rewardTxt(G_XP.regiment,G_GOLD.regiment):rewardTxt(G_XP.wquest,G_GOLD.wquest);
+        return `<div class="g-quest wk${done?" done":""}"><span class="g-check" aria-hidden="true">${done?"✓":""}</span><div class="g-qtxt"><div class="g-qn">${nm(Q.n)}</div><div class="g-qd">${nm(Q.d)}</div><div class="g-qh">${prog}</div></div><span class="g-qr">${done?L2("Réussie","Done"):rw}</span></div>`; }).join("");
+      wkBox.innerHTML=`<details class="card g-card fold" ${iso===today?"open":""}><summary class="g-title">${L2("Quêtes de la semaine","Weekly quests")} <span class="g-sum-r">${Object.keys(wk.done).length} / ${wk.quests.length}</span></summary>${rows}</details>`;
+    } else wkBox.innerHTML="";
+    applyI18n(qBox);
+  }
+  function gFeastBtn(mealKey, hasItems){
+    if(!G || !hasItems) return "";
+    const on=(G.feasts[currentDate]||[]).includes(mealKey);
+    return `<button class="g-feast${on?" on":""}" data-feast="${mealKey}" aria-pressed="${on}"><span class="g-sw" aria-hidden="true"></span>${L2("Festin","Feast")}</button>`;
+  }
+  function gFeastNote(mealKey){
+    if(!G || !lastState) return "";
+    const rec=lastState.days[currentDate]; if(!rec) return "";
+    const f=(rec.feastInfo||[]).find(x=>x.k===mealKey); if(!f) return "";
+    const L=lastState.level, active=L>=10 && penaltiesOn();
+    if(f.ord<=2) return `<div class="g-feast-note">${L2("Festin n° ","Feast no. ")+f.ord+L2(" de la semaine : sans frais, +5 XP d'honnêteté. La flamme continue."," this week: free, +5 XP for honesty. The flame goes on.")}</div>`;
+    const p=G_PEN.feast[Math.min(f.ord-3,2)];
+    return `<div class="g-feast-note warn">${L2("Festin n° ","Feast no. ")+f.ord+L2(" de la semaine : "," this week: ")+(active?signedTxt(-p[0],-p[1])+L2(" à minuit."," at midnight."):L2("sans frais avant le niveau 10.","free before level 10."))}</div>`;
+  }
+  function gBindFeasts(container){
+    container.querySelectorAll("[data-feast]").forEach(b=>b.addEventListener("click",()=>{
+      const k=b.dataset.feast, iso=currentDate, l=(G.feasts[iso]||[]).slice();
+      const i=l.indexOf(k); if(i>=0) l.splice(i,1); else l.push(k);
+      if(l.length) G.feasts[iso]=l; else delete G.feasts[iso];
+      saveGame(); renderDay();
+    }));
+  }
+  function gOpenChest(){
+    const iso=todayISO(); if(G.chests[iso]) return;
+    G.chests[iso]=true; saveGame();
+    const ch=chestOf(iso);
+    gModal(`<div class="g-kick">${L2("Coffre du jour","Daily chest")}</div><div class="g-chest-big" aria-hidden="true"></div>
+      <div class="g-big">+${ch.gold} ${L2("or","gold")}</div>${ch.jackpot?`<p class="g-line">${L2("Un trésor ! Le triple de la mise.","A treasure! Triple the loot.")}</p>`:""}
+      ${ch.shield?`<p class="g-line">${L2("Et un bouclier de flamme : il protège ta série un jour où tu oublierais de noter.","And a flame shield: it protects your streak on a day you forget to log.")}</p>`:""}
+      <button class="btn primary" data-gclose>${L2("Ranger dans la besace","Put it in the bag")}</button>`);
+    renderDay();
+  }
+  // ---------- fiche de séance ----------
+  let gSessDraft=null;
+  function gOpenSession(iso){
+    const cur=G.sessions[iso];
+    const last=Object.keys(G.sessions).sort().filter(d=>d<iso).pop();
+    gSessDraft = cur ? {...cur} : (last ? {type:G.sessions[last].type, min:G.sessions[last].min} : {type:"muscu", min:60});
+    const draw=()=>{
+      const s=gSessDraft;
+      sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet g-sheet">
+        <h3>${L2("Passage à la salle d'armes","Visit to the armoury")}</h3><p class="sub">${capFirst(fromISO(iso).toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long"}))}</p>
+        <div class="g-type"><button data-gt="muscu" aria-pressed="${s.type==="muscu"}"><span class="g-ti m" aria-hidden="true"></span>${L2("Musculation","Weight training")}</button>
+          <button data-gt="cardio" aria-pressed="${s.type==="cardio"}"><span class="g-ti k" aria-hidden="true"></span>${L2("Cardio","Cardio")}</button></div>
+        <label class="f">${L2("Durée","Duration")}</label>
+        <div class="g-chips">${[20,30,45,60,75,90,120].map(m=>`<button data-gm="${m}" aria-pressed="${num(s.min)===m}">${m} min</button>`).join("")}</div>
+        <p class="sub">${num(s.min)>=30?L2("Séance complète : +40 XP et +20 or.","Full session: +40 XP and +20 gold."):L2("Courte séance : +20 XP et +10 or.","Short session: +20 XP and +10 gold.")} ${L2("Une seule séance compte par jour. Le sport rapporte des points, pas des calories en plus : ton maintien inclut déjà tes séances habituelles.","Only one session counts per day. Training earns points, not extra calories: your maintenance already includes your usual sessions.")}</p>
+        <div class="sheet-actions">${cur?`<button class="btn secondary" data-gsdel>${L2("Retirer","Remove")}</button>`:`<button class="btn secondary" data-act="close">${L2("Annuler","Cancel")}</button>`}<button class="btn primary" data-gssave>${L2("Valider","Save")}</button></div>
+      </div></div>`;
+      bindSheet();
+      sheetRoot.querySelectorAll("[data-gt]").forEach(b=>b.addEventListener("click",()=>{ gSessDraft.type=b.dataset.gt; draw(); }));
+      sheetRoot.querySelectorAll("[data-gm]").forEach(b=>b.addEventListener("click",()=>{ gSessDraft.min=Number(b.dataset.gm); draw(); }));
+      sheetRoot.querySelector("[data-gssave]").addEventListener("click",()=>{ G.sessions[iso]={type:gSessDraft.type, min:num(gSessDraft.min)}; saveGame(); closeSheet(); renderDay(); });
+      const del=sheetRoot.querySelector("[data-gsdel]"); if(del) del.addEventListener("click",()=>{ delete G.sessions[iso]; saveGame(); closeSheet(); renderDay(); });
+    };
+    draw();
+  }
+
+  // ---------- onglet Héros ----------
+  let gCat="head";
+  function gTile(id, small){
+    const it=ITEM[id], r=rarityOf(it), own=owns(id), lvl=lastState?lastState.level:1, locked=!own && lvl<it.lvl, st=stars(id);
+    const eqd=equipped(it.slot)===id;
+    const img= it.slot==="pet" ? petURL(id, small?2:3) : iconURL(id, small?36:48);
+    return `<button class="g-tile r-${r}${locked?" locked":""}${eqd?" eq":""}${own?" own":""}" data-gitem="${id}" aria-label="${gEsc(nm(it.n))}">
+      <img src="${img}" alt="">${st?`<span class="g-stars">${"★".repeat(st)}</span>`:""}
+      ${small?"":`<span class="g-tag">${own?(eqd?L2("Porté","Worn"):"✓"):locked?L2("Niv. ","Lv. ")+it.lvl:fmtInt(it.price)+" ●"}</span>`}</button>`;
+  }
+  function gRenderHero(){
+    const box=document.getElementById("gHero"); if(!box) return;
+    const S=lastState||gRefresh({silent:true});
+    const L=S.level, t0=LVL_TH[L], t1=L>=MAX_LVL?t0+1:LVL_TH[L+1];
+    const slot=(s)=>{ const id=equipped(s); return `<button class="g-slot${id?" r-"+rarityOf(ITEM[id]):""}" data-gslot="${s}" aria-label="${nm(SLOT_NAMES[s])}">${id?`<img src="${s==="pet"?petURL(id,2):iconURL(id,36)}" alt="">`:`<span class="g-slot-e">${nm(SLOT_NAMES[s])}</span>`}${id&&stars(id)?`<span class="g-stars">${"★".repeat(stars(id))}</span>`:""}</button>`; };
+    const pid=equipped("pet");
+    const owned=ownedCount(), total=ITEMS.length;
+    const list=ITEMS.filter(i=>i.slot===gCat).sort((a,b)=>a.lvl-b.lvl||a.price-b.price);
+    box.innerHTML=`<div class="card g-stage">
+        <div class="g-stage-grid">
+          <div class="g-col">${slot("head")}${slot("chest")}${slot("legs")}</div>
+          <div class="g-stage-hero"><img class="g-hero-img" src="${heroURL(5)}" alt="${gEsc(G.hero.name||L2("Héros","Hero"))}">${pid?`<img class="g-pet-img" src="${petURL(pid,3)}" alt="">`:""}</div>
+          <div class="g-col">${slot("feet")}${slot("weapon")}${slot("pet")}</div>
+        </div>
+        <div class="g-stage-info"><div class="g-hname">${gEsc(G.hero.name||L2("Héros","Hero"))}</div>
+          <div class="g-hsub">${gEsc(titleOf(L))} · ${L2("niveau ","level ")+L}${classAt(todayISO())?" · "+className(classAt(todayISO())):""}</div>
+          <div class="g-hsub small">${L2("Acte ","Act ")}${actOf(L)} · ${L>=MAX_LVL?L2("niveau maximum","max level"):fmtInt(S.xp-t0)+" / "+fmtInt(t1-t0)+" XP"}</div>
+          <div class="g-stats"><span><b>${fmtInt(gloryScore())}</b>${L2("gloire","glory")}</span><span><b>${owned} / ${total}</b>${L2("collection","collection")}</span><span><b>${fmtInt(S.gold)}</b>${L2("or","gold")}</span></div>
+          ${S.chipped?`<div class="g-note warn">${L2("Armure ébréchée : la quête de la rédemption la répare, ou le forgeron pour ","Armour chipped: the redemption quest fixes it, or the smith for ")}${REPAIR_COST} ${L2("or","gold")}. <button class="g-btn" data-grepair ${S.gold<REPAIR_COST?"disabled":""}>${L2("Réparer","Repair")}</button></div>`:""}
+          <div class="g-actions"><button class="g-btn" data-glook>${L2("Apparence","Appearance")}</button>${L>=10?`<button class="g-btn" data-gclass>${classAt(todayISO())?L2("Changer de classe","Change class"):L2("Choisir une classe","Pick a class")}</button>`:""}</div>
+        </div></div>
+      <div class="g-cats" role="tablist">${SLOT_ORDER.map(s=>`<button role="tab" data-gcat="${s}" aria-selected="${gCat===s}"><span class="g-cat-ico" style="background-image:url(${gCatIcon(s)})"></span><span>${nm(SLOT_NAMES[s])}</span></button>`).join("")}</div>
+      <div class="g-grid">${list.map(i=>gTile(i.id)).join("")}</div>
+      <p class="g-foot">${L2("Les objets se débloquent avec ton niveau et s'achètent avec l'or. Plus le niveau requis est haut, plus l'objet est rare et travaillé : commun, rare, épique, légendaire, mythique.","Items unlock with your level and are bought with gold. The higher the level, the rarer and finer the item: common, rare, epic, legendary, mythic.")}</p>`;
+    box.querySelectorAll("[data-gcat]").forEach(b=>b.addEventListener("click",()=>{ gCat=b.dataset.gcat; gRenderHero(); }));
+    box.querySelectorAll("[data-gitem]").forEach(b=>b.addEventListener("click",()=>gOpenItem(b.dataset.gitem)));
+    box.querySelectorAll("[data-gslot]").forEach(b=>b.addEventListener("click",()=>{ gCat=b.dataset.gslot; gRenderHero(); const g=box.querySelector(".g-cats"); if(g) g.scrollIntoView({block:"start",behavior:gReduce?"auto":"smooth"}); }));
+    const lk=box.querySelector("[data-glook]"); if(lk) lk.addEventListener("click",()=>gOpenLook(false));
+    const cl=box.querySelector("[data-gclass]"); if(cl) cl.addEventListener("click",gOpenClass);
+    const rp=box.querySelector("[data-grepair]"); if(rp) rp.addEventListener("click",()=>{ if((lastState.gold)<REPAIR_COST) return; G.spend.push({d:todayISO(),gold:REPAIR_COST,kind:"repair"}); saveGame(); gRefresh(); gRenderHero(); showToast(L2("Le forgeron a réparé ton armure","The smith repaired your armour")); });
+  }
+  function gCatIcon(s){
+    const map={head:"h_nasal",chest:"c_cuirasse",legs:"l_chevalier",feet:"b_coureur",weapon:"w_epee",pet:"p_chien"};
+    return s==="pet" ? petURL(map[s],1) : iconURL(map[s],24);
+  }
+  function gOpenItem(id){
+    const it=ITEM[id], r=rarityOf(it), own=owns(id), S=lastState, lvl=S.level, eqd=equipped(it.slot)===id;
+    const preview = it.slot==="pet"
+      ? `<div class="g-try"><img class="g-hero-img" src="${heroURL(4)}" alt=""><img class="g-pet-img" src="${petURL(id,3)}" alt=""></div>`
+      : `<div class="g-try"><img class="g-hero-img" src="${heroURL(4,{[it.slot]:id})}" alt=""></div>`;
+    let actions="";
+    if(!own){
+      if(lvl<it.lvl) actions=`<button class="btn secondary" disabled>${L2("Niveau ","Level ")+it.lvl+L2(" requis"," required")}</button>`;
+      else if(S.gold<it.price) actions=`<button class="btn secondary" disabled>${L2("Il manque ","Missing ")+fmtInt(it.price-S.gold)+" "+L2("or","gold")}</button>`;
+      else actions=`<button class="btn primary" data-gbuy>${L2("Acheter · ","Buy · ")+fmtInt(it.price)+" "+L2("or","gold")}</button>`;
+    } else {
+      const canUn = eqd && (it.slot==="head"||it.slot==="pet"||!it.starter);
+      actions = (eqd ? (canUn?`<button class="btn secondary" data-gunequip>${L2("Retirer","Take off")}</button>`:"") : `<button class="btn primary" data-gequip>${L2("Équiper","Equip")}</button>`);
+      const uc=upCost(id);
+      if(uc) actions+=`<button class="btn secondary" data-gup ${S.gold<uc?"disabled":""}>${L2("Forgeron : améliorer ","Smith: upgrade ")+"★".repeat(stars(id)+1)+" · "+fmtInt(uc)+" "+L2("or","gold")}</button>`;
+    }
+    sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet g-sheet">
+      ${preview}
+      <h3>${gEsc(nm(it.n))} ${stars(id)?`<span class="g-stars inline">${"★".repeat(stars(id))}</span>`:""}</h3>
+      <p class="sub"><span class="g-rar r-${r}">${nm(RARITY[r])}</span> · ${nm(SLOT_NAMES[it.slot])} · ${L2("niveau ","level ")+it.lvl}${it.price?" · "+fmtInt(it.price)+" "+L2("or","gold"):(it.gift?" · "+L2("offert au niveau ","given at level ")+it.gift:" · "+L2("offert","free"))}</p>
+      ${!own && it.slot!=="pet"?`<p class="sub small">${L2("Aperçu : ton héros le porte déjà ici.","Preview: your hero is already wearing it here.")}</p>`:""}
+      <div class="g-sheet-actions">${actions}<button class="btn secondary" data-act="close">${L2("Fermer","Close")}</button></div>
+    </div></div>`;
+    bindSheet();
+    const q=s=>sheetRoot.querySelector(s);
+    if(q("[data-gbuy]")) q("[data-gbuy]").addEventListener("click",()=>{
+      if(lastState.gold<it.price || lastState.level<it.lvl) return;
+      G.spend.push({d:todayISO(),gold:it.price,kind:"buy",id}); G.inv[id]={d:todayISO(),stars:0}; G.eq[it.slot]=id; saveGame();
+      closeSheet(); gRefresh({silent:true}); gRenderHero(); gFloat("−"+it.price+" "+L2("or","gold"),true);
+      showToast(nm(it.n)+L2(" acheté et équipé"," bought and equipped"));
+    });
+    if(q("[data-gequip]")) q("[data-gequip]").addEventListener("click",()=>{ G.eq[it.slot]=id; saveGame(); closeSheet(); gRefresh({silent:true}); gRenderHero(); });
+    if(q("[data-gunequip]")) q("[data-gunequip]").addEventListener("click",()=>{ G.eq[it.slot]= (it.slot==="head"||it.slot==="pet") ? null : DEFAULT_EQ[it.slot]; saveGame(); closeSheet(); gRefresh({silent:true}); gRenderHero(); });
+    if(q("[data-gup]")) q("[data-gup]").addEventListener("click",()=>{ const uc=upCost(id); if(!uc || lastState.gold<uc) return;
+      G.spend.push({d:todayISO(),gold:uc,kind:"up",id}); G.inv[id]=Object.assign({d:todayISO()}, G.inv[id]||{}); G.inv[id].stars=stars(id)+1; saveGame();
+      closeSheet(); gRefresh({silent:true}); gRenderHero(); showToast(nm(it.n)+" "+"★".repeat(stars(id))); });
+  }
+  function gOpenClass(){
+    const cur=classAt(todayISO());
+    gModal(`<h3 class="g-h">${L2("Choisis ta classe","Pick your class")}</h3><p class="g-line small">${L2("Chaque classe donne +20 % d'XP sur une famille de bonnes habitudes, à partir d'aujourd'hui. Les bonus de classe et de flamme sont plafonnés ensemble à +60 %.","Each class gives +20 % XP on one family of good habits, from today on. Class and flame bonuses are capped together at +60 %.")}</p>
+      <div class="g-list">${Object.keys(CLASSES).map(k=>`<button class="g-class${cur===k?" on":""}" data-gcl="${k}"><b>${className(k)}</b><span>${nm(CLASSES[k].d)}</span></button>`).join("")}</div>
+      <button class="btn secondary" data-gclose>${L2("Fermer","Close")}</button>`, root=>{
+      root.querySelectorAll("[data-gcl]").forEach(b=>b.addEventListener("click",()=>{
+        const t=todayISO(); G.cls=G.cls.filter(x=>x.from<t); G.cls.push({id:b.dataset.gcl, from:t}); saveGame(); gNextModal(); gRefresh({silent:true}); if(currentView==="hero") gRenderHero();
+        showToast(L2("Classe : ","Class: ")+className(b.dataset.gcl)); }));
+    });
+  }
+  // ---------- apparence (style « création de personnage ») ----------
+  let gLookDraft=null, gLookTab="name";
+  function gOpenLook(creating){
+    gLookDraft={...G.hero}; gLookTab="name";
+    const SK=PXOK?PX.SKINS:[], HC=PXOK?PX.HAIRC:[], EY=PXOK?PX.EYES:[];
+    const draw=()=>{
+      const d=gLookDraft, prev=heroURL(5, gLookTab==="name"?null:{head:null}, {skin:d.skin,hair:d.hair,hairc:d.hairc,eyes:d.eyes,beard:d.beard});
+      const tabs=[["name",L2("Nom","Name")],["skin",L2("Peau","Skin")],["hair",L2("Coiffure","Hair")],["hairc",L2("Couleur","Colour")],["eyes",L2("Yeux","Eyes")],["beard",L2("Barbe","Beard")]];
+      let body="";
+      if(gLookTab==="name") body=`<label class="f" for="gName">${L2("Nom du héros","Hero name")}</label><input class="t" id="gName" maxlength="18" value="${gEsc(d.name)}" placeholder="${L2("Aldric, Maëlle…","Aldric, Maelle…")}">
+        <label class="f" style="margin-top:12px">${L2("Titres","Titles")}</label><div class="g-chips"><button data-glf="0" aria-pressed="${!d.fem}">${L2("Au masculin","Masculine")}</button><button data-glf="1" aria-pressed="${!!d.fem}">${L2("Au féminin","Feminine")}</button></div>`;
+      if(gLookTab==="skin") body=`<div class="g-swatches">${SK.map((s,i)=>`<button class="g-sw-b" style="background:${s[0]}" data-glv="skin:${i}" aria-pressed="${d.skin===i}" aria-label="${L2("Teint ","Skin tone ")}${i+1}"></button>`).join("")}</div>`;
+      if(gLookTab==="hair") body=`<div class="g-hairs">${Object.keys(PXOK?PX.HAIR:{}).map(k=>`<button data-glv="hair:${k}" aria-pressed="${d.hair===k}"><img src="${heroURL(2,{head:null},{skin:d.skin,hair:k,hairc:d.hairc,eyes:d.eyes,beard:d.beard})}" alt=""><span>${nm(PX.HAIR[k].n)}</span></button>`).join("")}</div>`;
+      if(gLookTab==="hairc") body=`<div class="g-swatches">${HC.map((s,i)=>`<button class="g-sw-b" style="background:${s[0]}" data-glv="hairc:${i}" aria-pressed="${d.hairc===i}" aria-label="${L2("Couleur ","Colour ")}${i+1}"></button>`).join("")}</div>`;
+      if(gLookTab==="eyes") body=`<div class="g-swatches">${EY.map((s,i)=>`<button class="g-sw-b" style="background:${s}" data-glv="eyes:${i}" aria-pressed="${d.eyes===i}" aria-label="${L2("Yeux ","Eyes ")}${i+1}"></button>`).join("")}</div>`;
+      if(gLookTab==="beard") body=`<div class="g-chips"><button data-glv="beard:1" aria-pressed="${!!d.beard}">${L2("Avec barbe","With beard")}</button><button data-glv="beard:0" aria-pressed="${!d.beard}">${L2("Sans barbe","No beard")}</button></div>`;
+      sheetRoot.innerHTML=`<div class="sheet-backdrop"${creating?"":` data-close="1"`}><div class="sheet g-sheet">
+        <h3>${creating?L2("Ton héros","Your hero"):L2("Apparence","Appearance")}</h3>
+        <div class="g-try big"><img class="g-hero-img" src="${prev}" alt=""></div>
+        <div class="g-ltabs" role="tablist">${tabs.map(([k,n])=>`<button role="tab" data-glt="${k}" aria-selected="${gLookTab===k}">${n}</button>`).join("")}</div>
+        <div class="g-lbody">${body}</div>
+        <p class="sub small">${L2("L'apparence est gratuite et modifiable à tout moment. Elle ne reflète jamais ton poids.","Appearance is free and can be changed any time. It never reflects your weight.")}</p>
+        <div class="sheet-actions">${creating?"":`<button class="btn secondary" data-act="close">${L2("Annuler","Cancel")}</button>`}<button class="btn primary" data-glsave>${creating?L2("Partir à l'aventure","Set off"):L2("Enregistrer","Save")}</button></div>
+      </div></div>`;
+      bindSheet();
+      const nameIn=sheetRoot.querySelector("#gName"); if(nameIn) nameIn.addEventListener("input",()=>{ gLookDraft.name=nameIn.value.slice(0,18); });
+      sheetRoot.querySelectorAll("[data-glt]").forEach(b=>b.addEventListener("click",()=>{ gLookTab=b.dataset.glt; draw(); }));
+      sheetRoot.querySelectorAll("[data-glf]").forEach(b=>b.addEventListener("click",()=>{ gLookDraft.fem=b.dataset.glf==="1"; draw(); }));
+      sheetRoot.querySelectorAll("[data-glv]").forEach(b=>b.addEventListener("click",()=>{ const [k,v]=b.dataset.glv.split(":");
+        gLookDraft[k] = k==="hair" ? v : k==="beard" ? v==="1" : Number(v); draw(); }));
+      sheetRoot.querySelector("[data-glsave]").addEventListener("click",()=>{
+        G.hero={...gLookDraft, name:String(gLookDraft.name||"").trim().slice(0,18)};
+        if(creating){ G.created=true; const S=lastState||replayGame(); G.seen.lvl=S.level; G.seen.ach=Object.assign({},S.ach); G.seen.bilan=addDays(todayISO(),-1); if(S.level>=3){ G.inv.p_chien={d:todayISO(),stars:0,gift:true}; G.eq.pet="p_chien"; } }
+        saveGame(); closeSheet(); gRefresh({silent:true});
+        if(currentView==="hero") gRenderHero(); else if(currentView==="day") renderDay();
+        if(creating) showToast(L2("Bienvenue au Royaume, ","Welcome to the Realm, ")+(G.hero.name||L2("héros","hero"))+" !");
+      });
+    };
+    draw();
+  }
+
+  // ---------- onglet Carte : l'épopée ----------
+  function gRenderEpic(){
+    const box=document.getElementById("gEpic"); if(!box) return;
+    const S=lastState||gRefresh({silent:true});
+    const goalW=num(db.settings.weightGoal), wl=weightEntries();
+    if(!(goalW>0) || !wl.length){
+      box.innerHTML=`<div class="card g-card"><div class="card-title g-title">${L2("L'épopée","The epic")}</div><p class="card-sub">${L2("Définis un poids cible dans les Réglages et note une pesée : ton objectif devient un chemin en 10 étapes, du Village au Château. Chaque étape franchie rapporte 150 XP et 100 or.","Set a target weight in Settings and log a weigh-in: your goal becomes a 10-step road from the Village to the Castle. Each step reached earns 150 XP and 100 gold.")}</p></div>`;
+      return;
+    }
+    const step=S.epic;
+    const nodes=PLACES.map((p,i)=>{ const done=step>=i+1, cur=step===i;
+      return `<div class="g-node${done?" done":""}${cur?" next":""}" style="grid-row:${i<5?2:1};grid-column:${i<5?i+1:10-i}"><span class="g-node-ico"><img src="${placeURL(i,3)}" alt=""></span><span class="g-node-n">${nm(p)}</span>${step===i+1?`<img class="g-node-hero" src="${headURL(2)}" alt="${L2("Ton héros","Your hero")}">`:""}</div>`; }).join("");
+    box.innerHTML=`<div class="card g-card"><div class="card-head"><div class="card-title g-title">${L2("L'épopée","The epic")}</div><div class="right">${L2("étape ","step ")+step+" / 10"}</div></div>
+      <p class="card-sub">${L2("De ","From ")+String(wl[0].kg).replace(".",decSep())+" kg "+L2("à ","to ")+String(goalW).replace(".",decSep())+" kg. "+L2("Le héros avance avec la moyenne de tes 5 dernières pesées : une bonne ou une mauvaise pesée isolée ne le fait ni avancer ni reculer, et il ne revient jamais en arrière.","The hero moves with the average of your last 5 weigh-ins: a single good or bad weigh-in neither moves nor sets it back, and it never goes backwards.")}</p>
+      <div class="g-road">${nodes}</div>${step===0?`<div class="g-start"><img src="${headURL(2)}" alt="">${L2("Ton héros attend au départ, avant le Village.","Your hero waits at the start, before the Village.")}</div>`:""}</div>`;
+  }
+
+  // ---------- Progrès : les Chroniques ----------
+  function gRenderChron(){
+    const box=document.getElementById("prog-chron"); if(!box) return;
+    const S=lastState||gRefresh({silent:true});
+    const today=todayISO(), wk=S.week, n=dowOf(today)+1;
+    const story = wk ? `<p>${L2("Depuis lundi, ","Since Monday, ")}<b>${gEsc(G.hero.name||L2("ton héros","your hero"))}</b>${L2(" a noté ses repas "," logged meals on ")}<b>${wk.mealDays} ${L2("jour(s) sur ","day(s) out of ")}${n}</b>${L2(", tenu sa fourchette ",", stayed on target ")}<b>${wk.inRange} ${L2("fois","time(s)")}</b>${L2(" et atteint ses protéines "," and reached protein ")}<b>${wk.prot} ${L2("jour(s)","day(s)")}</b>.</p>
+      <p>${L2("À la salle d'armes : ","At the armoury: ")}<b>${wk.sess} ${L2("séance(s)","session(s)")}</b>${L2(" sur "," of ")}${num(G.sessGoal||3)}${L2(" visées (",
+      " planned (")}${wk.muscu} ${L2("de musculation","weights")}, ${wk.cardio} ${L2("de cardio","cardio")}). ${wk.feasts?wk.feasts+L2(" festin(s) déclaré(s), honnêtement."," feast(s) declared, honestly."):L2("Aucun festin déclaré.","No feast declared.")}</p>
+      <p class="small">${L2("Le récit reste bienveillant : un jour sans n'est jamais un reproche, la flamme repart dès le lendemain.","The story stays kind: a day off is never a reproach, the flame starts again the next day.")}</p>` : "";
+    let cal=`<div class="g-cal"><span></span>${["L","M","M","J","V","S","D"].map(j=>`<span class="g-cal-h">${j}</span>`).join("")}`;
+    const w0=weekStart(today);
+    for(let i=7;i>=0;i--){ const ws=addDays(w0,-7*i); cal+=`<span class="g-cal-w">${shortLabel(ws)}</span>`;
+      for(let j=0;j<7;j++){ const d=addDays(ws,j), s=G.sessions[d], t=s&&num(s.min)>=20?(s.type==="cardio"?"k":"m"):""; cal+=`<span class="g-cal-c ${t}${d===today?" cur":""}${d>today?" fut":""}"></span>`; } }
+    cal+=`</div>`;
+    const ach=ACH.map(a=>{ const on=S.ach[a[0]]; return `<div class="g-ach${on?" on":""}"><b>${nm(a[1])}</b><span>${nm(a[2])}</span>${on?`<i>${shortLabel(on)}</i>`:""}</div>`; }).join("");
+    const log=[]; Object.keys(S.days).sort().reverse().slice(0,21).forEach(d=>{ const r=S.days[d]; if(!r.ev.length) return;
+      const x=r.ev.reduce((a,e)=>a+e.xp,0), g=r.ev.reduce((a,e)=>a+e.gold,0);
+      log.push(`<div class="g-row${(x<0||g<0)?" neg":""}"><span><i>${shortLabel(d)}</i> ${r.ev.filter(e=>!e.k.startsWith("meal_")&&!e.info).slice(0,3).map(e=>gEsc(e.l)).join(" · ")||L2("Repas notés","Meals logged")}</span><b>${signedTxt(x,g)}</b></div>`); });
+    box.innerHTML=`<div class="card g-card"><div class="card-title g-title">${L2("Récit de la semaine","This week's tale")}</div><div class="g-story">${story}</div></div>
+      <div class="card g-card"><div class="card-head"><div class="card-title g-title">${L2("Calendrier de la salle","Armoury calendar")}</div><div class="right">${L2("8 semaines","8 weeks")}</div></div>${cal}
+        <div class="g-legend"><span><i class="m"></i>${L2("Musculation","Weights")}</span><span><i class="k"></i>Cardio</span><span><i></i>${L2("Repos","Rest")}</span></div>
+        <p class="card-sub" style="margin:8px 0 0">${L2("Séances : ","Sessions: ")}${S.stats.sess} (${S.stats.muscu} ${L2("musculation","weights")}, ${S.stats.cardio} cardio) · ${L2("Discipline de fer : ","Iron discipline: ")}${S.disc} · ${L2("record ","best ")}${S.discBest}</p></div>
+      <div class="card g-card"><div class="card-head"><div class="card-title g-title">${L2("Hauts faits","Achievements")}</div><div class="right">${Object.keys(S.ach).length} / ${ACH.length}</div></div><div class="g-achs">${ach}</div></div>
+      <div class="card g-card"><div class="card-title g-title">${L2("Journal","Journal")}</div><div class="g-list">${log.join("")||`<p class="card-sub">${L2("Le journal se remplira avec tes journées.","The journal fills up with your days.")}</p>`}</div></div>`;
+  }
+
+  // ---------- Réglages : le jeu ----------
+  function gRenderSettings(){
+    const box=document.getElementById("gSettings"); if(!box) return;
+    const S=lastState||gRefresh({silent:true});
+    const td=G.trainDays||[];
+    box.innerHTML=`<div class="meal-title" style="margin-bottom:10px">${L2("Le jeu","The game")}</div>
+      <div class="g-set"><span>${L2("Afficher le jeu","Show the game")}</span><button class="g-feast${G.classic?"":" on"}" data-gset="classic" aria-pressed="${!G.classic}"><span class="g-sw" aria-hidden="true"></span>${G.classic?L2("Masqué","Hidden"):L2("Affiché","Shown")}</button></div>
+      <div class="g-set"><span>${L2("Séances visées par semaine","Sessions per week")}</span><div class="g-step"><button data-gset="sess-" aria-label="${L2("Moins","Less")}">−</button><b>${num(G.sessGoal||3)}</b><button data-gset="sess+" aria-label="${L2("Plus","More")}">+</button></div></div>
+      <div class="g-set col"><span>${L2("Jours d'entraînement habituels","Usual training days")}</span><div class="g-days">${["L","M","M","J","V","S","D"].map((j,i)=>`<button data-gday="${i}" aria-pressed="${td.includes(i)}" aria-label="${fromISO(addDays(weekStart(todayISO()),i)).toLocaleDateString(loc(),{weekday:"long"})}">${j}</button>`).join("")}</div></div>
+      <div class="g-set"><span>${L2("Pénalités (festins en trop, surplus)","Penalties (extra feasts, surplus)")}</span><button class="g-feast${penaltiesOn()?" on":""}" data-gset="pen" aria-pressed="${penaltiesOn()}"><span class="g-sw" aria-hidden="true"></span>${penaltiesOn()?L2("Actives","On"):L2("En pause","Paused")}</button></div>
+      <p class="hint">${L2("Mets les pénalités en pause pour des vacances, des fêtes ou une maladie : la flamme ne s'éteint pas pour autant. Elles ne commencent qu'au niveau 10, sont plafonnées à 300 XP et 300 or par semaine, et ne font jamais perdre de niveau.","Pause penalties for holidays, celebrations or illness: the flame doesn't go out. They only start at level 10, are capped at 300 XP and 300 gold a week, and never cost a level.")}</p>
+      <button class="btn secondary" data-gset="look">${L2("Personnaliser mon héros","Customise my hero")}</button>
+      <details class="g-rules"><summary>${L2("Règles du jeu","Game rules")}</summary>
+        <div class="g-list">${[
+          [L2("Repas noté (4 par jour)","Meal logged (4 a day)"),G_XP.meal,G_GOLD.meal],[L2("Journée complète (3 repas)","Full day (3 meals)"),G_XP.complete,G_GOLD.complete],
+          [L2("Fourchette 90–110 % (à minuit)","Target 90–110 % (at midnight)"),G_XP.range,G_GOLD.range],[L2("Protéines ≥ 90 %","Protein ≥ 90 %"),G_XP.prot,G_GOLD.prot],
+          [L2("Lipides 80–110 % (à minuit)","Fat 80–110 % (at midnight)"),G_XP.lip,G_GOLD.lip],[L2("Objectif d'eau","Water goal"),G_XP.water,G_GOLD.water],
+          [L2("Le triplé (à minuit)","The triple (at midnight)"),G_XP.triple,G_GOLD.triple],[L2("Séance ≥ 30 min","Session ≥ 30 min"),G_XP.sess,G_GOLD.sess],
+          [L2("Pesée","Weigh-in"),G_XP.weigh,G_GOLD.weigh],[L2("Quête du jour","Daily quest"),G_XP.quest,G_GOLD.quest],
+          [L2("Quête de la semaine","Weekly quest"),G_XP.wquest,G_GOLD.wquest],[L2("Le régiment","The regiment"),G_XP.regiment,G_GOLD.regiment],[L2("Étape de l'épopée","Epic step"),G_XP.epic,G_GOLD.epic]
+        ].map(r=>`<div class="g-row"><span>${r[0]}</span><b>${rewardTxt(r[1],r[2])}</b></div>`).join("")}
+        <div class="g-row neg"><span>${L2("3e festin de la semaine","3rd feast of the week")}</span><b>${signedTxt(-40,-40)}</b></div>
+        <div class="g-row neg"><span>${L2("4e festin","4th feast")}</span><b>${signedTxt(-60,-60)}</b></div>
+        <div class="g-row neg"><span>${L2("5e festin et suivants","5th feast and more")}</span><b>${signedTxt(-80,-80)}</b></div>
+        <div class="g-row neg"><span>${L2("Surplus non déclaré au-dessus du maintien","Undeclared surplus over maintenance")}</span><b>${signedTxt(-60,-60)}</b></div>
+        <div class="g-row neg"><span>${L2("Plus de 500 kcal au-dessus : armure ébréchée","Over 500 kcal: armour chipped")}</span><b>${signedTxt(-90,-90)}</b></div></div>
+        <p class="hint">${L2("La flamme du foyer (jours d'affilée avec un repas noté) multiplie l'XP : ×1,1 à 3 jours, ×1,25 à 7 jours, ×1,5 à 30 jours. Jamais de pénalité pour avoir trop peu mangé ; un festin déclaré coûte toujours moins qu'un surplus caché.","The hearth flame (days in a row with a meal logged) multiplies XP: ×1.1 at 3 days, ×1.25 at 7, ×1.5 at 30. Never a penalty for eating too little; a declared feast always costs less than a hidden surplus.")}</p>
+      </details>`;
+    box.querySelectorAll("[data-gset]").forEach(b=>b.addEventListener("click",()=>{
+      const a=b.dataset.gset;
+      if(a==="classic"){ G.classic=!G.classic; document.body.classList.toggle("classic",G.classic); gRenderTabbar(); }
+      else if(a==="sess-") G.sessGoal=Math.max(1,num(G.sessGoal||3)-1);
+      else if(a==="sess+") G.sessGoal=Math.min(7,num(G.sessGoal||3)+1);
+      else if(a==="pen"){ const t=todayISO(); if(penaltiesOn()) G.penPauses.push({from:t,to:null}); else { const p=G.penPauses.find(x=>!x.to); if(p){ if(p.from===t) G.penPauses.splice(G.penPauses.indexOf(p),1); else p.to=t; } } }
+      else if(a==="look"){ gOpenLook(false); return; }
+      saveGame(); gRefresh({silent:true}); gRenderSettings(); applyI18n(box);
+    }));
+    box.querySelectorAll("[data-gday]").forEach(b=>b.addEventListener("click",()=>{ const i=Number(b.dataset.gday); const l=(G.trainDays||[]).slice(); const k=l.indexOf(i); if(k>=0) l.splice(k,1); else l.push(i); G.trainDays=l.sort(); saveGame(); gRenderSettings(); }));
+  }
+  // ---------- barre d'onglets ----------
+  function gRenderTabbar(){
+    const names = G && !G.classic
+      ? {day:L2("Camp","Camp"), weight:L2("Carte","Map"), hero:L2("Héros","Hero"), progress:L2("Chroniques","Chronicles"), settings:L2("Réglages","Settings")}
+      : {day:tr("Aujourd'hui"), weight:tr("Poids"), hero:L2("Héros","Hero"), progress:tr("Progrès"), settings:tr("Réglages")};
+    document.querySelectorAll("#tabbar .tab-btn").forEach(b=>{ const s=b.querySelector("span"); if(s && names[b.dataset.view]) s.textContent=names[b.dataset.view]; });
+  }
+  function gBackground(){
+    if(!PXOK) return;
+    const [c,x]=PX.canvas(96,96); const r=rngOf("sky");
+    for(let i=0;i<34;i++){ const v=r(); x.fillStyle= v<0.15?"rgba(255,244,200,.85)":v<0.5?"rgba(200,215,255,.55)":"rgba(160,175,230,.35)"; x.fillRect(Math.floor(r()*96),Math.floor(r()*96),1,1); }
+    document.documentElement.style.setProperty("--g-stars", "url("+PX.upscale(c,3).toDataURL()+")");
+  }
+
+  // ---------- raccords du jeu avec l'app ----------
+  function gAfterDay(S, container){
+    if(!G || !S) return;
+    gRenderCamp(S); gRenderDayPanels(S); gBindFeasts(container);
+  }
+  document.getElementById("gHudPortrait").addEventListener("click",()=>showView("hero"));
+  document.getElementById("gCamp").addEventListener("click",()=>showView("hero"));
+  document.getElementById("gCamp").addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); showView("hero"); } });
+  window.__game={replay:()=>replayGame(), state:()=>G, items:()=>ITEMS, refresh:()=>gRefresh({silent:true}), level:levelOf, th:LVL_TH,
+    quests:(iso)=>drawQuests(iso,{goal:1,P:1,F:1,W:1,trainDay:G.trainDays.includes(dowOf(iso))},false)};
+
   // ---------- init ----------
   loadDB();
   document.getElementById("langRow").innerHTML=LANGS.map(([code,label])=>
@@ -5057,11 +6240,12 @@
   }
   document.getElementById("wDate").value=todayISO();
   document.getElementById("wDate").max=todayISO();
+  loadGame(); gBackground(); gRenderTabbar();
   renderDay();
   applyI18n();
   bindCalc();
   bindTuto();
-  if(!tutoSeen()) openTuto();
+  if(!tutoSeen()) openTuto(); else setTimeout(gMaybeWelcome, 350);
 })();
 </script>
 </body>
