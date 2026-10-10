@@ -2032,6 +2032,38 @@
   const hue=(f,o)=>{ const t=((f*6+(o||0))%280+280)%280; return "hsl("+((290+(t<140?t:280-t))%360)+",100%,66%)"; };
   const isOutline=(d,i)=>d[i+3]>20 && d[i]<40 && d[i+1]<34 && d[i+2]<48;   // contour sombre (#1B1424, #070A1C…)
 
+  // ---------- calque de pixels en mémoire ----------
+  // Les effets écrivent des milliers de pixels par image : on les compose dans un tableau
+  // (fusion alpha « par-dessus ») au lieu d'appeler le canvas pixel par pixel.
+  const COLC=new Map();
+  function rgbOf(s){
+    let v=COLC.get(s); if(v) return v;
+    if(s[0]==="#") v=[parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16)];
+    else { const m=/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/.exec(s)||[0,0,0,100];
+      const h=+m[1]/360, sa=+m[2]/100, l=+m[3]/100, q=l<.5?l*(1+sa):l+sa-l*sa, p=2*l-q;
+      const f=t=>{ t=(t+1)%1; return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p; };
+      v=[Math.round(f(h+1/3)*255),Math.round(f(h)*255),Math.round(f(h-1/3)*255)]; }
+    if(COLC.size>4000) COLC.clear(); COLC.set(s,v); return v;
+  }
+  function PCtx(W,H){ this.W=W; this.H=H; this.d=new Float32Array(W*H*4); this.fillStyle="#000000"; this.globalAlpha=1; this._fs=null; this._c=null; }
+  PCtx.prototype.clear=function(){ this.d.fill(0); };
+  PCtx.prototype.fillRect=function(x,y,w,h){
+    const a=this.globalAlpha; if(!(a>0)) return; if(this.fillStyle!==this._fs){ this._fs=this.fillStyle; this._c=rgbOf(this._fs); }
+    const c=this._c, W=this.W, H=this.H, d=this.d; x=Math.floor(x); y=Math.floor(y);
+    const x1=Math.min(W,x+w), y1=Math.min(H,y+h); if(x<0) x=0; if(y<0) y=0;
+    for(let yy=y;yy<y1;yy++) for(let xx=x;xx<x1;xx++){ const i=(yy*W+xx)*4, da=d[i+3];
+      if(a>=1||da<=0){ d[i]=c[0]; d[i+1]=c[1]; d[i+2]=c[2]; d[i+3]=a>=1?1:a; continue; }
+      const na=a+da*(1-a), k=da*(1-a); d[i]=(c[0]*a+d[i]*k)/na; d[i+1]=(c[1]*a+d[i+1]*k)/na; d[i+2]=(c[2]*a+d[i+2]*k)/na; d[i+3]=na; }
+  };
+  // géométrie mise en cache : pixels d'un disque, avec distance et angle au centre
+  function geo(fx,cx,cy,rad){
+    const key=cx+","+cy+","+rad; fx._geo=fx._geo||{}; let g=fx._geo[key]; if(g) return g;
+    const xs=[],ys=[],ds=[],as=[];
+    for(let y=Math.max(0,Math.floor(cy-rad));y<=Math.min(fx.H-1,Math.ceil(cy+rad));y++) for(let x=Math.max(0,Math.floor(cx-rad));x<=Math.min(fx.W-1,Math.ceil(cx+rad));x++){
+      const dx=x+.5-cx, dy=y+.5-cy, d=Math.hypot(dx,dy)/rad; if(d>=1) continue; xs.push(x); ys.push(y); ds.push(d); as.push(Math.atan2(dy,dx)); }
+    g={xs,ys,ds,as}; fx._geo[key]=g; return g;
+  }
+
   // ---------- primitives ----------
   function dot(c,x,y,col,a){ x=Math.round(x); y=Math.round(y); c.globalAlpha=a==null?1:a; c.fillStyle=col; c.fillRect(x,y,1,1); }
   function plus(c,x,y,r,core,arm,a){ x=Math.round(x); y=Math.round(y); c.globalAlpha=a==null?1:a; c.fillStyle=arm;
@@ -2040,17 +2072,16 @@
     c.fillStyle=core; c.fillRect(x,y,1,1); }
   // halo tramé : plus dense au centre, en motif de Bayer (pas de flou)
   function glow(fx,c,cx,cy,rad,col,str,a){
-    const W=fx.W,H=fx.H; c.fillStyle=col;
-    const x0=Math.max(0,Math.floor(cx-rad)), x1=Math.min(W-1,Math.ceil(cx+rad)), y0=Math.max(0,Math.floor(cy-rad)), y1=Math.min(H-1,Math.ceil(cy+rad));
-    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const d=Math.hypot(x+.5-cx,y+.5-cy)/rad; if(d>=1) continue;
-      const v=(1-d)*str; const lv=v>.62?3:v>.38?2:v>.16?1:((x+y)&1)&&v>.06?.5:0; if(!lv) continue;
+    const g=geo(fx,cx,cy,rad); c.fillStyle=col;
+    for(let k=0;k<g.xs.length;k++){ const x=g.xs[k], y=g.ys[k], v=(1-g.ds[k])*str; const lv=v>.62?3:v>.38?2:v>.16?1:((x+y)&1)&&v>.06?.5:0; if(!lv) continue;
       c.globalAlpha=Math.min(1,a*lv/2); c.fillRect(x,y,1,1); }
   }
+  const LUTS={}; function lut(sh){ if(LUTS[sh]) return LUTS[sh]; const t=new Float32Array(256); for(let i=0;i<256;i++) t[i]=Math.pow(.5+.5*Math.cos(i/256*Math.PI*2),sh); return LUTS[sh]=t; }
   // rayons tournants tramés
   function rays(fx,c,cx,cy,rad,n,rot,col,a,sharp){
-    const W=fx.W,H=fx.H; c.fillStyle=col;
-    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const dx=x+.5-cx, dy=y+.5-cy, d=Math.hypot(dx,dy)/rad; if(d>=1||d<.15) continue;
-      const v=Math.pow(.5+.5*Math.cos(n*(Math.atan2(dy,dx)-rot)), sharp||6)*(1.15-d);
+    const g=geo(fx,cx,cy,rad); c.fillStyle=col; sharp=sharp||6; const T=lut(sharp), K=256/(Math.PI*2);
+    for(let k=0;k<g.xs.length;k++){ const d=g.ds[k]; if(d<.15) continue; const x=g.xs[k], y=g.ys[k];
+      const v=T[((n*(g.as[k]-rot)*K)%256+256)&255]*(1.15-d);
       const lv=v>.55?2:v>.3?1:(v>.14&&((x+y)&1))?.6:0; if(!lv) continue; c.globalAlpha=a*lv/2; c.fillRect(x,y,1,1); }
   }
   function ringAt(fx,c,cx,cy,r,col,a){ c.globalAlpha=a; c.fillStyle=col; const n=Math.max(8,Math.round(r*7));
@@ -2144,20 +2175,100 @@
         const x=s.cx+Math.cos(a)*rx, y=s.cy+fx.by+sn*ry; dot(c,x,y,t===0?"#FFFFFF":t===1?"#FFE08A":t<3?"#F07CC8":"#6A3EC0",t===0?1:.9-t*.15); } }
   }
 
+  // ---------- 3D : voxels pixelisés ----------
+  // Chaque pixel du sprite devient une colonne de voxels ; l'épaisseur grandit vers l'intérieur de la forme
+  // (bords fins, cœur épais : un volume arrondi). Rendu par tampon de profondeur dans une petite image (2 px par voxel),
+  // agrandie sans lissage : la 3D garde son grain pixel.
+  const LIGHT=(()=>{ const v=[-0.45,-0.62,0.64], n=Math.hypot(v[0],v[1],v[2]); return v.map(x=>x/n); })();
+  const AMB=.46, DIF=.62;
+  const FACE=[ {n:[0,0,1],e1:[1,0,0],e2:[0,1,0]}, {n:[0,0,-1],e1:[1,0,0],e2:[0,1,0]},
+    {n:[-1,0,0],e1:[0,1,0],e2:[0,0,1]}, {n:[1,0,0],e1:[0,1,0],e2:[0,0,1]},
+    {n:[0,-1,0],e1:[1,0,0],e2:[0,0,1]}, {n:[0,1,0],e1:[1,0,0],e2:[0,0,1]} ];
+  function voxModel(cv, o){
+    const w=cv.width, h=cv.height, d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,w,h).data;
+    const N=w*h, A=new Uint8Array(N), D=new Float32Array(N), H=new Float32Array(N), C=new Int32Array(N);
+    for(let i=0;i<N;i++){ if(d[i*4+3]>200){ A[i]=1; D[i]=1e9; C[i]=(255<<24)|(d[i*4+2]<<16)|(d[i*4+1]<<8)|d[i*4]; } }
+    const at=(x,y)=>(x<0||y<0||x>=w||y>=h)?0:D[y*w+x];
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(A[i]) D[i]=Math.min(D[i],at(x-1,y)+1,at(x,y-1)+1,at(x-1,y-1)+1.4,at(x+1,y-1)+1.4); }
+    for(let y=h-1;y>=0;y--) for(let x=w-1;x>=0;x--){ const i=y*w+x; if(A[i]) D[i]=Math.min(D[i],at(x+1,y)+1,at(x,y+1)+1,at(x+1,y+1)+1.4,at(x-1,y+1)+1.4); }
+    for(let i=0;i<N;i++) if(A[i]) H[i]=Math.min(o.maxH, o.base+(D[i]-1)*o.k);
+    const F=[], hh=(x,y)=>(x<0||y<0||x>=w||y>=h)?0:H[y*w+x];
+    const side=(t,x,y,hz,hn,c)=>{ if(hn>=hz) return; if(hn<=0){ F.push(t,x,y,-hz,2*hz,c); return; } F.push(t,x,y,hn,hz-hn,c,t,x,y,-hz,hz-hn,c); };
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!A[i]) continue; const hz=H[i], c=C[i];
+      F.push(0,x,y,hz,1,c, 1,x,y,-hz,1,c);
+      side(2,x,y,hz,hh(x-1,y),c); side(3,x,y,hz,hh(x+1,y),c); side(4,x,y,hz,hh(x,y-1),c); side(5,x,y,hz,hh(x,y+1),c); }
+    return {w,h,H,F:new Float64Array(F), cx:o.cx!=null?o.cx:w/2, cy:o.cy!=null?o.cy:h/2};
+  }
+  function rotV(R3,x,y,z){ const x1=x*R3.cy+z*R3.sy, z1=-x*R3.sy+z*R3.cy; return [x1, y*R3.cp-z1*R3.sp, y*R3.sp+z1*R3.cp]; }
+  function voxRender(fx){
+    const M=fx.M, R3=fx.R3, Q=fx.Q, W2=fx.W*Q, H2=fx.H*Q, img=fx.img32, zb=fx.zb;
+    img.fill(0); zb.fill(-1e9);
+    R3.cy=Math.cos(R3.yaw); R3.sy=Math.sin(R3.yaw); R3.cp=Math.cos(R3.pitch); R3.sp=Math.sin(R3.pitch);
+    const n0=[0,-R3.sp,R3.cp], ref=AMB+DIF*Math.max(0,n0[0]*LIGHT[0]+n0[1]*LIGHT[1]+n0[2]*LIGHT[2]);
+    const vis=[], sh=[], E1=[], E2=[];
+    for(let t=0;t<6;t++){ const n=rotV(R3,...FACE[t].n); vis[t]=n[2]>0.03;
+      sh[t]=Math.min(1.3,(AMB+DIF*Math.max(0,n[0]*LIGHT[0]+n[1]*LIGHT[1]+n[2]*LIGHT[2]))/ref); E1[t]=rotV(R3,...FACE[t].e1); E2[t]=rotV(R3,...FACE[t].e2); }
+    const F=M.F, L=F.length, ccx=M.cx, ccy=M.cy, ox=fx.ox, oy=fx.oy+fx.vb;
+    for(let k=0;k<L;k+=6){ const t=F[k]; if(!vis[t]) continue;
+      let x=F[k+1], y=F[k+2]; const z=F[k+3], len=t<2?1:F[k+4], col=F[k+5];
+      if(t===3) x+=1; else if(t===5) y+=1;
+      const p=rotV(R3,x-ccx,y-ccy,z), sx=(ox+ccx+p[0])*Q, sy=(oy+ccy+p[1])*Q, sz=p[2];
+      const a=E1[t], b=E2[t], ax=a[0]*Q, ay=a[1]*Q, bx=b[0]*Q*len, byy=b[1]*Q*len, bz=b[2]*len;
+      const det=ax*byy-ay*bx; if(det>-1e-3&&det<1e-3) continue;
+      const xs=[sx,sx+ax,sx+bx,sx+ax+bx], ys=[sy,sy+ay,sy+byy,sy+ay+byy];
+      const x0=Math.max(0,Math.floor(Math.min(xs[0],xs[1],xs[2],xs[3]))), x1=Math.min(W2-1,Math.ceil(Math.max(xs[0],xs[1],xs[2],xs[3])));
+      const y0=Math.max(0,Math.floor(Math.min(ys[0],ys[1],ys[2],ys[3]))), y1=Math.min(H2-1,Math.ceil(Math.max(ys[0],ys[1],ys[2],ys[3])));
+      const s=sh[t], r=Math.min(255,(col&255)*s)|0, g=Math.min(255,((col>>8)&255)*s)|0, bl=Math.min(255,((col>>16)&255)*s)|0, cc=(255<<24)|(bl<<16)|(g<<8)|r;
+      for(let py=y0;py<=y1;py++){ const dy=py+.5-sy; for(let px=x0;px<=x1;px++){ const dx=px+.5-sx;
+        const u=(dx*byy-dy*bx)/det; if(u<0||u>=1) continue; const v=(ax*dy-ay*dx)/det; if(v<0||v>=1) continue;
+        const zz=sz+u*a[2]+v*bz, i=py*W2+px; if(zz>zb[i]){ zb[i]=zz; img[i]=cc; } } }
+    }
+  }
+
   // ---------- instance ----------
   function Fx(o){
     this.cv=o.front; this.ctx=o.front.getContext("2d"); this.bcv=o.back||null; this.bctx=o.back?o.back.getContext("2d"):null;
-    this.W=o.W; this.H=o.H; this.f=0; this.parts=[]; this.bolts=[]; this.vis=true; this.by=0; this.glitch=0;
-    this.cv.width=o.W; this.cv.height=o.H; if(this.bcv){ this.bcv.width=o.W; this.bcv.height=o.H; }
+    this.W=o.W; this.H=o.H; this.f=0; this.parts=[]; this.bolts=[]; this.vis=true; this.by=0; this.vb=0; this.glitch=0;
+    this.Q=(o.vox&&o.sprite)?(o.vox.Q||2):1;
+    this.cv.width=o.W*this.Q; this.cv.height=o.H*this.Q; if(this.bcv){ this.bcv.width=o.W; this.bcv.height=o.H; }
+    this.ctx.imageSmoothingEnabled=false;
     this.sprite=o.sprite||null; this.ox=o.ox||0; this.oy=o.oy||0; this.bob=!!o.bob; this.hero=!!o.hero;
     this.rank=RANK[o.rarity]||0;
     this.sil=new Uint8Array(o.W*o.H); this.inner=[]; this.bb=[1e9,1e9,-1e9,-1e9];
     if(o.silFrom||this.sprite) this.silhouette(o.silFrom||this.sprite, this.ox, this.oy);
     this.rings();
     const b=this.bb; this.cx=(b[0]+b[2]+1)/2; this.cy=(b[1]+b[3]+1)/2; this.rad=Math.max(b[2]-b[0],b[3]-b[1])/2+(o.radPad||6);
+    if(this.Q>1){ const v=o.vox;
+      this.M=voxModel(this.sprite,{maxH:v.maxH||2,base:v.base!=null?v.base:.5,k:v.k||.6,cx:v.cx,cy:v.cy});
+      this.R3={yaw:v.yaw0||0,pitch:v.pitch!=null?v.pitch:-.2}; this.motion=v.motion||null; this.ta=v.phase!=null?v.phase:R()*20; this.drag=0; this.dragging=false;
+      const W2=o.W*this.Q, H2=o.H*this.Q; this.fcv=document.createElement("canvas"); this.fcv.width=W2; this.fcv.height=H2; this.fctx=this.fcv.getContext("2d");
+      this.imgData=this.fctx.createImageData(W2,H2); this.img32=new Int32Array(this.imgData.data.buffer); this.zb=new Float32Array(W2*H2);
+      this.outData=this.ctx.createImageData(W2,H2); this.out32=new Int32Array(this.outData.data.buffer);
+      this.bob3=this.bob; this.bob=false; this.pb=new PCtx(o.W,o.H); this.pf=new PCtx(o.W,o.H); }
     this.src=(o.sources||[]).map(s=>this.source(s)).filter(s=>s.pts.length);
     this._stars=null;
   }
+  // angle du moment : balancement ou rotation complète, plus ce que le doigt a tourné
+  Fx.prototype.angle=function(){
+    const m=this.motion; if(!this.dragging) this.ta+=1/FPS;
+    let a=0; if(m){ a = m.spin ? this.ta*m.spin : Math.sin(this.ta*(m.speed||.8))*(m.amp||.4);
+      if(m.piro){ const u=((this.ta+m.piro*3)%9)/1.8; if(u<1) a+=Math.PI*2*(u<.5?2*u*u:1-2*(1-u)*(1-u)); } }   // pirouette de temps en temps
+    this.R3.yaw=a+this.drag;
+  };
+  // silhouette, intérieur et anneaux recalculés depuis l'image 3D du moment (à la résolution des pixels logiques)
+  Fx.prototype.sil3d=function(){
+    const W=this.W,H=this.H,Q=this.Q,W2=W*Q,I=this.img32,S=this.sil; S.fill(0); const inner=[], bb=[1e9,1e9,-1e9,-1e9];
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ let any=0, inn=0;
+      for(let j=0;j<Q;j++) for(let i=0;i<Q;i++){ const c=I[(y*Q+j)*W2+x*Q+i]; if(c){ any=1; if(((c&255)>=40)||(((c>>8)&255)>=34)||(((c>>16)&255)>=48)) inn=1; } }
+      if(any){ S[y*W+x]=1; if(x<bb[0])bb[0]=x; if(y<bb[1])bb[1]=y; if(x>bb[2])bb[2]=x; if(y>bb[3])bb[3]=y; } if(inn) inner.push({x,y}); }
+    this.inner=inner; if(bb[2]>=0) this.bb=bb; this.rings();
+  };
+  // points d'émission : chaque point garde sa place sur la surface avant du volume et suit la rotation
+  Fx.prototype.reproj=function(){
+    const M=this.M, R3=this.R3, ox=this.ox, oy=this.oy+this.vb;
+    for(const s of this.src) for(const arr of [s.pts,s.edge,s.top]) for(const p of arr){
+      if(p.mx===undefined) continue; const q=rotV(R3,p.mx-M.cx,p.my-M.cy,p.mz); p.x=Math.round(ox+M.cx+q[0]-.5); p.y=Math.round(oy+M.cy+q[1]-.5); }
+  };
   Fx.prototype.silhouette=function(cv,ox,oy){
     const d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height).data, W=this.W, H=this.H;
     for(let y=0;y<cv.height;y++) for(let x=0;x<cv.width;x++){ const i=(y*cv.width+x)*4; if(d[i+3]<=20) continue; const X=x+ox, Y=y+oy; if(X<0||Y<0||X>=W||Y>=H) continue;
@@ -2179,9 +2290,11 @@
     for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=(y*w+x)*4; if(d[i+3]<=20) continue; const X=x+ox, Y=y+oy;
       if(X<0||Y<0||X>=this.W||Y>=this.H) continue;
       if(X<bb[0])bb[0]=X; if(Y<bb[1])bb[1]=Y; if(X>bb[2])bb[2]=X; if(Y>bb[3])bb[3]=Y;
-      if(!op(x-1,y)||!op(x+1,y)||!op(x,y-1)||!op(x,y+1)) edge.push({x:X,y:Y});
-      if(isOutline(d,i)) continue; pts.push({x:X,y:Y});
-      let up=y-1; while(up>=0 && op(x,up) && isOutline(d,(up*w+x)*4)) up--; if(up<0||!op(x,up)) top.push({x:X,y:Y-(y-1-up)}); }
+      const M=this.M, mx=X-this.ox, my=Y-this.oy, mz=(M&&mx>=0&&my>=0&&mx<M.w&&my<M.h)?M.H[my*M.w+mx]:0;
+      const pt=(yy)=>M?{x:X,y:yy,mx:mx+.5,my:yy-this.oy+.5,mz:mz}:{x:X,y:yy};
+      if(!op(x-1,y)||!op(x+1,y)||!op(x,y-1)||!op(x,y+1)) edge.push(pt(Y));
+      if(isOutline(d,i)) continue; pts.push(pt(Y));
+      let up=y-1; while(up>=0 && op(x,up) && isOutline(d,(up*w+x)*4)) up--; if(up<0||!op(x,up)) top.push(pt(Y-(y-1-up))); }
     const cx=(bb[0]+bb[2]+1)/2, cy=(bb[1]+bb[3]+1)/2, r=Math.max(bb[2]-bb[0],bb[3]-bb[1])/2;
     return {el:s.el, I:s.I||1, pts, edge, top, bb, cx, cy, r};
   };
@@ -2192,18 +2305,23 @@
   Fx.prototype.step=function(){
     const f=++this.f;
     if(this.bob) this.by=(Math.floor(f/8)%2)?-1:0;
+    if(this.M){ if(this.bob3) this.vb=(Math.floor(f/8)%2)?-1:0; this.angle();
+      if(!this.half || (f&1) || this.dragging){ voxRender(this); this.sil3d(); this.reproj(); } }   // tuiles : le volume tourne lentement, une image sur deux suffit
     for(const s of this.src){ const E=EL[s.el]; if(E&&E.spawn) E.spawn(this,s); }
     rarSpawn(this);
     const P=this.parts; for(let i=P.length-1;i>=0;i--){ const p=P[i]; if(++p.age>=p.life){ P.splice(i,1); continue; } if(p.upd) p.upd(p,this); p.x+=p.vx; p.y+=p.vy; if(p.kind==="fire") p.vx+=rnd(-.06,.06); }
     for(let i=this.bolts.length-1;i>=0;i--){ if(++this.bolts[i].age>=this.bolts[i].life) this.bolts.splice(i,1); }
   };
   Fx.prototype.draw=function(){
-    const W=this.W,H=this.H, c=this.ctx, b=this.bctx||c;
-    if(this.bctx) b.clearRect(0,0,W,H); c.clearRect(0,0,W,H);
+    if(this.M) return this.draw3d();
+    const W=this.W,H=this.H, c=this.ctx, b=this.bctx||c, Q=this.Q;
+    c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,W*Q,H*Q); c.setTransform(Q,0,0,Q,0,0);
+    if(this.bctx) b.clearRect(0,0,W,H);
     rarBack(this,b);
     for(const s of this.src){ const E=EL[s.el]; if(E&&E.back) E.back(this,s,b); }
     drawParts(this,b,"back");
-    if(this.sprite){ c.globalAlpha=1; c.drawImage(this.sprite,this.ox,this.oy+this.by); }
+    if(this.M){ this.fctx.putImageData(this.imgData,0,0); c.save(); c.setTransform(1,0,0,1,0,0); c.globalAlpha=1; c.drawImage(this.fcv,0,0); c.restore(); }
+    else if(this.sprite){ c.globalAlpha=1; c.drawImage(this.sprite,this.ox,this.oy+this.by); }
     rarFront(this,c);
     for(const s of this.src){ const E=EL[s.el]; if(E&&E.front) E.front(this,s,c); }
     drawParts(this,c,"front");
@@ -2211,6 +2329,28 @@
       const halo=a===0?"#9AD8FF":"#5EA7FF"; c.globalAlpha=a===0?.85:.5; c.fillStyle=halo; c.fillRect(x+1,y,1,1); c.fillRect(x-1,y,1,1); c.fillRect(x,y-1,1,1); c.fillRect(x,y+1,1,1); }
       for(const [x,y] of bo.pts) dot(c,x,y,a===0?"#FFFFFF":a===1?"#CFEFFF":"#5EA7FF",a<2?1:.6); }
     c.globalAlpha=1; if(this.bctx) b.globalAlpha=1;
+  };
+
+  // image 3D : aura et effets arrière, volume, effets avant, composés pixel par pixel puis posés d'un coup
+  Fx.prototype.draw3d=function(){
+    const pb=this.pb, pf=this.pf; pb.clear(); pf.clear();
+    rarBack(this,pb); for(const s of this.src){ const E=EL[s.el]; if(E&&E.back) E.back(this,s,pb); } drawParts(this,pb,"back");
+    rarFront(this,pf); for(const s of this.src){ const E=EL[s.el]; if(E&&E.front) E.front(this,s,pf); } drawParts(this,pf,"front");
+    for(const bo of this.bolts){ const a=bo.age; for(const [x,y] of bo.pts){
+      pf.globalAlpha=a===0?.85:.5; pf.fillStyle=a===0?"#9AD8FF":"#5EA7FF"; pf.fillRect(x+1,y,1,1); pf.fillRect(x-1,y,1,1); pf.fillRect(x,y-1,1,1); pf.fillRect(x,y+1,1,1); }
+      for(const [x,y] of bo.pts) dot(pf,x,y,a===0?"#FFFFFF":a===1?"#CFEFFF":"#5EA7FF",a<2?1:.6); }
+    const W=this.W, H=this.H, Q=this.Q, W2=W*Q, S=this.img32, O=this.out32, B=pb.d, F=pf.d;
+    for(let ly=0;ly<H;ly++) for(let lx=0;lx<W;lx++){ const li=(ly*W+lx)*4, fa=F[li+3], ba=B[li+3];
+      // fond seul (arrière + avant), calculé une fois par pixel logique
+      let bg=0;
+      if(ba>0||fa>0){ let r=B[li], g=B[li+1], b=B[li+2], a=ba;
+        if(fa>0){ const na=fa+a*(1-fa), k=a*(1-fa); r=(F[li]*fa+r*k)/na; g=(F[li+1]*fa+g*k)/na; b=(F[li+2]*fa+b*k)/na; a=na; }
+        bg=((a*255)<<24)|((b&255)<<16)|((g&255)<<8)|(r&255); }
+      for(let j=0;j<Q;j++){ let o=(ly*Q+j)*W2+lx*Q; for(let i=0;i<Q;i++,o++){ const sp=S[o];
+        if(!sp){ O[o]=bg; continue; }
+        if(!(fa>0)){ O[o]=sp; continue; }
+        { const k=1-fa; O[o]=(255<<24)|(((F[li+2]*fa+((sp>>16)&255)*k)&255)<<16)|(((F[li+1]*fa+((sp>>8)&255)*k)&255)<<8)|((F[li]*fa+(sp&255)*k)&255); } } } }
+    this.ctx.putImageData(this.outData,0,0);
   };
 
   // ---------- rareté ----------
@@ -2282,9 +2422,10 @@
     if(!LIVE.size){ cancelAnimationFrame(raf); raf=0; }
   }
   function start(fx){
+    if(reduce && fx.M){ fx.motion=null; fx.drag=.45; }   // mouvement réduit : vue de trois quarts, immobile
     for(let i=0;i<24;i++) fx.step();   // l'effet démarre déjà installé
     fx.draw(); fx.cv.__fx=fx;
-    const still = reduce || (!fx.rank && !fx.src.length && !fx.bob);
+    const still = reduce || (!fx.rank && !fx.src.length && !fx.bob && !(fx.M && fx.motion));
     if(still) return fx;
     LIVE.add(fx); if(io) io.observe(fx.cv);
     if(!raf) raf=requestAnimationFrame(loop);
@@ -2298,7 +2439,24 @@
     const pad=opts.pad!=null?opts.pad:(rank>=3||el?7:rank?6:5);
     const S=Math.max(opts.min||22, Math.max(sw,sh)+pad*2);
     const ox=Math.floor((S-sw)/2), oy=Math.max(1,Math.floor((S-sh)/2)-(opts.lift||0));
-    return start(new Fx({front:cv, W:S, H:S, sprite, ox, oy, rarity, sources:el?[{el, I:[1,1,1,1.3,1.6][rank]}]:[], bob:!!opts.bob, radPad:opts.radPad}));
+    const vox=opts.vox===false?null:Object.assign({Q:2, maxH:1.6, motion:{amp:[.32,.38,.46,.55,.62][rank], speed:.9, piro:rank>=3?R()+1:0}}, opts.vox||{});
+    const fx=new Fx({front:cv, W:S, H:S, sprite, ox, oy, rarity, sources:el?[{el, I:[1,1,1,1.3,1.6][rank]}]:[], bob:!!opts.bob, radPad:opts.radPad, vox});
+    fx.half=!opts.bob; return start(fx);
+  };
+  // Héros en 3D : une seule toile (aura, héros en voxels, particules), marges m autour du sprite.
+  PX.fxHero=function(cv, o){
+    const m=o.m||6, W=o.sprite.width+2*m, H=o.sprite.height+2*m;
+    return start(new Fx({front:cv, W, H, sprite:o.sprite, ox:m, oy:m, hero:true, rarity:o.rarity, radPad:3,
+      vox:Object.assign({Q:2, maxH:3, k:.55, motion:{amp:.42, speed:.6}}, o.vox||{}),
+      sources:(o.layers||[]).map(l=>({el:l.el, mask:l.mask, ox:m, oy:m, I:l.I||.55}))}));
+  };
+  // Le doigt fait tourner le volume ; au lâcher, l'objet reprend son mouvement
+  PX.fxDrag=function(el, getFx){
+    let x0=null; el.style.touchAction="pan-y";
+    el.addEventListener("pointerdown",e=>{ const fx=getFx(); if(!fx||!fx.M) return; x0=e.clientX; fx.dragging=true; });
+    el.addEventListener("pointermove",e=>{ const fx=getFx(); if(x0==null||!fx) return; fx.drag+=(e.clientX-x0)*.025; x0=e.clientX; if(reduce){ fx.step(); fx.draw(); } });
+    const up=()=>{ const fx=getFx(); x0=null; if(fx) fx.dragging=false; };
+    el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up); el.addEventListener("pointerleave",up);
   };
   // Surimpression autour d'une image (héros) : toile arrière + toile avant, marges m.
   PX.fxOverlay=function(back, front, o){

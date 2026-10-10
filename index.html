@@ -1136,8 +1136,8 @@
   .g-slot .g-fx{position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);image-rendering:pixelated;border-radius:4px;}
   .g-slot .g-stars{z-index:3;}
   /* héros et familier animés */
-  .g-fx-back,.g-fx-front{position:absolute;pointer-events:none;image-rendering:pixelated;}
-  .g-fx-back{z-index:0;} .g-stage-hero .g-hero-img,.g-try .g-hero-img{position:relative;z-index:1;} .g-fx-front{z-index:2;}
+  .g-fx-hero{position:absolute;z-index:1;pointer-events:none;image-rendering:pixelated;}
+  .g-stage-hero,.g-try{cursor:grab;-webkit-user-select:none;user-select:none;}
   .g-pet-fx{position:absolute;right:-2px;bottom:-4px;z-index:3;image-rendering:pixelated;pointer-events:none;}
   .g-try .g-pet-fx{right:6%;bottom:0;}
   /* cadres de rareté : chaque palier ajoute du détail */
@@ -1173,6 +1173,10 @@
      linear-gradient(#FFFFFF,#FFFFFF) 50% 0/4px 6px no-repeat, linear-gradient(#FF5A6E,#FF5A6E) 50% 0/12px 3px no-repeat;}
   .g-tile.eq{outline:3px solid #7AE09A;outline-offset:2px;}
   .r-legendaire .g-tag,.r-mythique .g-tag{background:rgba(7,10,28,.86);}
+  .g-vitrine{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 0 10px;padding:8px 0 6px;border-radius:6px;
+    background:radial-gradient(ellipse at 50% 80%,rgba(255,255,255,.07),transparent 60%),#141C40;box-shadow:inset 0 0 0 2px #070A1C;cursor:grab;-webkit-user-select:none;user-select:none;}
+  .g-fx-vit{display:block;image-rendering:pixelated;}
+  .g-vit-hint{font-size:12px;color:var(--ink-faint);margin-top:2px;}
   /* fiche d'objet : élément et légende */
   .g-el{font-family:var(--pix);font-weight:700;}
   .g-el-fire{color:#FFB040}.g-el-ice{color:#9ADFFF}.g-el-spectral{color:#7AF5D0}.g-el-storm{color:#FFF6A0}.g-el-cosmic{color:#D2A8FF}
@@ -5762,6 +5766,7 @@
   // ---------- effets de rareté et d'élément (v55) ----------
   const FXOK = PXOK && !!PX.fxTile;
   const RK={commun:0,rare:1,epique:2,legendaire:3,mythique:4};
+  const VOXH={weapon:1.2, head:2.2, chest:2.4, legs:1.8, feet:1.8, pet:3.2};   // épaisseur maximale du volume, en voxels
   function spriteOf(it){
     const key="sp"+it.id+(it.slot==="head"?JSON.stringify(lookOf()):""); if(pxCache[key]) return pxCache[key];
     const c= it.slot==="pet" ? PX.crop(PX.pet(it,0)) : PX.icon(it, lookOf()); pxCache[key]=c; return c;
@@ -5771,28 +5776,30 @@
     if(!FXOK || !root) return;
     root.querySelectorAll("canvas[data-gfx]").forEach(cv=>{
       if(cv.__fx) return; const it=ITEM[cv.dataset.gfx]; if(!it) return; const k=cv.dataset.gfk, r=rarityOf(it);
+      const vox={maxH:VOXH[it.slot]||1.8};
       try{
-        if(k==="pet"){ const sp=spriteOf(it); PX.fxTile(cv, sp, r, it.fx||null, {pad:RK[r]>=3?5:4, bob:true, min:12}); const sc=sp.width>22?2:3; cv.style.width=cv.width*sc+"px"; cv.style.height=cv.height*sc+"px"; }
-        else PX.fxTile(cv, spriteOf(it), r, it.fx||null, {lift:k==="tile"?2:0, pad:k==="slot"?(RK[r]>=3?5:3):undefined, min:k==="slot"?20:22});
+        if(k==="vit"){ const fx=PX.fxTile(cv, spriteOf(it), r, it.fx||null, {pad:6, vox:Object.assign(vox,{motion:{spin:.75}})}); const sc=Math.max(2,Math.floor(184/fx.H)); cv.style.width=fx.W*sc+"px"; cv.style.height=fx.H*sc+"px"; }
+        else if(k==="pet"){ const sp=spriteOf(it); const fx=PX.fxTile(cv, sp, r, it.fx||null, {pad:RK[r]>=3?5:4, bob:true, min:12, vox:Object.assign(vox,{motion:{amp:.45,speed:.7}})}); const sc=sp.width>22?2:3; cv.style.width=fx.W*sc+"px"; cv.style.height=fx.H*sc+"px"; }
+        else PX.fxTile(cv, spriteOf(it), r, it.fx||null, {lift:k==="tile"?2:0, pad:k==="slot"?(RK[r]>=3?5:3):undefined, min:k==="slot"?20:22, vox:k==="slot"?Object.assign(vox,{motion:{amp:.3,speed:.7}}):vox});
       }catch(e){}
     });
   }
-  // effets autour du héros : chaque objet élémentaire porté émet ses particules ; l'aura suit la plus haute rareté
+  // héros en 3D : volume en voxels qui se balance (le doigt le fait tourner), particules de chaque objet élémentaire,
+  // aura selon la plus haute rareté portée
   function gHeroFx(wrap, over){
-    if(!FXOK || !wrap || !PX.heroLayer) return;
+    if(!FXOK || !wrap || !PX.heroLayer || !PX.fxHero) return;
     const img=wrap.querySelector(".g-hero-img"); if(!img) return;
-    wrap.querySelectorAll(".g-fx-back,.g-fx-front").forEach(c=>c.remove());
+    wrap.querySelectorAll(".g-fx-hero").forEach(c=>c.remove());
     const eq=eqDefs(over), look=lookOf(), layers=[]; let best=0;
     ["head","chest","legs","feet","weapon"].forEach(s=>{ const it=eq[s]; if(!it) return; best=Math.max(best,RK[rarityOf(it)]); if(it.fx) layers.push({el:it.fx, mask:PX.heroLayer(look, eq, s)}); });
-    if(!layers.length && best<3) return;
-    const back=document.createElement("canvas"), front=document.createElement("canvas");
-    back.className="g-fx-back"; front.className="g-fx-front"; back.setAttribute("aria-hidden","true"); front.setAttribute("aria-hidden","true");
-    wrap.insertBefore(back, wrap.firstChild); wrap.appendChild(front);
+    const cv=document.createElement("canvas"); cv.className="g-fx-hero"; cv.setAttribute("role","img"); cv.setAttribute("aria-label", img.getAttribute("alt")||"");
+    wrap.appendChild(cv);
     const m=6;
     const place=()=>{ const W=img.clientWidth, H=img.clientHeight; if(!W||!H) return; const s=Math.min(W/PX.W, H/PX.H);
       const x0=img.offsetLeft+(W-PX.W*s)/2-m*s, y0=img.offsetTop+(H-PX.H*s)/2-m*s;
-      [back,front].forEach(c=>{ c.style.width=(PX.W+2*m)*s+"px"; c.style.height=(PX.H+2*m)*s+"px"; c.style.left=x0+"px"; c.style.top=y0+"px"; }); };
-    try{ PX.fxOverlay(back, front, {w:PX.W, h:PX.H, m, sil:PX.hero(look, eq), rarity:["commun","commun","commun","legendaire","mythique"][best], layers}); }catch(e){ back.remove(); front.remove(); return; }
+      cv.style.width=(PX.W+2*m)*s+"px"; cv.style.height=(PX.H+2*m)*s+"px"; cv.style.left=x0+"px"; cv.style.top=y0+"px"; img.style.visibility="hidden"; };
+    try{ PX.fxHero(cv, {m, sprite:PX.hero(look, eq), rarity:["commun","commun","commun","legendaire","mythique"][best], layers}); }catch(e){ cv.remove(); img.style.visibility=""; return; }
+    if(!wrap.__drag){ wrap.__drag=1; PX.fxDrag(wrap, ()=>{ const c=wrap.querySelector(".g-fx-hero"); return c&&c.__fx; }); }
     if(img.complete && img.clientHeight) place(); else img.addEventListener("load",place,{once:true});
     requestAnimationFrame(place);
   }
@@ -6145,8 +6152,9 @@
       const uc=upCost(id);
       if(uc) actions+=`<button class="btn secondary" data-gup ${S.gold<uc?"disabled":""}>${L2("Forgeron : améliorer ","Smith: upgrade ")+"★".repeat(stars(id)+1)+" · "}${goldHTML(uc)}</button>`;
     }
+    const vitrine = FXOK ? `<div class="g-vitrine" aria-label="${L2("Vue 3D de l'objet","3D view of the item")}">${fxCanvas(id,"vit")}<span class="g-vit-hint">${L2("Fais-le tourner du doigt","Spin it with your finger")}</span></div>` : "";
     sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet g-sheet">
-      ${preview}
+      ${vitrine}${preview}
       <h3>${gEsc(nm(it.n))} ${stars(id)?`<span class="g-stars inline">${"★".repeat(stars(id))}</span>`:""}</h3>
       <p class="sub"><span class="g-rar r-${r}">${nm(RARITY[r])}</span>${elName(it)?` · <span class="g-el g-el-${it.fx}">${elName(it)}</span>`:""} · ${nm(SLOT_NAMES[it.slot])} · ${L2("niveau ","level ")+it.lvl}${it.price?" · "+goldHTML(it.price):(it.gift?" · "+L2("offert au niveau ","given at level ")+it.gift:" · "+L2("offert","free"))}</p>
       ${it.lore?`<p class="g-lore">${gEsc(nm(it.lore))}</p>`:""}
@@ -6155,6 +6163,7 @@
     </div></div>`;
     bindSheet();
     gMountFx(sheetRoot); gHeroFx(sheetRoot.querySelector(".g-try"), it.slot==="pet"?null:{[it.slot]:id});
+    const vit=sheetRoot.querySelector(".g-vitrine"); if(vit && PX.fxDrag) PX.fxDrag(vit, ()=>{ const c=vit.querySelector("canvas"); return c&&c.__fx; });
     const q=s=>sheetRoot.querySelector(s);
     if(q("[data-gbuy]")) q("[data-gbuy]").addEventListener("click",()=>{
       if(lastState.gold<it.price || lastState.level<it.lvl) return;
