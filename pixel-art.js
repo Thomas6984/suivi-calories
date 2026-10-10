@@ -1,5 +1,5 @@
-/* Suivi calories v54 · La Quête du Royaume : sprites pixel et moteur de dessin.
-   Dessins originaux. Généré à partir de px-core.js, px-hero.js, px-items-a.js, px-items-b.js. */
+/* Suivi calories v55 · La Quête du Royaume : sprites pixel, objets légendaires et effets animés.
+   Dessins originaux. Généré à partir de px-core.js, px-hero.js, px-items-a.js, px-items-b.js, px-items-d.js, px-items-e.js, px-items-f.js, px-items-c.js, px-fx.js. */
 /* ============================================================
    Suivi calories · La Quête du Royaume : moteur de dessin pixel
    Chaque sprite est une grille de caractères ; une palette associe
@@ -312,6 +312,15 @@
     }
     const handPal = (eq.chest && eq.chest.gloves) ? Object.assign({}, lp, eq.chest.gloves) : lp;
     PX.drawArt(ctx, HANDS, handPal);
+    return c;
+  };
+  // Une seule couche du héros, à sa place exacte (sert de masque aux effets d'élément)
+  PX.heroLayer=function(look, eq, slot){
+    const [c,ctx]=PX.canvas(PX.W, PX.H), it=eq[slot]; if(!it) return c;
+    if(slot==="weapon"){
+      const a=it.art, w=Math.max(...a.rows.map(r=>r.length)), g=a.grip||[2, a.rows.length-3];
+      PX.drawArt(ctx, a, it.pal, 12-(w-1-g[0]), 31-g[1], true);
+    } else PX.drawArt(ctx, it.art, slot==="head" ? Object.assign({}, lookPal(look||{}), it.pal) : it.pal);
     return c;
   };
   // Icône d'un objet : on dessine la couche seule et on recadre au plus juste
@@ -1411,4 +1420,891 @@
   ]),{a:"#FF6A3C",o:"#FFA03C",y:"#FFE04A",r:"#C8242A",e:"#1B1424"});
 
   window.PX_ITEMS=(window.PX_ITEMS||[]).concat(L);
+})();
+
+/* v55 · Armes légendaires : feu, glace, spectre, plasma, foudre, océan, dragon, néant.
+   Dessinées par champs de distance : chaque pixel connaît sa position le long de la lame (u)
+   et son écart à l'axe (v), ce qui donne des ombrages nets et des formes travaillées. */
+(function(){
+  "use strict";
+  const P=window.PX_P;
+  const L=[];
+  function add(slot,id,fr,en,lvl,price,art,pal,more){ L.push(Object.assign({slot,id,n:[fr,en],lvl,price,art,pal},more||{})); }
+  function grid(w,h){ return Array.from({length:h},()=>Array(w).fill(".")); }
+  function put(g,x,y,c){ x=Math.round(x); y=Math.round(y); if(y>=0&&y<g.length&&x>=0&&x<g[0].length) g[y][x]=c; }
+  function outline(g){
+    const h=g.length,w=g[0].length, o=g.map(r=>r.slice());
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ if(g[y][x]!==".") continue;
+      if((y>0&&g[y-1][x]!==".")||(y<h-1&&g[y+1][x]!==".")||(x>0&&g[y][x-1]!==".")||(x<w-1&&g[y][x+1]!==".")) o[y][x]="k"; }
+    return o.map(r=>r.join(""));
+  }
+  function art(w,h,draw,grip){ const g=grid(w,h); draw(g); return {rows:outline(g), grip}; }
+  // segment épais : u ∈ [0,1] le long de l'axe, v écart signé (v<0 : côté éclairé, en haut à gauche)
+  function seg(g,x0,y0,x1,y1,wf,cf){
+    const dx=x1-x0, dy=y1-y0, Ln=Math.hypot(dx,dy), ux=dx/Ln, uy=dy/Ln;
+    for(let y=0;y<g.length;y++) for(let x=0;x<g[0].length;x++){
+      const px=x-x0, py=y-y0, u=(px*ux+py*uy)/Ln; if(u<-.04||u>1.04) continue;
+      const v=px*(-uy)+py*ux, w=wf(Math.max(0,Math.min(1,u))); if(w<=0||Math.abs(v)>w) continue;
+      const c=cf(Math.max(0,Math.min(1,u)),v,w,x,y); if(c) g[y][x]=c; }
+  }
+  function disc(g,cx,cy,r,c){ for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++) if(x*x+y*y<=r*r+r*0.8) put(g,cx+x,cy+y,c); }
+  function bez(g,p0,p1,p2,w,cf){
+    for(let i=0;i<=80;i++){ const t=i/80, u=1-t, x=u*u*p0[0]+2*u*t*p1[0]+t*t*p2[0], y=u*u*p0[1]+2*u*t*p1[1]+t*t*p2[1];
+      const ww=typeof w==="function"?w(t):w; for(let yy=Math.floor(y-ww);yy<=Math.ceil(y+ww);yy++) for(let xx=Math.floor(x-ww);xx<=Math.ceil(x+ww);xx++){
+        if(Math.hypot(xx-x,yy-y)<=ww+.15){ const c=cf(t,xx,yy); if(c) put(g,xx,yy,c); } } }
+  }
+  const stripes=(n,a,b)=>(u)=>((u*n)|0)%2?a:b;
+
+  /* =========================== ARMES =========================== */
+  // Épée des flammes éternelles : lame ondulée en fusion, garde d'obsidienne à cornes
+  add("weapon","w_flamme","Épée des flammes éternelles","Blade of eternal flames",22,950,art(20,20,g=>{
+    seg(g,6,13,18,1,u=>u>.8?(1-u)/.2*1.8+.25:1.75+.6*Math.sin(u*16+.6),(u,v,w)=>{ const r=Math.abs(v)/w;
+      if(r<.3) return u>.85?"a":"n"; if(v<0) return r>.72?"b":"a"; return r>.7?"d":"c"; });
+    seg(g,3,10,9,16,u=>.95-.25*Math.abs(u-.5),(u,v)=>v<-.2?"f":"g");
+    put(g,2,9,"i"); put(g,2,8,"i"); put(g,1,7,"j"); put(g,10,17,"i"); put(g,11,17,"i"); put(g,12,16,"j");
+    put(g,6,13,"o"); put(g,5,12,"o"); put(g,7,14,"o");
+    seg(g,5,14,2,17,()=>.75,stripes(5,"f","g"));
+    disc(g,1,18,1,"j"); put(g,1,18,"o");
+  },[3,16]),P(["#FFE08A","#FFB040","#E0501E","#8A1E12"],["#B07A5A","#5A4038","#3A2A2A","#1E1418"],{n:"#FFFBE0",o:"#FF4A2A"}),{fx:"fire",lore:["Forgée dans le cœur d'un volcan, sa lame ne refroidit jamais.","Forged in a volcano's heart, its blade never cools."]});
+
+  // Lame de givre de Niflheim : cristal facetté, garde en stalactites
+  add("weapon","w_givre","Lame de givre de Niflheim","Niflheim frost blade",27,1300,art(20,20,g=>{
+    seg(g,6,13,18,1,u=>u>.7?(1-u)/.3*2.1+.2:2.1-((u*9)%1>.55?.55:0),(u,v,w)=>{ const r=Math.abs(v)/w;
+      if(Math.abs(v)<.45) return "n"; if(v<0) return r>.7?"b":"a"; return r>.7?"d":"c"; });
+    seg(g,3,10,9,16,()=>.8,(u,v)=>v<0?"b":"c");
+    [[2,8],[1,7],[3,8],[10,16],[11,15],[11,17]].forEach(([x,y],i)=>put(g,x,y,i%3===1?"a":"b"));
+    put(g,6,13,"o");
+    seg(g,5,14,2,17,()=>.75,stripes(5,"f","g"));
+    put(g,1,18,"b"); put(g,1,17,"a"); put(g,2,18,"c");
+  },[3,16]),P(["#FFFFFF","#C8EEFF","#82C4E8","#3E6E9A"],["#4A6EA8","#2A4270","#1A2A4A","#0E1830"],{n:"#E6FAFF",o:"#49E0F0"}),{fx:"ice",lore:["Taillée dans la glace du monde d'en bas, elle gèle l'air qu'elle tranche.","Cut from the ice of the underworld, it freezes the air it cuts."]});
+
+  // Glaive spectral : hampe d'os, crâne, lame courbe translucide
+  add("weapon","w_spectre","Glaive spectral","Spectral glaive",32,1800,art(20,20,g=>{
+    seg(g,1,19,11,9,()=>.7,stripes(7,"f","g"));
+    bez(g,[11,9],[13,1],[19,1],t=>1.6*(1-t)+.35,(t,x,y)=>{ const d=(x-12)+(y-9); return d<-6?"a":d<-3?"b":"c"; });
+    seg(g,10,8,19,1,u=>.3,()=>"d");
+    disc(g,10,10,1,"n"); put(g,9,10,"k"); put(g,10,9,"m"); put(g,11,11,"o");
+    put(g,6,14,"o"); put(g,4,16,"o");
+  },[3,17]),P(["#E0FFF6","#7AF5D0","#3EC2A0","#1E6A68"],["#8A6EE0","#5A3EA8","#3A2470","#1E1240"],{n:"#F0F0E0",m:"#B8B4A0",o:"#7AF5D0"}),{fx:"spectral",lore:["Les âmes qu'elle libère montent en volutes vers la lune.","The souls it frees rise in wisps toward the moon."]});
+
+  // Sabre à plasma : poignée chromée, faisceau d'énergie
+  add("weapon","w_plasma","Sabre à plasma","Plasma saber",36,2500,art(20,20,g=>{
+    seg(g,7,12,18,1,u=>u>.92?(1-u)/.08*1.35+.3:1.35,(u,v,w)=>{ const r=Math.abs(v)/w; return r<.35?"n":r<.75?"a":"b"; });
+    seg(g,2,17,6,13,()=>1.15,(u,v)=>v<-.35?"f":v<.35?"g":"i");
+    seg(g,5,11,9,15,()=>.7,(u,v)=>v<0?"f":"i");
+    put(g,3,16,"o"); put(g,4,15,"p"); put(g,5,14,"o"); put(g,1,18,"j"); put(g,2,18,"i");
+  },[3,16]),P(["#A8FFF0","#49E0F0","#1F9DB8","#0E4E5E"],["#F4F7FB","#B4BECB","#6A7486","#3A4252"],{n:"#FFFFFF",o:"#49E0F0",p:"#FF4AD8"}),{fx:"tech",lore:["Arme des chevaliers des étoiles : un faisceau tenu par un champ magnétique.","Weapon of the star knights: a beam held by a magnetic field."]});
+
+  // Marteau du tonnerre : manche gainé, tête d'acier céleste, rune d'éclair
+  add("weapon","w_foudre","Marteau du tonnerre","Thunder hammer",41,3300,art(20,20,g=>{
+    seg(g,2,18,11,9,()=>.75,stripes(6,"f","g"));
+    seg(g,9,2,17,10,u=>2.9-(u<.12||u>.88?.8:0),(u,v,w)=>{ const r=v/w; if(u<.14||u>.86) return "i"; return r<-.55?"a":r<.15?"b":r<.6?"c":"d"; });
+    [[11,5],[12,6],[13,6],[13,7],[14,8]].forEach(([x,y])=>put(g,x,y,"n"));
+    put(g,12,4,"o"); put(g,15,7,"o");
+    disc(g,1,19,1,"i"); put(g,10,10,"i"); put(g,9,11,"i");
+  },[4,16]),P(["#E6F2FF","#8FA6D8","#4A5E98","#232E58"],["#6E4A2E","#4A2E1A","#D9A420","#7A5A0E"],{n:"#FFF6A0",o:"#FFFFFF"}),{fx:"storm",lore:["Chaque coup appelle un éclair du ciel.","Every strike calls lightning from the sky."]});
+
+  // Trident de Poséidon : or marin, pointes barbelées, perle des abysses
+  add("weapon","w_poseidon","Trident de Poséidon","Poseidon's trident",46,4500,art(20,20,g=>{
+    seg(g,1,19,12,8,()=>.7,(u,v)=>v<0?"a":"c");
+    seg(g,9,5,15,11,()=>.85,(u,v)=>v<0?"a":"b");
+    seg(g,12,8,19,1,u=>u>.75?(1-u)/.25*.95+.2:.75,(u,v)=>v<0?"a":"b");
+    seg(g,9,5,13,1,u=>u>.6?(1-u)/.4*.8+.15:.7,(u,v)=>v<0?"a":"c");
+    seg(g,15,11,19,7,u=>u>.6?(1-u)/.4*.8+.15:.7,(u,v)=>v<0?"b":"c");
+    put(g,11,3,"b"); put(g,17,9,"c"); put(g,16,4,"b");
+    disc(g,12,8,1,"n"); put(g,12,8,"o"); put(g,11,7,"w");
+    [[5,15],[7,13]].forEach(([x,y])=>put(g,x,y,"n"));
+  },[4,16]),P(["#FFF3B0","#F2C14E","#C98A1E","#7A4E12"],null,{n:"#2FCFBE",o:"#A8FFF0"}),{fx:"water",lore:["Il soulève les vagues et fend les récifs.","It raises the waves and splits the reefs."]});
+
+  // Lame du Dragon-Soleil (mythique) : lame large or et sang, garde en ailes de dragon
+  add("weapon","w_dragon","Lame du Dragon-Soleil","Sun Dragon blade",50,9000,art(20,20,g=>{
+    seg(g,6,13,18,1,u=>u>.78?(1-u)/.22*2.3+.25:2.3,(u,v,w,x,y)=>{ const r=v/w;
+      if(Math.abs(v)<.5) return ((x+y)%3===0)?"o":"n"; return r<-.6?"a":r<0?"b":r<.6?"c":"d"; });
+    bez(g,[6,13],[1,11],[1,6],t=>.85-t*.5,(t)=>t<.5?"c":"d");
+    bez(g,[6,13],[8,18],[13,18],t=>.85-t*.5,(t)=>t<.5?"c":"d");
+    put(g,1,5,"f"); put(g,14,18,"f");
+    disc(g,6,13,1,"g"); put(g,6,13,"e"); put(g,5,12,"f");
+    seg(g,5,14,2,17,()=>.75,stripes(5,"g","i"));
+    disc(g,1,18,1,"g"); put(g,1,18,"e");
+  },[3,16]),P(["#FFF3B0","#F2C14E","#C8242A","#6A0E14"],["#FFF3B0","#C98A1E","#7A4E12","#3A2408"],{n:"#FF8A3C",o:"#FFE08A",e:"#FF2A3A"}),{fx:"fire",lore:["Le dernier dragon solaire a scellé son souffle dans cette lame.","The last sun dragon sealed its breath inside this blade."]});
+
+  // Faucheuse d'étoiles (mythique) : lame de néant constellée, hampe d'argent
+  add("weapon","w_neant","Faucheuse d'étoiles","Star reaper",50,12000,art(20,20,g=>{
+    seg(g,1,19,13,7,()=>.7,(u,v)=>v<0?"f":"i");
+    bez(g,[13,7],[11,0],[2,2],t=>1.9*(1-t)+.3,(t,x,y)=>{ const h=(x*7+y*13)%11; return h===0?"n":h===5?"o":(y<3?"b":"c"); });
+    bez(g,[13,7],[11,1],[3,2],()=>.35,()=>"a");
+    disc(g,13,7,1,"g"); put(g,13,7,"o"); put(g,12,6,"n");
+    [[7,13],[9,11]].forEach(([x,y])=>put(g,x,y,"o"));
+  },[4,16]),P(["#FF9AF0","#3A1E6A","#1E0E3E","#0E0620"],["#F4F7FB","#C6D0DC","#7D8898","#3A4252"],{n:"#FFFFFF",o:"#B58CFF"}),{fx:"cosmic",lore:["Sa lame est un morceau de ciel nocturne ; elle moissonne les étoiles mortes.","Its blade is a shard of night sky; it reaps dead stars."]});
+
+  window.PX_ITEMS=(window.PX_ITEMS||[]).concat(L);
+  window.PX_ART={grid,put,outline,art,seg,disc,bez,stripes};
+})();
+
+/* v55 · Familiers légendaires : créatures mythologiques et machines des étoiles. Généré par pets/gen.py. */
+(function(){
+  "use strict";
+  const A=window.PX_ART, L=[];
+  function pet(rows){ return {rows:A.outline(rows.map(r=>r.split("")))}; }
+  L.push({slot:"pet",id:"p_dragon",n:["Dragon ancestral", "Ancestral dragon"],lvl:50,price:10000,art:pet([
+    ".............................",
+    "................a........c...",
+    "................acaaaaaoo....",
+    "...........nnn..ccccggggi....",
+    "..........nn...ccggcccgg.....",
+    "........mnm....ccggggcccc....",
+    ".......mnm.....ccggggggiccc..",
+    ".aaaaddbbaa....ccggggiiiiicc.",
+    ".dbbbdebbbbd...cggggiiiiii...",
+    ".abbbbbbbbbba..cgggiiiiii.c..",
+    ".cbbbbbbbbbbdaocgiiiiiigg.c..",
+    ".dwdwddbcbbbbbbciiigi..iiccc.",
+    ".w.ccccc.fbbbbdbiiii.........",
+    ".........ffbbbbbbbb.......aa.",
+    "..........ffbbbbbbbaa.....ab.",
+    "..........affbbbbbbbba....ab.",
+    ".........cbbffbbbbbbbbd..abc.",
+    "..........ffjffffffbbbbadac..",
+    "..........jfffjfjfjbbbbbab...",
+    "..........abfffffffbbccbbc...",
+    "..........abb.....abb..cc....",
+    "..........ccc.....ccc........",
+    "..........ccc....cccc........",
+    "..........w.w.....w.w........",
+    "............................."]),pal:{"a": "#FF8A6A", "b": "#C8242A", "c": "#7A1018", "d": "#3E0810", "f": "#FFE08A", "j": "#E0A82A", "g": "#FF9A3C", "i": "#D8501E", "o": "#FFC870", "e": "#FFE04A", "n": "#F6EED8", "m": "#B8A888", "w": "#FFFFFF"},fx:"fire",lore:["Le premier dragon du royaume. Il couve encore le feu du monde.", "The realm's first dragon. It still broods over the world's fire."]});
+  L.push({slot:"pet",id:"p_drone",n:["Drone éclaireur", "Scout drone"],lvl:26,price:1250,art:pet([
+    ".......................",
+    "..............r........",
+    "..............d........",
+    ".gggggg.......d.gggggg.",
+    "....c........d.....c...",
+    ".....c....aaad....c....",
+    ".....c..aabbbbaa..c....",
+    "......cabnnbbbbbac.....",
+    "..ccccabwoonbbddbcccc..",
+    "..caccabopoobbbbbcacc..",
+    "..cccccbnoonbbpbbcccc..",
+    "..cocc.cbnnbbbbbcccoc..",
+    "........ccbbbdddd......",
+    ".........ddddd.........",
+    ".......................",
+    "...........oo..........",
+    "...........p...........",
+    "......................."]),pal:{"a": "#F4F7FB", "b": "#C6D0DC", "c": "#8D99AA", "d": "#525C6E", "g": "#6A7486", "n": "#1B2236", "o": "#49E0F0", "p": "#A8FFF0", "r": "#FF4A6A", "w": "#FFFFFF"},fx:"tech",lore:["Il cartographie le royaume depuis le ciel et ne dort jamais.", "It maps the realm from the sky and never sleeps."]});
+  L.push({slot:"pet",id:"p_kitsune",n:["Kitsune à neuf queues", "Nine-tailed kitsune"],lvl:31,price:1800,art:pet([
+    "..............................",
+    ".....................ww.......",
+    ".....a.............fwww.......",
+    ".....a...a........fgww..www...",
+    ".....ra.rb........fggi.fwww...",
+    ".....rb.ar.......fgggffgww....",
+    ".....ababb.......fggfgwwwi....",
+    "....abbrrb.......fgfffwww.www.",
+    "...abdebbr......fggfggwfffwww.",
+    ".cdbbbbbbb......fgfgggfgggww..",
+    "..cccccbbb......fgfgffggggi...",
+    ".......cbba.a...ifgfgggggi....",
+    "........abrabaaabffggggii.....",
+    ".......abbbrbbbbbbifffffffwww.",
+    ".......abbbbbbbbbbigggggggwww.",
+    ".......cbbbcbbbbbcciigggggii..",
+    "........abccbccbbcc..iiiii....",
+    "........ab.cc..abcc...........",
+    "........ab.c...abcc...........",
+    "........cc.....cc.............",
+    "........cc.....cc.............",
+    ".............................."]),pal:{"a": "#FFFFFF", "b": "#E8F4F8", "c": "#A8C8D8", "d": "#3A4A6A", "f": "#A8FFE8", "g": "#7AF5D0", "i": "#3EC2A0", "r": "#FF4A6A", "e": "#FFE04A", "w": "#FFFFFF"},fx:"spectral",lore:["Esprit renard du folklore japonais : chaque queue est un siècle de sagesse.", "Fox spirit of Japanese folklore: each tail is a century of wisdom."]});
+  L.push({slot:"pet",id:"p_griffon",n:["Griffon royal", "Royal griffin"],lvl:37,price:2600,art:pet([
+    "............................",
+    "................ggwg.ii.....",
+    "..............iffgiiiiw.....",
+    "..............iffiii.gggwg..",
+    ".........mm...igfggggggg....",
+    "......nnnnm...iffggg...iiiw.",
+    ".....nddnnnm.fffgiiiiiiiiii.",
+    "..yyynennnn..iffiii.........",
+    ".yyyynnnnnn..ifgggggggggggw.",
+    "..oyymnnnnnn.iffiiiii.......",
+    "..do..mnnnnnnigiiiiiiiiiw...",
+    ".......mnnnnnifggggggg...dd.",
+    "........mnnnnniiiiiggw...dd.",
+    ".........mnnnnnabbw.....c...",
+    "..........mnnnnnbbbaaa.c....",
+    "..........nmnnnnbbbbbba.....",
+    "..........annnnnbbbbbbb.....",
+    "..........yynnnbbbbbbbbc....",
+    "..........yybobccbbbbbb.....",
+    "..........yycocccbcbbbc.....",
+    "..........yy.o.ccc.abb......",
+    "...............cc..ccc......",
+    ".........d.dd.d.............",
+    "............................"]),pal:{"a": "#F2D8A0", "b": "#D9A860", "c": "#A8743A", "d": "#5E3E1A", "f": "#FFF3C8", "g": "#E8C060", "i": "#B8862E", "n": "#FFFFFF", "m": "#D0D6E4", "y": "#FFD04A", "o": "#C98A1E", "e": "#1B1424", "w": "#FFFFFF"},fx:"holy",lore:["Moitié aigle, moitié lion : il garde les trésors des dieux.", "Half eagle, half lion: it guards the treasures of the gods."]});
+  L.push({slot:"pet",id:"p_wyverne",n:["Wyverne de givre", "Frost wyvern"],lvl:41,price:3400,art:pet([
+    ".............................",
+    "................a........c...",
+    "................acaaaaaoo....",
+    "...........nnn..ccccggggi....",
+    "..........nn...ccggcccgg.....",
+    "........mnmn...ccggggcccc....",
+    ".......mnm.n...ccggggggiccc..",
+    ".aaaaddbbaan.n.ccggggiiiiicc.",
+    ".dbbbdebbbbd.n.cggggiiiiii...",
+    ".abbbbbbbbbban.cgggiiiiii.c..",
+    ".cbbbbbbbbbbdaocgiiiiiigg.c..",
+    ".dwdwddbcbbbbbbciiigi..iiccc.",
+    ".w.ccccc.fbbbbdbiiii.........",
+    ".........ffbbbbobbb...n...aa.",
+    "..........ffbbbbnbbaa.n...ab.",
+    "..........affnbbbbbbban..nab.",
+    ".........cbbffbbbbbbbbd..nbc.",
+    "..........ffjffffffbbbbadac..",
+    "..........jfffjfjfjbbbbbab...",
+    "............fffffffbbccbbc...",
+    "..................abb..cc....",
+    "..................ccc........",
+    ".................cccc........",
+    "..................w.w........",
+    "............................."]),pal:{"a": "#FFFFFF", "b": "#9ADFFF", "c": "#4A90C8", "d": "#1E4A7A", "f": "#E6FAFF", "j": "#B8E4F8", "g": "#C8EEFF", "i": "#82C4E8", "o": "#FFFFFF", "e": "#49E0F0", "n": "#FFFFFF", "m": "#C8EEFF", "w": "#FFFFFF"},fx:"ice",lore:["Ses ailes soufflent le blizzard des cimes.", "Its wings blow the blizzard of the peaks."]});
+  L.push({slot:"pet",id:"p_cerbere",n:["Cerbère", "Cerberus"],lvl:45,price:4200,art:pet([
+    "...............................",
+    ".............d.................",
+    ".............o.................",
+    ".......d.....ad.............p..",
+    "......ao...aabd............opo.",
+    "......adaaebebbd............o..",
+    "....aabbdbbbbbbd...........oo..",
+    ".aaaeebbbdwdbbbgg..........oo..",
+    ".dbbbbbbbd..dbngd..p.p....ao...",
+    ".rwrwdbbdgad.dbbdpoooo...abc...",
+    "......dgobbbd.dbooaa..o.abc....",
+    ".......addbbbadabdbbaaaabc.....",
+    ".....aabbdddbbddddbbbbbbb......",
+    "..aaaeebbbaaaadbbbbbbbbbba.....",
+    "..dbbbbbbbbbbbdbbbbbbbbbbb.....",
+    "..rwrwdbbbgddddbbbbbbbbbbc.....",
+    ".......dgnd.abbbbbbbbbbbb......",
+    "............abbbbbccbbbbb......",
+    "............abbbbb..abbbb......",
+    "............abbbbb..abbbb......",
+    "............cccccc..ccccc......",
+    "............d.d.d...d.d.dd.....",
+    "..............................."]),pal:{"a": "#7A7690", "b": "#4A4658", "c": "#2E2A3A", "d": "#141020", "e": "#FF4A2A", "r": "#8A1E1E", "o": "#FF8A3C", "p": "#FFE08A", "g": "#C98A1E", "n": "#E8ECF2", "w": "#FFFFFF"},fx:"fire",lore:["Le chien à trois têtes qui garde les portes des Enfers.", "The three-headed hound guarding the gates of the Underworld."]});
+  L.push({slot:"pet",id:"p_pegase",n:["Pégase", "Pegasus"],lvl:48,price:4800,art:pet([
+    "..............................",
+    "................nnng..mm......",
+    ".......a......nnnnmmmmgm......",
+    ".......a......mnnmmmm.nnnng...",
+    ".......af.....mnmnnnnnnnnn....",
+    "....aaabpf....mnnnnnn...mmmm..",
+    "...abebbbfp...mnnmmmmmmmmmmg..",
+    ".cabbbbbbgf..nnnmmmm..........",
+    "..dccccbbbfp.nnnnnnnnnnnnng...",
+    ".......abbgf.mnmmmm.....nnn...",
+    ".......cbbbfpmnnmmmmmmmmg.....",
+    "........abb.fmnnnnnnn..m......",
+    "........cbbaabbbbbbbba........",
+    ".........abbbbbbbbbbbbaf......",
+    ".........abbbbbbbbbbbbbff.....",
+    ".........cbbbbbbbbbbbbbfff....",
+    "..........abbbbbbbbbbbc.fffff.",
+    "..........acbbccccbccb........",
+    "..........a.ab....a..a........",
+    "..........a.ab....a..a........",
+    "..........a.ab....a..a........",
+    ".........ab.ab....aa.a........",
+    ".........yy.yy....yy.yy.......",
+    ".............................."]),pal:{"a": "#FFFFFF", "b": "#EEF0F8", "c": "#C2C8DC", "d": "#5A6080", "f": "#8A6EE0", "g": "#B58CFF", "p": "#FFD0EE", "n": "#FFFFFF", "m": "#C8DCFF", "y": "#F2C14E", "e": "#2A1E6A"},fx:"cosmic",lore:["Le cheval ailé devenu constellation.", "The winged horse that became a constellation."]});
+  L.push({slot:"pet",id:"p_mecha",n:["Dragon cybernétique", "Cyber dragon"],lvl:50,price:12000,art:pet([
+    ".............................",
+    "................a........c...",
+    "................acaaaaaoo....",
+    "...........nnn..ccccggggi....",
+    "..........nn...ccggcccgg.....",
+    "........mnm....ccggggcccc....",
+    ".......mnm.....ccggggggiccc..",
+    ".aaaaddbbaa....ccggggiiiiicc.",
+    ".dbbbdebbbbd...cggggiiiiii...",
+    ".abobbbbobbba..cgggiiiiii.c..",
+    ".cbbbbbbbbbbdaocgiiiiiigg.c..",
+    ".dwdwddbcbbbbbbciiigi..iiccc.",
+    ".w.ccccc.fbbbbdbiiii.........",
+    ".........ffbbbbdbbb.......aa.",
+    "..........ffobbdbobaa.....ab.",
+    "..........affdddddddba....ab.",
+    ".........cbbffbdbbbbbbd..abc.",
+    "..........ffjffffffobbbadac..",
+    "..........jofojojojbbbbbab...",
+    "..........abfffffffbbccbbc...",
+    "..........abb.....abb..cc....",
+    "..........ccc.....ccc........",
+    "..........ccc....cccc........",
+    "..........w.w.....w.w........",
+    "............................."]),pal:{"a": "#F4F7FB", "b": "#A8B4C4", "c": "#6A7486", "d": "#2A3040", "f": "#3A4252", "j": "#525C6E", "g": "#49E0F0", "i": "#1F9DB8", "o": "#A8FFF0", "e": "#FF4AD8", "n": "#49E0F0", "m": "#1F9DB8", "w": "#FFFFFF"},fx:"tech",lore:["Forgé dans une station orbitale, il crache du plasma.", "Forged on an orbital station, it breathes plasma."]});
+  window.PX_ITEMS=(window.PX_ITEMS||[]).concat(L);
+})();
+
+/* v55 · Équipement légendaire : casques, plastrons, jambières, bottes élémentaires. Moitiés gauches (sym). */
+(function(){
+  "use strict";
+  const M=window.PX_M, P=window.PX_P, L=[];
+  function add(slot,id,fr,en,lvl,price,art,pal,more){ L.push(Object.assign({slot,id,n:[fr,en],lvl,price,art,pal},more||{})); }
+
+  /* =========================== CASQUES =========================== */
+  add("head","h_salamandre","Heaume de la salamandre","Salamander helm",23,1000,{sym:true,oy:0,rows:[
+    "...........p",
+    "..........pp",
+    "....p.....po",
+    "....po...poo",
+    ".....op..pon",
+    ".....onkkonn",
+    "......kabonn",
+    ".....kabbbnc",
+    "....kabbcbbb",
+    "...kabbbbbcb",
+    "...kbbcbbbbb",
+    "..kbbbbbedbb",
+    "..kbcbbbbcbb",
+    "..kgggfggggg",
+    "..kbbk......",
+    "..kbbk......",
+    "..kbcbk.....",
+    "..kbbbk.....",
+    "...kbbk.....",
+    "...kbk......",
+    "....k.......",
+  ]},P(M.drag,M.gold,{p:"#FFE08A",o:"#FF8A3C",n:"#D8301A",e:"#FFE04A",d:"#1B1424",f:"#FF3A2A"}),{hair:"hide",fx:"fire",lore:["La salamandre vit dans le feu sans jamais brûler.","The salamander lives in fire and never burns."]});
+
+  add("head","h_givre","Couronne de givre","Frost crown",28,1400,{sym:true,oy:0,rows:[
+    "...........a",
+    "..........ab",
+    ".......a..ab",
+    ".......ab.ab",
+    "....a..ab.bc",
+    "....ab.abcbc",
+    "....abcabcbc",
+    "...kbbbbbbbb",
+    "...kcnccnccn",
+    "...kdddddddd",
+  ]},P(M.ice,null,{n:"#49E0F0"}),{hair:"show",clip:10,fx:"ice",lore:["Ses pointes de glace ne fondent jamais, même au soleil d'été.","Its ice spikes never melt, even in summer sun."]});
+
+  add("head","h_liche","Capuche du roi-liche","Lich king's hood",33,1900,{sym:true,oy:2,rows:[
+    "......p..p.p",
+    "......f..f.f",
+    ".....kffkfgf",
+    "....kbbbbbbb",
+    "...kabbbbbbb",
+    "..kabbbbbbbb",
+    "..kabbbbbbbb",
+    ".kabbbbbbbbb",
+    ".kabbbcccccc",
+    ".kabbcdddddd",
+    ".kabbcdddddd",
+    ".kabbcdoodd.",
+    ".kabbcdddddd",
+    ".kabbcdddddd",
+    ".kabbbcddddd",
+    "..kabbbcdddd",
+    "..kabbbbcccc",
+    "...kabbbbbbb",
+    "...kabbbbbbb",
+    "....kkkkkkkk",
+  ].map(r=>r.replace(/\.$/,"d"))},P(["#7A68B0","#3A2E5E","#241A40","#0A0614"],["#C8CCD8","#8A90A4"],{g:"#7AF5D0",o:"#A8FFE8",p:"#E8ECF2"}),{hair:"hide",fx:"spectral",lore:["Sous la capuche, seuls brillent deux yeux d'outre-tombe.","Under the hood, only two eyes from beyond the grave shine."]});
+
+  add("head","h_pilote","Casque de pilote stellaire","Star pilot helmet",38,2700,{sym:true,oy:4,rows:[
+    "..r....kkkkk",
+    "..g..kkaaaab",
+    "..g.kaaabbbb",
+    "..gkaabbbbbb",
+    "...kabbbbbbb",
+    "..kabbbbbbbb",
+    "..kabbbbbbbb",
+    "..kabbbbnnnn",
+    "..kabbkooooo",
+    "..kabkoppooo",
+    "..kabkoopooo",
+    "..kabkoooooo",
+    "..kabkoooooo",
+    "..kabbkooooo",
+    "..kcbbbkkkkk",
+    "..kcbbbbbbbb",
+    "...kccbbbbbb",
+    "....kkkccccc",
+    ".......kkkkk",
+  ]},P(M.white,null,{n:"#49E0F0",o:"#1F9DB8",p:"#C8FFFF",g:"#8D99AA",r:"#FF4A6A"}),{hair:"hide",fx:"tech",lore:["Visière anti-rayonnement, radio intégrée, réserve d'oxygène : prêt pour le vide.","Radiation visor, built-in radio, oxygen supply: ready for the void."]});
+
+  add("head","h_anubis","Masque d'Anubis","Mask of Anubis",44,3800,{sym:true,oy:0,rows:[
+    ".....k......",
+    ".....kk.....",
+    ".....kgk....",
+    ".....kggk...",
+    ".....kgbk...",
+    ".....kgbbk..",
+    ".....kbbbkkk",
+    "....kbbbbbbb",
+    "...kfgfgbbbb",
+    "..kfgfgbbbbb",
+    "..kgfgbbbbbb",
+    ".kfgfkbeebbb",
+    ".kgfgkbbddbb",
+    ".kfgfkbbbbbb",
+    ".kgfgkbbbbcb",
+    ".kfgfkbbbbbc",
+    ".kgfgkbbbbcc",
+    ".kfgfkkbbbcc",
+    ".kgfgk.kbbcc",
+    ".kfgfk..kbcn",
+    ".kgfgk...kkk",
+    ".kfgfk......",
+    "..kkk.......",
+  ]},P(M.black,["#5E8CFF","#F2C14E"],{e:"#FFE04A",d:"#F2C14E",n:"#121018"}),{hair:"hide",fx:"shadow",lore:["Le dieu à tête de chacal pèse les cœurs aux portes de l'au-delà.","The jackal-headed god weighs hearts at the gates of the afterlife."]});
+
+  add("head","h_phenix","Couronne du phénix","Phoenix crown",50,9000,{sym:true,oy:0,rows:[
+    "...........p",
+    "o.........po",
+    "on........po",
+    "pon.......on",
+    ".pon..a..pon",
+    ".pnoa.ba.onn",
+    "..pnbabbabnn",
+    "...kbbrbbrbb",
+    "...kcbbbbbbb",
+    "...kdddddddd",
+  ]},P(M.gold,null,{p:"#FFE08A",o:"#FF8A3C",n:"#D8301A",r:"#FF2A4A"}),{hair:"show",clip:10,fx:"fire",lore:["Le phénix renaît de ses cendres : celui qui la porte se relève toujours.","The phoenix rises from its ashes: whoever wears it always gets back up."]});
+
+  /* =========================== PLASTRONS =========================== */
+  add("chest","c_magma","Cuirasse de magma","Magma cuirass",23,1000,{sym:true,oy:22,rows:[
+    ".n..n.....",
+    ".kbnbkkkkk",
+    "kbbbibkbbb",
+    "kbibbbkbib",
+    "kbcicbkbbi",
+    ".kkkkkkibg",
+    ".kbikcbbig",
+    ".kkkkcbibg",
+    "....kbbbii",
+    "....kjjjjo",
+    "....kbibbb",
+    "....kbbcib",
+    "....kkkkkk",
+  ]},{b:"#3A3248",c:"#241E30",i:"#FF8A3C",g:"#FFE08A",n:"#FF5A1E",j:"#120E18",o:"#FF3A2A"},{gloves:{s:"#3A3248",S:"#241E30"},fx:"fire",lore:["Des plaques d'obsidienne soudées par la lave encore vive.","Obsidian plates welded by still-living lava."]});
+
+  add("chest","c_givre","Armure de givre éternel","Everfrost armour",28,1400,{sym:true,oy:22,rows:[
+    ".a..a.....",
+    ".kabakkkkk",
+    "kaabbbkabb",
+    "kabbbckabb",
+    "kbcccckbbn",
+    ".kkkkkkbnf",
+    ".kabkcbbbn",
+    ".kkkkcbbbc",
+    "....kcbbcc",
+    "....kdddnd",
+    "....kbbcbb",
+    "....kbcbbc",
+    "....kkkkkk",
+  ]},P(M.ice,null,{n:"#FFFFFF",f:"#49E0F0"}),{gloves:{s:"#C8EEFF",S:"#82C4E8"},fx:"ice",lore:["Un flocon de cristal bat en son centre comme un cœur.","A crystal snowflake beats at its centre like a heart."]});
+
+  add("chest","c_spectre","Linceul spectral","Spectral shroud",33,1900,{sym:true,oy:23,rows:[
+    ".kkkkkkkkk",
+    ".kabkfbbgb",
+    ".kabkabbbg",
+    ".kabkabbgb",
+    ".kbbkabbbb",
+    ".kbckbbgbb",
+    ".kfkkbbbbg",
+    "..f.kbgbbb",
+    "....knnnnn",
+    "....kbbgbb",
+    "....kbbbbg",
+    "....kbgbkb",
+    "....kf.kbf",
+    ".....k..kk",
+  ]},{a:"#7AF5D0",b:"#2E8A7E",c:"#1E5A58",g:"#A8FFE8",f:"#6A4EC0",n:"#F0F0E0"},{gloves:{s:"#E0F0EC",S:"#A8C8C0"},fx:"spectral",lore:["Tissé avec la brume des cimetières, il flotte sans vent.","Woven from graveyard mist, it floats without wind."]});
+
+  add("chest","c_exo","Exo-armure à plasma","Plasma exo-armour",38,2700,{sym:true,oy:22,rows:[
+    "..kkkk....",
+    ".kaabbkkkk",
+    "kabbbbkaab",
+    "kbobbbkabo",
+    "kbcccbkbon",
+    ".kkkkkkbnp",
+    ".kaokcbbon",
+    ".kkkkcbbbo",
+    "....kcdddd",
+    "....kdoood",
+    "....kabbbb",
+    "....kbcbcd",
+    "....kkkkkk",
+  ]},P(M.white,null,{o:"#49E0F0",n:"#A8FFF0",p:"#FFFFFF"}),{gloves:{s:"#8D99AA",S:"#525C6E"},fx:"tech",lore:["Un cœur à fusion alimente chaque mouvement.","A fusion core powers every move."]});
+
+  add("chest","c_egide","Égide d'Athéna","Aegis of Athena",44,3800,{sym:true,oy:22,rows:[
+    "..kkkk....",
+    ".kaabbkkkk",
+    "kabbbbkaab",
+    "kbbbcbkabb",
+    "kbcccbkbgg",
+    ".kkkkkkbgn",
+    ".kffkcbgnr",
+    ".kkkkcbbgn",
+    "....kccccc",
+    "....kdddod",
+    "....kfffff",
+    "....kfifif",
+    "....kkkkkk",
+  ]},P(M.gold,null,{f:"#FFFFFF",i:"#C8CCD8",g:"#3EA850",n:"#F0E6C8",r:"#C8242A",o:"#2C5AD8"}),{gloves:{s:"#F2C14E",S:"#C98A1E"},fx:"holy",lore:["Le bouclier-cuirasse de la déesse, orné du visage de Méduse.","The goddess's shield-breastplate, bearing Medusa's face."]});
+
+  add("chest","c_neant","Armure du néant stellaire","Starvoid armour",50,10000,{sym:true,oy:21,rows:[
+    ".o..o.....",
+    ".kokkk....",
+    "kabbbbkkkk",
+    "kbnbbbkbbn",
+    "kbbcbnkbbb",
+    "kbcccbkbfb",
+    ".kkkkkkfgb",
+    ".kbnkcbgfn",
+    ".kkkkcbbgf",
+    "....kbnbbg",
+    "....kooooo",
+    "....kbbnbb",
+    "....kbbbnb",
+    "....kkkkkk",
+  ]},{a:"#6A4AB0",b:"#1E0E3E",c:"#120828",n:"#FFFFFF",f:"#F07CC8",g:"#8A5AE0",o:"#B58CFF"},{gloves:{s:"#2A1A50",S:"#1E0E3E"},fx:"cosmic",lore:["On y voit tourner des galaxies entières.","Whole galaxies can be seen turning inside it."]});
+
+  /* =========================== JAMBES =========================== */
+  add("legs","l_spectre","Jambières spectrales","Spectral leggings",31,1750,{sym:true,oy:33,rows:[
+    "kbbbgc","kbgbbc","kbbbbg","kgbbbc","kbbgbc","kfbfbc","kfbfbf",
+  ]},{b:"#2E8A7E",c:"#1E5A58",g:"#A8FFE8",f:"#6A4EC0"},{fx:"spectral"});
+  add("legs","l_exo","Jambières cybernétiques","Cybernetic leggings",39,2900,{sym:true,oy:33,rows:[
+    "kabbbc","kaoobc","kabbbc","kcdddc","kabbbc","kaobbc","kddddd",
+  ]},P(M.white,null,{o:"#49E0F0"}),{fx:"tech"});
+  add("legs","l_olympe","Jambières de l'Olympe","Olympian greaves",47,4600,{sym:true,oy:33,rows:[
+    "kfffff","kfigif","kabbbc","kabgbc","kabbbc","kabnbc","kbbbcc",
+  ]},P(M.gold,null,{f:"#FFFFFF",i:"#C8CCD8",g:"#58B04E",n:"#FFFFFF"}),{fx:"holy"});
+  add("legs","l_neant","Grèves du néant","Void greaves",50,8000,{sym:true,oy:33,rows:[
+    "kbbnbo","kbfbbo","kgbbno","kbbgbo","knbbfo","kbgbbo","kbbbno",
+  ]},{b:"#1E0E3E",n:"#FFFFFF",f:"#F07CC8",g:"#8A5AE0",o:"#B58CFF"},{fx:"cosmic"});
+
+  /* =========================== BOTTES =========================== */
+  add("feet","b_givre","Bottes de givre","Frost boots",27,1300,{sym:true,oy:37,rows:[
+    "..a.a..",".kabbak","kabbbck","kabnbck","kbbbbck","kdcdcdk",
+  ]},P(M.ice,null,{n:"#49E0F0"}),{fx:"ice"});
+  add("feet","b_spectre","Bottes du marcheur spectral","Spectral walker boots",32,1850,{sym:true,oy:38,rows:[
+    "kbbbbck","kbgbbck","kbbbgck","kbbbbck","kfgfgfk","f.g.f..",
+  ]},{b:"#2E8A7E",c:"#1E5A58",g:"#A8FFE8",f:"#6A4EC0"},{fx:"spectral"});
+  add("feet","b_antigrav","Bottes antigravité","Antigravity boots",39,2900,{sym:true,oy:38,rows:[
+    "kaabbck","kaoobck","kabbbck","kdddddk",".ooooo.",".p.p.p.",
+  ]},P(M.white,null,{o:"#49E0F0",p:"#A8FFF0"}),{fx:"tech"});
+  add("feet","b_comete","Bottes de comète","Comet boots",50,8000,{sym:true,oy:37,rows:[
+    "n.kabbk","onkbbbk",".okbnbk","..kbbbk","..kgggk",".popop.",
+  ]},{a:"#6A4AB0",b:"#1E0E3E",n:"#FFFFFF",g:"#8A5AE0",o:"#B58CFF",p:"#F07CC8"},{fx:"cosmic"});
+
+  window.PX_ITEMS=(window.PX_ITEMS||[]).concat(L);
+})();
+
+/* Éléments des objets existants : chaque objet épique ou plus porte un effet. */
+(function(){
+  "use strict";
+  const FXE={h_mage:"cosmic",h_druide:"nature",h_orage:"storm",h_corail:"water",h_ombre:"shadow",h_aube:"holy",h_cosmos:"cosmic",
+    c_champignon:"nature",c_ecailles:"nature",c_obsidienne:"fire",c_cristal:"ice",c_solaire:"holy",c_dragon:"fire",
+    l_ecorce:"nature",l_os:"spectral",l_tempete:"storm",l_lave:"fire",l_givre:"ice",l_aurore:"cosmic",l_titan:"holy",
+    b_racines:"nature",b_braise:"fire",b_ailees:"holy",b_foudre:"storm",b_corail:"water",b_nuages:"holy",
+    w_feuille:"nature",w_espadon:"water",w_trident:"water",w_cle:"tech",w_faux:"spectral",w_haltere:"holy",w_temps:"cosmic",
+    p_follet:"spectral",p_champi:"nature",p_fee:"nature",p_dragonneau:"fire",p_licorne:"holy",p_phenix:"fire"};
+  (window.PX_ITEMS||[]).forEach(i=>{ if(FXE[i.id]) i.fx=FXE[i.id]; });
+})();
+
+/* ============================================================
+   Effets pixel : auras de rareté, rayons, éclats, particules élémentaires.
+   Tout est dessiné en pixels logiques (même taille que les pixels des sprites),
+   puis agrandi sans lissage par le CSS (image-rendering: pixelated).
+   Une seule boucle d'animation (14 images/s) anime toutes les toiles visibles.
+   ============================================================ */
+(function(){
+  "use strict";
+  const PX=window.PX; if(!PX) return;
+  const FPS=14, MAXP=160;
+  const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+0.5)/16);
+  const R=Math.random, rnd=(a,b)=>a+R()*(b-a), pick=a=>a[(R()*a.length)|0];
+  const RANK={commun:0,rare:1,epique:2,legendaire:3,mythique:4};
+  const RCOL={rare:["#FFFFFF","#BFE0FF","#5EA7FF","#2C5AA8"],epique:["#FFFFFF","#E2C8FF","#B58CFF","#6A3EC0"],
+    legendaire:["#FFFFFF","#FFE9A0","#F2C14E","#C98A1E"],mythique:["#FFFFFF","#FFB0D8","#FF5A6E","#8A2A6E"]};
+  // teinte « mythique » : va-et-vient violet → magenta → rouge → orange → or (jamais de vert)
+  const hue=(f,o)=>{ const t=((f*6+(o||0))%280+280)%280; return "hsl("+((290+(t<140?t:280-t))%360)+",100%,66%)"; };
+  const isOutline=(d,i)=>d[i+3]>20 && d[i]<40 && d[i+1]<34 && d[i+2]<48;   // contour sombre (#1B1424, #070A1C…)
+
+  // ---------- primitives ----------
+  function dot(c,x,y,col,a){ x=Math.round(x); y=Math.round(y); c.globalAlpha=a==null?1:a; c.fillStyle=col; c.fillRect(x,y,1,1); }
+  function plus(c,x,y,r,core,arm,a){ x=Math.round(x); y=Math.round(y); c.globalAlpha=a==null?1:a; c.fillStyle=arm;
+    for(let k=1;k<=r;k++){ c.fillRect(x+k,y,1,1); c.fillRect(x-k,y,1,1); c.fillRect(x,y+k,1,1); c.fillRect(x,y-k,1,1); }
+    if(r>=2){ c.fillRect(x+1,y+1,1,1); c.fillRect(x-1,y-1,1,1); c.fillRect(x+1,y-1,1,1); c.fillRect(x-1,y+1,1,1); }
+    c.fillStyle=core; c.fillRect(x,y,1,1); }
+  // halo tramé : plus dense au centre, en motif de Bayer (pas de flou)
+  function glow(fx,c,cx,cy,rad,col,str,a){
+    const W=fx.W,H=fx.H; c.fillStyle=col;
+    const x0=Math.max(0,Math.floor(cx-rad)), x1=Math.min(W-1,Math.ceil(cx+rad)), y0=Math.max(0,Math.floor(cy-rad)), y1=Math.min(H-1,Math.ceil(cy+rad));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const d=Math.hypot(x+.5-cx,y+.5-cy)/rad; if(d>=1) continue;
+      const v=(1-d)*str; const lv=v>.62?3:v>.38?2:v>.16?1:((x+y)&1)&&v>.06?.5:0; if(!lv) continue;
+      c.globalAlpha=Math.min(1,a*lv/2); c.fillRect(x,y,1,1); }
+  }
+  // rayons tournants tramés
+  function rays(fx,c,cx,cy,rad,n,rot,col,a,sharp){
+    const W=fx.W,H=fx.H; c.fillStyle=col;
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const dx=x+.5-cx, dy=y+.5-cy, d=Math.hypot(dx,dy)/rad; if(d>=1||d<.15) continue;
+      const v=Math.pow(.5+.5*Math.cos(n*(Math.atan2(dy,dx)-rot)), sharp||6)*(1.15-d);
+      const lv=v>.55?2:v>.3?1:(v>.14&&((x+y)&1))?.6:0; if(!lv) continue; c.globalAlpha=a*lv/2; c.fillRect(x,y,1,1); }
+  }
+  function ringAt(fx,c,cx,cy,r,col,a){ c.globalAlpha=a; c.fillStyle=col; const n=Math.max(8,Math.round(r*7));
+    let lx=-99,ly=-99; for(let i=0;i<n;i++){ const t=i/n*Math.PI*2, x=Math.round(cx+Math.cos(t)*r), y=Math.round(cy+Math.sin(t)*r*.8); if(x===lx&&y===ly) continue; lx=x; ly=y; c.fillRect(x,y,1,1); } }
+
+  // ---------- éléments ----------
+  const FIRE=["#FFFBE0","#FFE08A","#FFB040","#FF6A1E","#D8301A","#7A1410"];
+  const ramp=(cols,t)=>cols[Math.min(cols.length-1,Math.floor(t*cols.length))];
+  function spawnN(rate){ let n=Math.floor(rate); if(R()<rate-n) n++; return n; }
+  function P(fx,o){ if(fx.parts.length>=MAXP) return; fx.parts.push(Object.assign({vx:0,vy:0,age:0,life:10,kind:"dot",layer:"front",ph:R()*6.28},o)); }
+  const EL={
+    fire:{n:["Feu","Fire"],glow:"#FF6A1E",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#FF5A1A",.55+.2*Math.sin(fx.f*.9),.32); },
+      spawn(fx,s){ for(let k=spawnN(2.4*s.I);k--;){ const p=(s.top.length&&R()<.65)?pick(s.top):pick(s.pts); if(!p) return;
+        P(fx,{x:p.x+rnd(-.4,.4),y:p.y+fx.by-.6,vx:rnd(-.1,.1),vy:-rnd(.35,.85),life:(rnd(5,12))|0,kind:"fire"}); } },
+      front(fx,s,c){ for(const p of s.top){ if(R()<.4){ dot(c,p.x,p.y-1+fx.by,R()<.5?"#FFE08A":"#FFB040",1); if(R()<.35) dot(c,p.x,p.y-2+fx.by,"#FF6A1E",1); } } }
+    },
+    ice:{n:["Glace","Ice"],glow:"#9ADFFF",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#9ADFFF",.5,.3); },
+      spawn(fx,s){ if(R()<.55*s.I){ const b=s.bb; P(fx,{x:rnd(b[0]-4,b[2]+4),y:rnd(b[1]-5,b[1]+2),vy:rnd(.12,.26),life:(rnd(16,30))|0,kind:R()<.4?"flake":"dot",cols:["#FFFFFF","#E6F8FF","#C8EEFF","#82C4E8"],
+          upd(p){ p.vx=Math.sin(p.age*.25+p.ph)*.16; }}); } },
+      front(fx,s,c){ for(let k=0;k<2;k++) if(R()<.55){ const p=pick(s.edge); if(p) dot(c,p.x,p.y+fx.by,"#FFFFFF",1); }
+        if(R()<.06*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y+fx.by,life:7,kind:"twinkle",cols:["#FFFFFF","#C8EEFF"]}); } }
+    },
+    spectral:{n:["Spectral","Spectral"],glow:"#7AF5D0",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#3EC2A0",.45,.28);
+        const dx=Math.round(Math.sin(fx.f*.32)*1.6), dy=Math.round(Math.cos(fx.f*.21)*1.2)-1; c.globalAlpha=.32; c.fillStyle="#7AF5D0";
+        for(const p of s.pts){ if(BAYER[((p.y&3)*4)+(p.x&3)]<.7) c.fillRect(p.x+dx,p.y+dy+fx.by,1,1); } },
+      spawn(fx,s){ for(let k=spawnN(1.0*s.I);k--;){ const p=pick(s.pts); if(!p) return;
+        P(fx,{x:p.x,y:p.y+fx.by,x0:p.x,vy:-rnd(.15,.35),life:(rnd(14,26))|0,kind:"wisp",cols:["#F0FFFA","#A8FFE8","#7AF5D0","#3EC2A0","#8A6EE0","#5A3EA8"],
+          upd(q){ q.x=q.x0+Math.sin(q.age*.4+q.ph)*1.3; }}); } },
+    },
+    storm:{n:["Foudre","Storm"],glow:"#7FC8FF",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#5EA7FF",(fx.bolts.length?.9:.45),.3); },
+      spawn(fx,s){
+        if(R()<.2*s.I && s.edge.length){ const a=pick(s.edge), ang=R()*6.28, len=rnd(5,10); const pts=[]; let x=a.x, y=a.y+fx.by;
+          const tx=x+Math.cos(ang)*len, ty=y+Math.sin(ang)*len, steps=Math.round(len);
+          for(let i=0;i<=steps;i++){ const t=i/steps; pts.push([Math.round(x+(tx-x)*t+(i%2?rnd(-1.2,1.2):0)), Math.round(y+(ty-y)*t+(i%2?rnd(-1.2,1.2):0))]); }
+          fx.bolts.push({pts,age:0,life:3});
+          for(let k=0;k<3;k++) P(fx,{x:tx,y:ty,vx:rnd(-.8,.8),vy:rnd(-.8,.8),life:(rnd(3,6))|0,cols:["#FFFFFF","#FFF6A0","#9AD8FF"]}); }
+        if(R()<.4*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.6,.6),vy:rnd(-.6,.3),life:(rnd(2,5))|0,cols:["#FFFFFF","#FFF6A0"]}); } }
+    },
+    cosmic:{n:["Cosmique","Cosmic"],glow:"#B58CFF",
+      back(fx,s,c){ const f=fx.f, rad=s.r+5, cx=s.cx, cy=s.cy+fx.by;
+        for(let y=Math.max(0,Math.floor(cy-rad));y<Math.min(fx.H,cy+rad);y++) for(let x=Math.max(0,Math.floor(cx-rad));x<Math.min(fx.W,cx+rad);x++){
+          const d=Math.hypot(x-cx,y-cy)/rad; if(d>1) continue; const n=Math.sin(x*.55+f*.07)*Math.cos(y*.5-f*.05)+Math.sin((x+y)*.28+f*.04)*(1-d);
+          if(n>.55 && BAYER[(y&3)*4+(x&3)]<.6){ c.globalAlpha=.42; c.fillStyle=n>1.05?"#F07CC8":"#6A3EC0"; c.fillRect(x,y,1,1); } }
+        for(const st of fx.starsOf(s)){ const v=Math.sin(f*.35+st.ph); if(v>.75) plus(c,st.x,st.y,1,"#FFFFFF","#B58CFF",.9); else if(v>-.2) dot(c,st.x,st.y,v>.3?"#FFFFFF":"#8A7AE0",.9); }
+        comets(fx,s,c,false); },
+      front(fx,s,c){ comets(fx,s,c,true); },
+      spawn(fx,s){ if(R()<.5*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.25,.25),vy:rnd(-.3,.1),life:(rnd(10,18))|0,cols:["#FFFFFF","#FFD0EE","#B58CFF","#6A3EC0"]}); } }
+    },
+    holy:{n:["Sacré","Holy"],glow:"#FFE08A",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#FFE08A",.5,.3);
+        const b=s.bb; for(let k=0;k<3;k++){ const x=Math.round(b[0]+(b[2]-b[0])*(.2+.3*k)+Math.sin(fx.f*.05+k*2)*2), v=.5+.5*Math.sin(fx.f*.18+k*2.1);
+          c.globalAlpha=.22+.25*v; c.fillStyle="#FFF6C8"; for(let y=0;y<Math.min(fx.H,b[3]+2);y++) if(BAYER[(y&3)*4+(x&3)]<.35+.5*v*(y/(b[3]+2))) c.fillRect(x,y,1,1); } },
+      spawn(fx,s){ if(R()<.7*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x+rnd(-2,2),y:p.y+fx.by,vy:-rnd(.15,.3),life:(rnd(14,24))|0,cols:["#FFFFFF","#FFF6C8","#FFE08A","#F2C14E"]}); }
+        if(R()<.08*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y+fx.by,life:8,kind:"twinkle",cols:["#FFFFFF","#FFE08A"]}); } }
+    },
+    nature:{n:["Nature","Nature"],glow:"#7FE07A",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#58B04E",.45,.28); },
+      spawn(fx,s){ if(R()<.35*s.I){ const b=s.bb; const col=pick([["#A8E68A","#58B04E"],["#58B04E","#347A38"],["#FFE04A","#D9A420"]]);
+          P(fx,{x:rnd(b[0]-2,b[2]+2),y:rnd(b[1]-3,b[1]+3),vy:rnd(.12,.24),life:(rnd(18,30))|0,kind:"leaf",col,upd(p){ p.vx=Math.sin(p.age*.3+p.ph)*.22; }}); }
+        if(R()<.45*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vy:-rnd(.12,.25),vx:rnd(-.1,.1),life:(rnd(10,18))|0,cols:["#FFFFFF","#FFF6A0","#E6FF9A","#9AE03A"]}); } }
+    },
+    tech:{n:["Techno","Tech"],glow:"#49E0F0",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#1F9DB8",.55,.32); },
+      front(fx,s,c){ const b=s.bb, h=b[3]-b[1]+8, row=b[1]-4+(fx.f*.8%h|0);
+        for(const p of s.pts){ const y=p.y; if(y===row) dot(c,p.x,y+fx.by,"#C8FFFF",.8); else if(y===row-1) dot(c,p.x,y+fx.by,"#49E0F0",.45); }
+        if(fx.glitch>0){ fx.glitch--; const r0=fx.gRow; for(const p of s.pts){ if(p.y>=r0&&p.y<r0+3){ dot(c,p.x+1,p.y+fx.by,"#FF4AD8",.55); dot(c,p.x-1,p.y+fx.by,"#49E0F0",.55); } } }
+        else if(R()<.05){ fx.glitch=2; fx.gRow=Math.round(rnd(b[1],b[3])); } },
+      spawn(fx,s){ for(let k=spawnN(.8*s.I);k--;){ const p=pick(s.pts); if(!p) return; P(fx,{x:p.x+rnd(-1,1),y:p.y+fx.by,vy:-rnd(.2,.45),life:(rnd(8,16))|0,kind:"bit",cols:["#FFFFFF","#A8FFF0","#49E0F0","#1F9DB8"]}); } }
+    },
+    water:{n:["Eau","Water"],glow:"#5EC8F0",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#2A7AC0",.55,.32); const f=fx.f, rad=s.r+4;
+        c.globalAlpha=.3; c.fillStyle="#8FD8FF";
+        for(let y=Math.max(0,Math.floor(s.cy-rad));y<Math.min(fx.H,s.cy+rad);y++) for(let x=Math.max(0,Math.floor(s.cx-rad));x<Math.min(fx.W,s.cx+rad);x++){
+          if(Math.hypot(x-s.cx,y-s.cy)>rad) continue; if(Math.sin(x*.9+f*.22)+Math.sin(y*.8-f*.17+x*.3)>1.45) c.fillRect(x,y+fx.by,1,1); } },
+      spawn(fx,s){ if(R()<.5*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vy:-rnd(.15,.32),life:(rnd(14,24))|0,kind:R()<.45?"bubble":"dot",cols:["#FFFFFF","#C8F4FF","#5EC8F0","#2A7AC0"],upd(q){ q.vx=Math.sin(q.age*.35+q.ph)*.15; }}); }
+        if(R()<.18*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vy:rnd(.3,.5),life:(rnd(6,10))|0,cols:["#C8F4FF","#5EC8F0"]}); } }
+    },
+    shadow:{n:["Ombre","Shadow"],glow:"#6A3EC0",
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+5,"#6A3EC0",.5,.3); glow(fx,c,s.cx,s.cy+fx.by,s.r+2,"#0A0414",.6,.45); },
+      spawn(fx,s){ for(let k=spawnN(.8*s.I);k--;){ const p=pick(s.pts); if(!p) return; P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.12,.12),vy:-rnd(.12,.3),life:(rnd(12,22))|0,kind:"smoke",cols:["#7A52B8","#4A2E7A","#2E1A50","#180C2C"]}); }
+        if(R()<.025*s.I){ const b=s.bb; P(fx,{x:rnd(b[0]-3,b[2]+1),y:rnd(b[1],b[3]),life:7,kind:"eyes",cols:["#FF3A4A"]}); } }
+    }
+  };
+  function comets(fx,s,c,front){
+    for(let k=0;k<2;k++){ const dir=k?1:-1, rx=s.r+3, ry=(s.r+3)*.45;
+      for(let t=4;t>=0;t--){ const a=fx.f*.16*dir+k*Math.PI-t*.12*dir, sn=Math.sin(a); if((sn>0)!==front) continue;
+        const x=s.cx+Math.cos(a)*rx, y=s.cy+fx.by+sn*ry; dot(c,x,y,t===0?"#FFFFFF":t===1?"#FFE08A":t<3?"#F07CC8":"#6A3EC0",t===0?1:.9-t*.15); } }
+  }
+
+  // ---------- instance ----------
+  function Fx(o){
+    this.cv=o.front; this.ctx=o.front.getContext("2d"); this.bcv=o.back||null; this.bctx=o.back?o.back.getContext("2d"):null;
+    this.W=o.W; this.H=o.H; this.f=0; this.parts=[]; this.bolts=[]; this.vis=true; this.by=0; this.glitch=0;
+    this.cv.width=o.W; this.cv.height=o.H; if(this.bcv){ this.bcv.width=o.W; this.bcv.height=o.H; }
+    this.sprite=o.sprite||null; this.ox=o.ox||0; this.oy=o.oy||0; this.bob=!!o.bob; this.hero=!!o.hero;
+    this.rank=RANK[o.rarity]||0;
+    this.sil=new Uint8Array(o.W*o.H); this.inner=[]; this.bb=[1e9,1e9,-1e9,-1e9];
+    if(o.silFrom||this.sprite) this.silhouette(o.silFrom||this.sprite, this.ox, this.oy);
+    this.rings();
+    const b=this.bb; this.cx=(b[0]+b[2]+1)/2; this.cy=(b[1]+b[3]+1)/2; this.rad=Math.max(b[2]-b[0],b[3]-b[1])/2+(o.radPad||6);
+    this.src=(o.sources||[]).map(s=>this.source(s)).filter(s=>s.pts.length);
+    this._stars=null;
+  }
+  Fx.prototype.silhouette=function(cv,ox,oy){
+    const d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height).data, W=this.W, H=this.H;
+    for(let y=0;y<cv.height;y++) for(let x=0;x<cv.width;x++){ const i=(y*cv.width+x)*4; if(d[i+3]<=20) continue; const X=x+ox, Y=y+oy; if(X<0||Y<0||X>=W||Y>=H) continue;
+      this.sil[Y*W+X]=1; if(!isOutline(d,i)) this.inner.push({x:X,y:Y}); const b=this.bb; if(X<b[0])b[0]=X; if(Y<b[1])b[1]=Y; if(X>b[2])b[2]=X; if(Y>b[3])b[3]=Y; }
+    if(this.bb[2]<0) this.bb=[0,0,W-1,H-1];
+  };
+  Fx.prototype.rings=function(){
+    const W=this.W,H=this.H,S=this.sil, r1=new Uint8Array(W*H); this.ring1=[]; this.ring2=[];
+    const nb=(x,y,A)=>(x>0&&A[y*W+x-1])||(x<W-1&&A[y*W+x+1])||(y>0&&A[(y-1)*W+x])||(y<H-1&&A[(y+1)*W+x]);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(S[y*W+x]) continue; if(nb(x,y,S)){ r1[y*W+x]=1; this.ring1.push({x,y}); } }
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(S[i]||r1[i]) continue; if(nb(x,y,r1)) this.ring2.push({x,y}); }
+  };
+  // source d'effet élémentaire : pixels émetteurs (hors contour), bords, sommets
+  Fx.prototype.source=function(s){
+    const cv=s.mask||this.sprite, ox=s.mask?(s.ox||0):this.ox, oy=s.mask?(s.oy||0):this.oy;
+    const d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height).data, w=cv.width, h=cv.height;
+    const op=(x,y)=>x>=0&&y>=0&&x<w&&y<h&&d[(y*w+x)*4+3]>20;
+    const pts=[], edge=[], top=[], bb=[1e9,1e9,-1e9,-1e9];
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=(y*w+x)*4; if(d[i+3]<=20) continue; const X=x+ox, Y=y+oy;
+      if(X<0||Y<0||X>=this.W||Y>=this.H) continue;
+      if(X<bb[0])bb[0]=X; if(Y<bb[1])bb[1]=Y; if(X>bb[2])bb[2]=X; if(Y>bb[3])bb[3]=Y;
+      if(!op(x-1,y)||!op(x+1,y)||!op(x,y-1)||!op(x,y+1)) edge.push({x:X,y:Y});
+      if(isOutline(d,i)) continue; pts.push({x:X,y:Y});
+      let up=y-1; while(up>=0 && op(x,up) && isOutline(d,(up*w+x)*4)) up--; if(up<0||!op(x,up)) top.push({x:X,y:Y-(y-1-up)}); }
+    const cx=(bb[0]+bb[2]+1)/2, cy=(bb[1]+bb[3]+1)/2, r=Math.max(bb[2]-bb[0],bb[3]-bb[1])/2;
+    return {el:s.el, I:s.I||1, pts, edge, top, bb, cx, cy, r};
+  };
+  Fx.prototype.starsOf=function(s){
+    if(!s._stars){ s._stars=[]; for(let k=0;k<11;k++){ const a=R()*6.28, d=s.r+rnd(1,6); s._stars.push({x:Math.round(s.cx+Math.cos(a)*d), y:Math.round(s.cy+Math.sin(a)*d*.85), ph:R()*6.28}); } }
+    return s._stars;
+  };
+  Fx.prototype.step=function(){
+    const f=++this.f;
+    if(this.bob) this.by=(Math.floor(f/8)%2)?-1:0;
+    for(const s of this.src){ const E=EL[s.el]; if(E&&E.spawn) E.spawn(this,s); }
+    rarSpawn(this);
+    const P=this.parts; for(let i=P.length-1;i>=0;i--){ const p=P[i]; if(++p.age>=p.life){ P.splice(i,1); continue; } if(p.upd) p.upd(p,this); p.x+=p.vx; p.y+=p.vy; if(p.kind==="fire") p.vx+=rnd(-.06,.06); }
+    for(let i=this.bolts.length-1;i>=0;i--){ if(++this.bolts[i].age>=this.bolts[i].life) this.bolts.splice(i,1); }
+  };
+  Fx.prototype.draw=function(){
+    const W=this.W,H=this.H, c=this.ctx, b=this.bctx||c;
+    if(this.bctx) b.clearRect(0,0,W,H); c.clearRect(0,0,W,H);
+    rarBack(this,b);
+    for(const s of this.src){ const E=EL[s.el]; if(E&&E.back) E.back(this,s,b); }
+    drawParts(this,b,"back");
+    if(this.sprite){ c.globalAlpha=1; c.drawImage(this.sprite,this.ox,this.oy+this.by); }
+    rarFront(this,c);
+    for(const s of this.src){ const E=EL[s.el]; if(E&&E.front) E.front(this,s,c); }
+    drawParts(this,c,"front");
+    for(const bo of this.bolts){ const a=bo.age; for(const [x,y] of bo.pts){
+      const halo=a===0?"#9AD8FF":"#5EA7FF"; c.globalAlpha=a===0?.85:.5; c.fillStyle=halo; c.fillRect(x+1,y,1,1); c.fillRect(x-1,y,1,1); c.fillRect(x,y-1,1,1); c.fillRect(x,y+1,1,1); }
+      for(const [x,y] of bo.pts) dot(c,x,y,a===0?"#FFFFFF":a===1?"#CFEFFF":"#5EA7FF",a<2?1:.6); }
+    c.globalAlpha=1; if(this.bctx) b.globalAlpha=1;
+  };
+
+  // ---------- rareté ----------
+  function rarSpawn(fx){
+    const k=fx.rank; if(!k) return; const C=RCOL[["","rare","epique","legendaire","mythique"][k]];
+    const tw=fx.hero?[0,0,0,.08,.12][k]:[0,.07,.11,.16,.22][k]; if(R()<tw){ const p=R()<.5?pick(fx.ring1):pick(fx.inner); if(p) P(fx,{x:p.x,y:p.y+fx.by,life:k>=3?10:8,kind:"twinkle",big:k>=3,cols:k===4?[C[0],"hue"]:[C[0],C[2]]}); }
+    if(fx.hero) return;
+    if(k>=2 && R()<[0,0,.35,.5,.7][k]){ const b=fx.bb; P(fx,{x:rnd(b[0]-3,b[2]+3),y:b[3]+rnd(0,3),vy:-rnd(.2,.42),life:(rnd(14,24))|0,cols:k===4?["#FFFFFF","hue","hue"]:[C[0],C[1],C[2],C[3]]}); }
+    if(k>=3 && R()<.45){ const p=pick(fx.inner); if(p) P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.15,.15),vy:-rnd(.25,.5),life:(rnd(8,14))|0,cols:k===4?["#FFFFFF","hue","hue","#8A2A6E"]:["#FFFFFF","#FFE9A0","#F2C14E","#C98A1E"]}); }
+  }
+  function rarBack(fx,c){
+    const k=fx.rank, f=fx.f, pul=.5+.5*Math.sin(f*.22); if(!k) return;
+    const cx=fx.cx, cy=fx.cy+fx.by, rad=fx.rad, gm=fx.src.length?.6:1;
+    if(k===1){ glow(fx,c,cx,cy,rad,"#5EA7FF",.45+.2*pul,.4*gm); }
+    if(fx.hero){ // autour du héros : une aura sobre, le visage reste lisible
+      const col=k===4?hue(f,60):"#F2C14E"; glow(fx,c,cx,cy+2,rad+2,col,.55+.15*pul,.22); ringPx(fx,c,fx.ring1,k===4?hue(f,200):"#FFE08A",.3+.2*pul);
+      if(k===4) orbit(fx,c,false); return; }
+    if(k===2){ glow(fx,c,cx,cy,rad+1,"#B58CFF",.6+.25*pul,.45*gm); ringPx(fx,c,fx.ring1,"#D2B4FF",.3+.4*pul); }
+    if(k===3){ rays(fx,c,cx,cy,rad+5,8,f*.045,"#FFE08A",.5); glow(fx,c,cx,cy,rad,"#F2C14E",.7+.25*pul,.45*gm);
+      ringPx(fx,c,fx.ring1,"#FFE08A",fx.hero?.35:.55+.45*pul); if(!fx.hero) ringPx(fx,c,fx.ring2,"#C98A1E",.35); }
+    if(k===4){ rays(fx,c,cx,cy,rad+7,6,f*.06,hue(f),.5,5); rays(fx,c,cx,cy,rad+4,10,-f*.035,hue(f,140),.35,8);
+      glow(fx,c,cx,cy,rad,hue(f,60),.8+.2*pul,.45*gm);
+      ringPx(fx,c,fx.ring1,hue(f,200),fx.hero?.5:1); if(!fx.hero) ringPx(fx,c,fx.ring2,hue(f,20),.55);
+      const w=f%42; if(w<16) ringAt(fx,c,cx,cy,2+w*rad/12,hue(f,90),1-w/16);
+      orbit(fx,c,false); }
+  }
+  function rarFront(fx,c){
+    const k=fx.rank, f=fx.f; if(k<3) return;
+    if(fx.hero){ if(k===4) orbit(fx,c,true); return; }
+    const per=k===4?30:40, b=fx.bb, lo=b[0]+b[1]-6, hi=b[2]+b[3]+6, s=lo+(f%per)/per*(hi-lo)*1.6;
+    if(s<hi) for(const p of fx.inner){ const v=p.x+p.y; if(v===Math.round(s)||v===Math.round(s)+1) dot(c,p.x,p.y+fx.by,"#FFFFFF",.75); else if(v===Math.round(s)+2) dot(c,p.x,p.y+fx.by,"#FFFFFF",.35); }
+    if(k===4) orbit(fx,c,true);
+  }
+  function ringPx(fx,c,ring,col,a){ c.globalAlpha=Math.max(0,Math.min(1,a)); c.fillStyle=col; for(const p of ring) c.fillRect(p.x,p.y+fx.by,1,1); }
+  function orbit(fx,c,front){
+    const n=fx.hero?5:6, rx=(fx.bb[2]-fx.bb[0])/2+5, ry=Math.max(3,(fx.bb[3]-fx.bb[1])/2*.35);
+    for(let k=0;k<n;k++) for(let t=3;t>=0;t--){ const a=fx.f*.13+k*Math.PI*2/n-t*.11, sn=Math.sin(a); if((sn>0)!==front) continue;
+      dot(c,fx.cx+Math.cos(a)*rx,fx.cy+fx.by+sn*ry+Math.cos(a*2)*1.2,t===0?"#FFFFFF":hue(fx.f,k*60+t*20),t===0?1:.85-t*.2); }
+  }
+
+  // ---------- particules ----------
+  function drawParts(fx,c,layer){
+    for(const p of fx.parts){ if(p.layer!==layer) continue; const t=p.age/p.life, f=fx.f;
+      const col=(cols)=>{ const v=ramp(cols,t); return v==="hue"?hue(f,p.ph*57):v; };
+      switch(p.kind){
+        case "fire": dot(c,p.x,p.y,ramp(FIRE,t),t>.8?.7:1); break;
+        case "flake": if(t<.85) plus(c,p.x,p.y,1,"#FFFFFF",col(p.cols),.9); else dot(c,p.x,p.y,col(p.cols),.6); break;
+        case "wisp": if(t>.6 && (p.age&1)) break; dot(c,p.x,p.y,col(p.cols),t>.7?.6:.9); if(t<.4) dot(c,p.x,p.y+1,col(p.cols.slice(2)),.45); break;
+        case "bit": if(p.age%3===2) break; dot(c,p.x,p.y,col(p.cols),1); if(p.ph>3) dot(c,p.x+1,p.y,col(p.cols),.7); break;
+        case "bubble": { const x=Math.round(p.x),y=Math.round(p.y),cc=col(p.cols); dot(c,x+1,y,cc,.8); dot(c,x-1,y,cc,.8); dot(c,x,y-1,cc,.8); dot(c,x,y+1,cc,.8); dot(c,x-1,y-1,"#FFFFFF",.9); break; }
+        case "leaf": { const fl=(p.age>>2)&1; dot(c,p.x,p.y,p.col[0],1); dot(c,p.x+(fl?1:-1),p.y+(fl?0:1),p.col[1],1); break; }
+        case "smoke": { const cc=col(p.cols); if(t<.5){ c.globalAlpha=.75; c.fillStyle=cc; c.fillRect(Math.round(p.x),Math.round(p.y),2,2); } else dot(c,p.x,p.y,cc,.6); break; }
+        case "eyes": if(p.age%4<3){ dot(c,p.x,p.y,"#FF3A4A",1); dot(c,p.x+2,p.y,"#FF3A4A",1); } break;
+        case "twinkle": { const sz=p.big?[0,1,2,2,2,1,1,0,0,0][p.age]||0:[0,1,1,2,1,0,0,0][p.age]||0; const arm=p.cols[1]==="hue"?hue(f,p.ph*57):p.cols[1];
+          if(sz===0) dot(c,p.x,p.y,p.cols[0],.9); else plus(c,p.x,p.y,sz,p.cols[0],arm,.95); break; }
+        default: dot(c,p.x,p.y,col(p.cols||["#FFFFFF"]),t>.75?.6:1);
+      }
+    }
+    c.globalAlpha=1;
+  }
+
+  // ---------- boucle ----------
+  const LIVE=new Set(); let raf=0, last=0;
+  const reduce=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const io=("IntersectionObserver" in window) ? new IntersectionObserver(es=>{ for(const e of es){ const fx=e.target.__fx; if(fx) fx.vis=e.isIntersecting; } },{rootMargin:"60px"}) : null;
+  function loop(t){
+    raf=requestAnimationFrame(loop); if(document.hidden) return; if(t-last<1000/FPS-2) return; last=t;
+    for(const fx of LIVE){ if(!fx.cv.isConnected){ LIVE.delete(fx); if(io) io.unobserve(fx.cv); continue; } if(!fx.vis) continue; fx.step(); fx.draw(); }
+    if(!LIVE.size){ cancelAnimationFrame(raf); raf=0; }
+  }
+  function start(fx){
+    for(let i=0;i<24;i++) fx.step();   // l'effet démarre déjà installé
+    fx.draw(); fx.cv.__fx=fx;
+    const still = reduce || (!fx.rank && !fx.src.length && !fx.bob);
+    if(still) return fx;
+    LIVE.add(fx); if(io) io.observe(fx.cv);
+    if(!raf) raf=requestAnimationFrame(loop);
+    return fx;
+  }
+
+  // ---------- API ----------
+  // Tuile : sprite centré dans une toile carrée, l'effet tient dans la toile.
+  PX.fxTile=function(cv, sprite, rarity, el, opts){
+    opts=opts||{}; const sw=sprite.width, sh=sprite.height, rank=RANK[rarity]||0;
+    const pad=opts.pad!=null?opts.pad:(rank>=3||el?7:rank?6:5);
+    const S=Math.max(opts.min||22, Math.max(sw,sh)+pad*2);
+    const ox=Math.floor((S-sw)/2), oy=Math.max(1,Math.floor((S-sh)/2)-(opts.lift||0));
+    return start(new Fx({front:cv, W:S, H:S, sprite, ox, oy, rarity, sources:el?[{el, I:[1,1,1,1.3,1.6][rank]}]:[], bob:!!opts.bob, radPad:opts.radPad}));
+  };
+  // Surimpression autour d'une image (héros) : toile arrière + toile avant, marges m.
+  PX.fxOverlay=function(back, front, o){
+    const m=o.m||6, W=o.w+2*m, H=o.h+2*m;
+    return start(new Fx({front, back, W, H, ox:m, oy:m, silFrom:o.sil, hero:true, rarity:o.rarity, radPad:3,
+      sources:(o.layers||[]).map(l=>({el:l.el, mask:l.mask, ox:m, oy:m, I:l.I||.55}))}));
+  };
+  PX.FX_EL=EL; PX.fxStopAll=function(){ LIVE.clear(); };
 })();

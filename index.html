@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <title>Suivi calories</title>
 <link rel="preload" href="./fonts/jersey-10-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./fonts/pixelify-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script src="./zxing.min.js" defer></script>
 <script src="./pixel-art.js"></script>
 <style>
@@ -801,7 +802,7 @@
   .gauge-num.fit{font-size:28px;}
 
   /* =====================================================================
-     v54 · LA QUÊTE DU ROYAUME : thème pixel (nuit étoilée, panneaux à bords nets)
+     v54-55 · LA QUÊTE DU ROYAUME : thème pixel (nuit étoilée, panneaux à bords nets)
      Police des titres : Jersey 10 (licence SIL OFL 1.1), embarquée dans l'app : nette et lisible,
      accents compris. Elle n'a qu'une graisse : le gras n'est jamais simulé (font-synthesis).
      Les textes longs et les champs restent dans la police système, plus lisible.
@@ -861,7 +862,7 @@
   .g-hud-xp span{position:absolute;inset:0;font-family:var(--pix);font-size:10px;line-height:12px;text-align:center;color:#fff;text-shadow:0 1px 0 #000;}
   .g-hud-res{display:flex;flex-direction:column;gap:3px;align-items:flex-end;font-family:var(--pix);font-weight:700;font-size:15px;}
   .g-hud-res div{display:flex;align-items:center;gap:5px;}
-  .px-coin{width:12px;height:12px;background:radial-gradient(circle at 35% 35%,#FFF1A8 0 2px,#F2C14E 3px,#C98A1E 6px);box-shadow:0 0 0 1px #5A3A06;border-radius:2px;display:inline-block;}
+  .px-coin{width:12px;height:12px;flex:none;display:inline-block;vertical-align:-1px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2012%2012%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20x%3D%223%22%20y%3D%220%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%222%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%223%22%20y%3D%221%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%227%22%20y%3D%221%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%229%22%20y%3D%221%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%224%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFFBE6%22/%3E%3Crect%20x%3D%225%22%20y%3D%222%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%227%22%20y%3D%222%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%2210%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%220%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%223%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFFBE6%22/%3E%3Crect%20x%3D%224%22%20y%3D%223%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%2210%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%220%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%222%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFFBE6%22/%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%225%22%20y%3D%224%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%227%22%20y%3D%224%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%2210%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%220%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%226%22%20y%3D%225%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%2210%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%220%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%222%22%20y%3D%226%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%225%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%2210%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%220%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFE08A%22/%3E%3Crect%20x%3D%222%22%20y%3D%227%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%225%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%226%22%20y%3D%227%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%2210%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%220%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%228%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%225%22%20y%3D%228%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%227%22%20y%3D%228%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%229%22%20y%3D%228%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2211%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%221%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%23F2C14E%22/%3E%3Crect%20x%3D%228%22%20y%3D%229%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%2210%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%222%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%223%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23B87A16%22/%3E%3Crect%20x%3D%228%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%238A5A0E%22/%3E%3Crect%20x%3D%229%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3Crect%20x%3D%223%22%20y%3D%2211%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%234A2E06%22/%3E%3C/svg%3E") center/contain no-repeat;image-rendering:pixelated;}
   .px-flame{width:12px;height:14px;display:inline-block;background:
      linear-gradient(#FFE68A,#FFE68A) 4px 6px/4px 6px no-repeat, linear-gradient(#FFA03C,#FFA03C) 2px 3px/8px 10px no-repeat, linear-gradient(#E0501E,#E0501E) 4px 0/4px 14px no-repeat;}
   .hud-date{display:none;}
@@ -1006,18 +1007,13 @@
     background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0)),#2A3164;box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--rc,#6A7090);}
   .g-tile img{max-width:72%;max-height:72%;image-rendering:pixelated;}
   .g-tile .g-tag{position:absolute;left:0;right:0;bottom:0;font-family:var(--pix);font-size:11px;line-height:16px;background:rgba(7,10,28,.78);color:#fff;}
-  .g-tile.locked img{filter:brightness(0) opacity(.55);} .g-tile.locked .g-tag{color:var(--ink-faint);}
+  .g-tile.locked .g-tag{color:var(--ink-soft);}
   .g-tile.eq{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--rc), 0 0 0 4px #7AE09A;}
   .g-tile.own .g-tag{color:#7AE09A;}
   .r-commun{--rc:var(--r-commun);} .r-rare{--rc:var(--r-rare);background-color:#24366E;} .r-epique{--rc:var(--r-epique);background-color:#36296E;}
   .r-legendaire{--rc:var(--r-legendaire);background-color:#4A3A1C;} .r-mythique{--rc:var(--r-mythique);background-color:#4A1A2E;}
   .g-slot.r-commun,.g-slot.r-rare,.g-slot.r-epique,.g-slot.r-legendaire,.g-slot.r-mythique{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 3px var(--rc);}
-  .g-tile.r-legendaire:not(.locked) img,.g-slot.r-legendaire img{filter:drop-shadow(0 0 4px rgba(242,193,78,.75));}
-  .g-tile.r-mythique:not(.locked)::after,.g-slot.r-mythique::after{content:"";position:absolute;inset:3px;border-radius:4px;pointer-events:none;
-    background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.28) 45%,transparent 60%);background-size:260% 100%;animation:gShine 2.4s steps(12) infinite;}
-  .g-tile.r-mythique:not(.locked) img,.g-slot.r-mythique img{animation:gHue 3s steps(12) infinite;}
-  @keyframes gShine{from{background-position:120% 0}to{background-position:-160% 0}}
-  @keyframes gHue{0%{filter:drop-shadow(0 0 4px #FF5A6E)}50%{filter:drop-shadow(0 0 6px #B58CFF)}100%{filter:drop-shadow(0 0 4px #FF5A6E)}}
+  .g-tile.r-legendaire img,.g-slot.r-legendaire img{filter:drop-shadow(0 0 4px rgba(242,193,78,.75));}
   .g-stars{position:absolute;top:2px;right:4px;font-size:10px;color:var(--gold-l);text-shadow:0 1px 0 #000;letter-spacing:-1px;}
   .g-stars.inline{position:static;font-size:16px;}
   .g-foot{font-size:12px;color:var(--ink-faint);text-align:center;margin:14px 6px;line-height:1.5;}
@@ -1103,8 +1099,88 @@
   .banner .bn-a button{font-family:var(--pix);font-size:18px;border-radius:5px;}
   /* mode classique : le jeu disparaît, le suivi reste */
   body.classic .g-only, body.classic #gCamp, body.classic #gQuests, body.classic #gGym, body.classic #gWeek, body.classic #gEpic, body.classic .meal-actions .g-feast, body.classic .g-feast-note, body.classic [data-view="hero"], body.classic [data-prog="chron"]{display:none !important;}
-  @media (prefers-reduced-motion:reduce){ .g-float,.g-pet-img,.g-chest.ready,.g-tile::after,.g-tile img,.g-slot img,.g-slot::after{animation:none !important;} }
+  @media (prefers-reduced-motion:reduce){ .g-float,.g-pet-img,.g-chest.ready,.g-tile::after,.g-tile::before,.g-tile img,.g-slot img,.g-slot::after,.g-slot::before{animation:none !important;} }
   @media (max-width:360px){ .g-stage-grid{grid-template-columns:56px 1fr 56px;} .g-slot{width:56px;height:56px;} .g-hero-img{height:200px;} .g-stage-hero{min-height:200px;} }
+
+  /* =====================================================================
+     v55 · police pixel partout, pièce d'or, objets verrouillés visibles, cadres de rareté animés
+     Texte courant : Pixelify Sans (licence SIL OFL 1.1, embarquée) ; titres et nombres : Jersey 10.
+     Le mode classique garde la police système.
+     ===================================================================== */
+  /* Le 5 de Pixelify ressemble à un S : les chiffres du texte courant viennent de Jersey 10, agrandie pour s'accorder */
+  @font-face{font-family:"Pixel Texte";src:url("./fonts/pixelify-sans-latin-400-normal.woff2") format("woff2");font-weight:100 500;font-style:normal;font-display:swap;unicode-range:U+0000-002F,U+003A-10FFFF;}
+  @font-face{font-family:"Pixel Texte";src:url("./fonts/pixelify-sans-latin-700-normal.woff2") format("woff2");font-weight:600 900;font-style:normal;font-display:swap;unicode-range:U+0000-002F,U+003A-10FFFF;}
+  @font-face{font-family:"Pixel Texte";src:url("./fonts/jersey-10-latin-400-normal.woff2") format("woff2");font-weight:100 500;font-style:normal;font-display:swap;unicode-range:U+0030-0039;size-adjust:122%;}
+  @font-face{font-family:"Pixel Texte";src:url("./fonts/jersey-10-latin-400-normal.woff2") format("woff2");font-weight:600 900;font-style:normal;font-display:swap;unicode-range:U+0030-0039;size-adjust:122%;}
+  :root{--txt:"Pixel Texte","Jersey 10",ui-monospace,monospace;}
+  body:not(.classic){font-family:var(--txt);}
+  body:not(.classic) input,body:not(.classic) textarea,body:not(.classic) select{font-family:var(--txt);}
+  /* l'or est toujours doré : pièce pixel + montant couleur or */
+  .g-gold{display:inline-flex;align-items:center;gap:4px;color:var(--gold-l);font-family:var(--pix);font-weight:700;white-space:nowrap;vertical-align:-1px;}
+  .g-gold .px-coin{width:13px;height:13px;}
+  #gHudGold{color:var(--gold-l);}
+  .g-hud-res .px-coin{width:15px;height:15px;}
+  .btn.primary .g-gold{color:#3A2606;font-size:1.05em;}
+  .btn .g-gold{font-size:1.05em;}
+  .g-stats b.g-gold{display:flex;justify-content:center;gap:4px;}
+  .px-lock{position:absolute;top:6px;left:6px;width:12px;height:15px;z-index:3;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%208%2010%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20x%3D%222%22%20y%3D%220%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%222%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%239AA3AE%22/%3E%3Crect%20x%3D%223%22%20y%3D%221%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23E8ECF2%22/%3E%3Crect%20x%3D%225%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%239AA3AE%22/%3E%3Crect%20x%3D%226%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%239AA3AE%22/%3E%3Crect%20x%3D%225%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%239AA3AE%22/%3E%3Crect%20x%3D%226%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%222%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%239AA3AE%22/%3E%3Crect%20x%3D%225%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%239AA3AE%22/%3E%3Crect%20x%3D%226%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%220%22%20y%3D%224%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%220%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%225%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23C9CED6%22/%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23FFFFFF%22/%3E%3Crect%20x%3D%224%22%20y%3D%225%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23C9CED6%22/%3E%3Crect%20x%3D%227%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%220%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%226%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23C9CED6%22/%3E%3Crect%20x%3D%223%22%20y%3D%226%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%225%22%20y%3D%226%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23C9CED6%22/%3E%3Crect%20x%3D%227%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%220%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%227%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23C9CED6%22/%3E%3Crect%20x%3D%223%22%20y%3D%227%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%225%22%20y%3D%227%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23C9CED6%22/%3E%3Crect%20x%3D%227%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%220%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%221%22%20y%3D%228%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%236A7090%22/%3E%3Crect%20x%3D%227%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3Crect%20x%3D%220%22%20y%3D%229%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23141020%22/%3E%3C/svg%3E") center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(0 1px 0 #000);}
+  .px-check{display:inline-block;width:14px;height:12px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2012%2010%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20x%3D%2210%22%20y%3D%220%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%229%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%2210%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%2211%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%228%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%229%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%2210%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%2211%22%20y%3D%222%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%220%22%20y%3D%223%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%227%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%228%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%229%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%2210%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%220%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%221%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%222%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%226%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%227%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%228%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%229%22%20y%3D%224%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%220%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%221%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%226%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%227%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%228%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%221%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%222%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%223%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%224%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%225%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%227%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%222%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%223%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%237AE09A%22/%3E%3Crect%20x%3D%226%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%223%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%224%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23C8FFD8%22/%3E%3Crect%20x%3D%225%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3Crect%20x%3D%224%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%230E2A18%22/%3E%3C/svg%3E") center/contain no-repeat;image-rendering:pixelated;}
+  /* tuiles : la toile d'effets remplit la tuile, l'étiquette reste dans le cadre */
+  .g-try{overflow:hidden;padding-top:12px;} .card.g-stage{overflow:hidden;}
+  .g-rar{display:inline-block;padding:0 5px;border-radius:3px;background:rgba(255,255,255,.06);}
+  .g-tile .g-fx{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:0;}
+  .g-tile .g-tag{z-index:3;left:4px;right:4px;bottom:4px;border-radius:0 0 3px 3px;display:flex;align-items:center;justify-content:center;gap:3px;}
+  .g-tile .g-tag .px-coin{width:12px;height:12px;}
+  .g-tile .g-stars{z-index:3;}
+  .g-slot{overflow:hidden;}
+  .g-slot .g-fx{position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);image-rendering:pixelated;border-radius:4px;}
+  .g-slot .g-stars{z-index:3;}
+  /* héros et familier animés */
+  .g-fx-back,.g-fx-front{position:absolute;pointer-events:none;image-rendering:pixelated;}
+  .g-fx-back{z-index:0;} .g-stage-hero .g-hero-img,.g-try .g-hero-img{position:relative;z-index:1;} .g-fx-front{z-index:2;}
+  .g-pet-fx{position:absolute;right:-2px;bottom:-4px;z-index:3;image-rendering:pixelated;pointer-events:none;}
+  .g-try .g-pet-fx{right:6%;bottom:0;}
+  /* cadres de rareté : chaque palier ajoute du détail */
+  .g-tile::before,.g-slot::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit;}
+  .r-rare.g-tile,.r-rare.g-slot{box-shadow:0 0 0 2px #070A1C, inset 0 0 0 2px #2C5AA8, inset 0 0 0 3px #5EA7FF, inset 0 0 0 4px #10183A, inset 0 0 0 5px rgba(143,196,255,.3);}
+  .r-rare.g-tile::before,.r-rare.g-slot::before{background:
+     linear-gradient(#BFE0FF,#BFE0FF) 2px 2px/4px 4px no-repeat, linear-gradient(#BFE0FF,#BFE0FF) calc(100% - 2px) 2px/4px 4px no-repeat,
+     linear-gradient(#BFE0FF,#BFE0FF) 2px calc(100% - 2px)/4px 4px no-repeat, linear-gradient(#BFE0FF,#BFE0FF) calc(100% - 2px) calc(100% - 2px)/4px 4px no-repeat;}
+  .r-epique.g-tile,.r-epique.g-slot{box-shadow:0 0 0 2px #070A1C, 0 0 8px rgba(181,140,255,.35), inset 0 0 0 2px #6A3EC0, inset 0 0 0 3px #B58CFF, inset 0 0 0 4px #1A1038, inset 0 0 0 5px rgba(210,180,255,.45), inset 0 0 14px rgba(181,140,255,.35);}
+  .r-epique.g-tile::before,.r-epique.g-slot::before{background:
+     linear-gradient(#FFFFFF,#FFFFFF) 4px 4px/2px 2px no-repeat, linear-gradient(#E2C8FF,#E2C8FF) 1px 4px/8px 2px no-repeat, linear-gradient(#E2C8FF,#E2C8FF) 4px 1px/2px 8px no-repeat,
+     linear-gradient(#FFFFFF,#FFFFFF) calc(100% - 4px) 4px/2px 2px no-repeat, linear-gradient(#E2C8FF,#E2C8FF) calc(100% - 1px) 4px/8px 2px no-repeat, linear-gradient(#E2C8FF,#E2C8FF) calc(100% - 4px) 1px/2px 8px no-repeat,
+     linear-gradient(#E2C8FF,#E2C8FF) 1px calc(100% - 4px)/8px 2px no-repeat, linear-gradient(#E2C8FF,#E2C8FF) 4px calc(100% - 1px)/2px 8px no-repeat,
+     linear-gradient(#E2C8FF,#E2C8FF) calc(100% - 1px) calc(100% - 4px)/8px 2px no-repeat, linear-gradient(#E2C8FF,#E2C8FF) calc(100% - 4px) calc(100% - 1px)/2px 8px no-repeat;}
+  .r-legendaire.g-tile,.r-legendaire.g-slot{box-shadow:0 0 0 2px #070A1C, 0 0 12px rgba(242,193,78,.5), inset 0 0 0 2px #7A4E12, inset 0 0 0 4px #F2C14E, inset 0 0 0 5px #FFF3B0, inset 0 0 0 6px #4A2E08, inset 0 0 18px rgba(242,193,78,.35);}
+  .r-legendaire.g-tile::before,.r-legendaire.g-slot::before{background:
+     linear-gradient(#FFFBE6,#FFFBE6) 1px 1px/14px 3px no-repeat, linear-gradient(#FFFBE6,#FFFBE6) 1px 1px/3px 14px no-repeat,
+     linear-gradient(#FFFBE6,#FFFBE6) calc(100% - 1px) 1px/14px 3px no-repeat, linear-gradient(#FFFBE6,#FFFBE6) calc(100% - 1px) 1px/3px 14px no-repeat,
+     linear-gradient(#FFFBE6,#FFFBE6) 1px calc(100% - 1px)/14px 3px no-repeat, linear-gradient(#FFFBE6,#FFFBE6) 1px calc(100% - 1px)/3px 14px no-repeat,
+     linear-gradient(#FFFBE6,#FFFBE6) calc(100% - 1px) calc(100% - 1px)/14px 3px no-repeat, linear-gradient(#FFFBE6,#FFFBE6) calc(100% - 1px) calc(100% - 1px)/3px 14px no-repeat,
+     linear-gradient(#FF3A4A,#FF3A4A) 50% 1px/6px 4px no-repeat, linear-gradient(#FFF3B0,#FFF3B0) 50% 0/12px 2px no-repeat;}
+  .r-mythique.g-tile,.r-mythique.g-slot{animation:gMythF 2.4s steps(12) infinite;}
+  @keyframes gMythF{
+    0%,100%{box-shadow:0 0 0 2px #070A1C,0 0 14px rgba(255,90,110,.6),inset 0 0 0 2px #8A2A6E,inset 0 0 0 4px #FF5A6E,inset 0 0 0 5px #FFD0E0,inset 0 0 0 6px #2A0A1E,inset 0 0 20px rgba(255,90,110,.4);}
+    33%{box-shadow:0 0 0 2px #070A1C,0 0 16px rgba(200,140,255,.65),inset 0 0 0 2px #4A2A8A,inset 0 0 0 4px #C88CFF,inset 0 0 0 5px #F0E0FF,inset 0 0 0 6px #160A2A,inset 0 0 20px rgba(200,140,255,.4);}
+    66%{box-shadow:0 0 0 2px #070A1C,0 0 16px rgba(255,176,64,.6),inset 0 0 0 2px #8A4A12,inset 0 0 0 4px #FFB040,inset 0 0 0 5px #FFF3C8,inset 0 0 0 6px #2A1606,inset 0 0 20px rgba(255,176,64,.4);}
+  }
+  .r-mythique.g-tile::before,.r-mythique.g-slot::before{background:
+     linear-gradient(#FFFFFF,#FFFFFF) 1px 1px/16px 3px no-repeat, linear-gradient(#FFFFFF,#FFFFFF) 1px 1px/3px 16px no-repeat, linear-gradient(#FF9AD0,#FF9AD0) 5px 5px/4px 4px no-repeat,
+     linear-gradient(#FFFFFF,#FFFFFF) calc(100% - 1px) 1px/16px 3px no-repeat, linear-gradient(#FFFFFF,#FFFFFF) calc(100% - 1px) 1px/3px 16px no-repeat, linear-gradient(#FF9AD0,#FF9AD0) calc(100% - 5px) 5px/4px 4px no-repeat,
+     linear-gradient(#FFFFFF,#FFFFFF) 1px calc(100% - 1px)/16px 3px no-repeat, linear-gradient(#FFFFFF,#FFFFFF) 1px calc(100% - 1px)/3px 16px no-repeat,
+     linear-gradient(#FFFFFF,#FFFFFF) calc(100% - 1px) calc(100% - 1px)/16px 3px no-repeat, linear-gradient(#FFFFFF,#FFFFFF) calc(100% - 1px) calc(100% - 1px)/3px 16px no-repeat,
+     linear-gradient(#FFFFFF,#FFFFFF) 50% 0/4px 6px no-repeat, linear-gradient(#FF5A6E,#FF5A6E) 50% 0/12px 3px no-repeat;}
+  .g-tile.eq{outline:3px solid #7AE09A;outline-offset:2px;}
+  .r-legendaire .g-tag,.r-mythique .g-tag{background:rgba(7,10,28,.86);}
+  /* fiche d'objet : élément et légende */
+  .g-el{font-family:var(--pix);font-weight:700;}
+  .g-el-fire{color:#FFB040}.g-el-ice{color:#9ADFFF}.g-el-spectral{color:#7AF5D0}.g-el-storm{color:#FFF6A0}.g-el-cosmic{color:#D2A8FF}
+  .g-el-holy{color:#FFE08A}.g-el-nature{color:#A8E68A}.g-el-tech{color:#49E0F0}.g-el-water{color:#5EC8F0}.g-el-shadow{color:#C8A8FF}
+  .g-lore{font-size:14px;line-height:1.45;color:var(--ink-soft);margin:2px 0 10px;}
+  .g-rar.r-mythique{animation:gMythT 2.4s steps(12) infinite;}
+  @keyframes gMythT{0%,100%{color:#FF7A8A}33%{color:#D2A8FF}66%{color:#FFC060}}
+  @media (prefers-reduced-motion:reduce){ .r-mythique.g-tile,.r-mythique.g-slot,.g-rar.r-mythique{animation:none !important;} }
 </style>
 </head>
 <body>
@@ -1713,7 +1789,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "54";                 // numéro affiché dans les réglages
+  const APP_VERSION = "55";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-10-10";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -5683,6 +5759,45 @@
     const key="pet"+id+scale; if(pxCache[key]) return pxCache[key];
     const u=PX.upscale(PX.pet(it,0), scale).toDataURL(); pxCache[key]=u; return u;
   }
+  // ---------- effets de rareté et d'élément (v55) ----------
+  const FXOK = PXOK && !!PX.fxTile;
+  const RK={commun:0,rare:1,epique:2,legendaire:3,mythique:4};
+  function spriteOf(it){
+    const key="sp"+it.id+(it.slot==="head"?JSON.stringify(lookOf()):""); if(pxCache[key]) return pxCache[key];
+    const c= it.slot==="pet" ? PX.crop(PX.pet(it,0)) : PX.icon(it, lookOf()); pxCache[key]=c; return c;
+  }
+  function fxCanvas(id, kind){ return `<canvas class="g-fx g-fx-${kind||"tile"}" data-gfx="${id}" data-gfk="${kind||"tile"}" aria-hidden="true"></canvas>`; }
+  function gMountFx(root){
+    if(!FXOK || !root) return;
+    root.querySelectorAll("canvas[data-gfx]").forEach(cv=>{
+      if(cv.__fx) return; const it=ITEM[cv.dataset.gfx]; if(!it) return; const k=cv.dataset.gfk, r=rarityOf(it);
+      try{
+        if(k==="pet"){ const sp=spriteOf(it); PX.fxTile(cv, sp, r, it.fx||null, {pad:RK[r]>=3?5:4, bob:true, min:12}); const sc=sp.width>22?2:3; cv.style.width=cv.width*sc+"px"; cv.style.height=cv.height*sc+"px"; }
+        else PX.fxTile(cv, spriteOf(it), r, it.fx||null, {lift:k==="tile"?2:0, pad:k==="slot"?(RK[r]>=3?5:3):undefined, min:k==="slot"?20:22});
+      }catch(e){}
+    });
+  }
+  // effets autour du héros : chaque objet élémentaire porté émet ses particules ; l'aura suit la plus haute rareté
+  function gHeroFx(wrap, over){
+    if(!FXOK || !wrap || !PX.heroLayer) return;
+    const img=wrap.querySelector(".g-hero-img"); if(!img) return;
+    wrap.querySelectorAll(".g-fx-back,.g-fx-front").forEach(c=>c.remove());
+    const eq=eqDefs(over), look=lookOf(), layers=[]; let best=0;
+    ["head","chest","legs","feet","weapon"].forEach(s=>{ const it=eq[s]; if(!it) return; best=Math.max(best,RK[rarityOf(it)]); if(it.fx) layers.push({el:it.fx, mask:PX.heroLayer(look, eq, s)}); });
+    if(!layers.length && best<3) return;
+    const back=document.createElement("canvas"), front=document.createElement("canvas");
+    back.className="g-fx-back"; front.className="g-fx-front"; back.setAttribute("aria-hidden","true"); front.setAttribute("aria-hidden","true");
+    wrap.insertBefore(back, wrap.firstChild); wrap.appendChild(front);
+    const m=6;
+    const place=()=>{ const W=img.clientWidth, H=img.clientHeight; if(!W||!H) return; const s=Math.min(W/PX.W, H/PX.H);
+      const x0=img.offsetLeft+(W-PX.W*s)/2-m*s, y0=img.offsetTop+(H-PX.H*s)/2-m*s;
+      [back,front].forEach(c=>{ c.style.width=(PX.W+2*m)*s+"px"; c.style.height=(PX.H+2*m)*s+"px"; c.style.left=x0+"px"; c.style.top=y0+"px"; }); };
+    try{ PX.fxOverlay(back, front, {w:PX.W, h:PX.H, m, sil:PX.hero(look, eq), rarity:["commun","commun","commun","legendaire","mythique"][best], layers}); }catch(e){ back.remove(); front.remove(); return; }
+    if(img.complete && img.clientHeight) place(); else img.addEventListener("load",place,{once:true});
+    requestAnimationFrame(place);
+  }
+  function goldHTML(n){ return `<span class="g-gold"><i class="px-coin" aria-hidden="true"></i>${fmtInt(n)}</span>`; }
+  function elName(it){ const E=FXOK&&it.fx&&PX.FX_EL[it.fx]; return E?nm(E.n):""; }
   function placeURL(i, scale){
     if(!PXOK || !PX.place) return ""; const key="pl"+i+scale; if(pxCache[key]) return pxCache[key];
     const u=PX.upscale(PX.place(i), scale).toDataURL(); pxCache[key]=u; return u;
@@ -5817,7 +5932,7 @@
     const hero=PX.hero(lookOf(), eqDefs());
     ctx.drawImage(hero, 4, H-46);
     const pid=equipped("pet");
-    if(pid){ const p=PX.pet(ITEM[pid],0); ctx.drawImage(p, 40, H-6-p.height+2); }
+    if(pid){ const p=PX.crop(PX.pet(ITEM[pid],0)); const px0=Math.max(26, Math.min(40, Math.floor(W/2)+6-7-p.width)); ctx.drawImage(p, px0, H-5-p.height); }
     // feu : sa taille suit la flamme du foyer ; le décor est figé, seul le feu est redessiné
     const base=PX.canvas(W,H)[0]; base.getContext("2d").drawImage(c,0,0);
     const fl=Math.min(30,S.flameShown), fs=fl>=30?3:fl>=7?2:fl>=1?1:0;
@@ -5972,35 +6087,37 @@
   function gTile(id, small){
     const it=ITEM[id], r=rarityOf(it), own=owns(id), lvl=lastState?lastState.level:1, locked=!own && lvl<it.lvl, st=stars(id);
     const eqd=equipped(it.slot)===id;
-    const img= it.slot==="pet" ? petURL(id, small?2:3) : iconURL(id, small?36:48);
-    return `<button class="g-tile r-${r}${locked?" locked":""}${eqd?" eq":""}${own?" own":""}" data-gitem="${id}" aria-label="${gEsc(nm(it.n))}">
-      <img src="${img}" alt="">${st?`<span class="g-stars">${"★".repeat(st)}</span>`:""}
-      ${small?"":`<span class="g-tag">${own?(eqd?L2("Porté","Worn"):"✓"):locked?L2("Niv. ","Lv. ")+it.lvl:fmtInt(it.price)+" ●"}</span>`}</button>`;
+    const img= FXOK ? fxCanvas(id,"tile") : `<img src="${it.slot==="pet" ? petURL(id, small?2:3) : iconURL(id, small?36:48)}" alt="">`;
+    const poor=!own && !locked && lastState && lastState.gold<it.price;
+    return `<button class="g-tile r-${r}${locked?" locked":""}${eqd?" eq":""}${own?" own":""}${poor?" poor":""}" data-gitem="${id}" aria-label="${gEsc(nm(it.n))}${locked?" · "+L2("niveau ","level ")+it.lvl:""}">
+      ${img}${st?`<span class="g-stars">${"★".repeat(st)}</span>`:""}${locked?`<i class="px-lock" aria-hidden="true"></i>`:""}
+      ${small?"":`<span class="g-tag">${own?(eqd?L2("Porté","Worn"):`<i class="px-check" aria-hidden="true"></i>`):locked?L2("Niv. ","Lv. ")+it.lvl:goldHTML(it.price)}</span>`}</button>`;
   }
   function gRenderHero(){
     const box=document.getElementById("gHero"); if(!box) return;
     const S=lastState||gRefresh({silent:true});
     const L=S.level, t0=LVL_TH[L], t1=L>=MAX_LVL?t0+1:LVL_TH[L+1];
-    const slot=(s)=>{ const id=equipped(s); return `<button class="g-slot${id?" r-"+rarityOf(ITEM[id]):""}" data-gslot="${s}" aria-label="${nm(SLOT_NAMES[s])}">${id?`<img src="${s==="pet"?petURL(id,2):iconURL(id,36)}" alt="">`:`<span class="g-slot-e">${nm(SLOT_NAMES[s])}</span>`}${id&&stars(id)?`<span class="g-stars">${"★".repeat(stars(id))}</span>`:""}</button>`; };
+    const slot=(s)=>{ const id=equipped(s); return `<button class="g-slot${id?" r-"+rarityOf(ITEM[id]):""}" data-gslot="${s}" aria-label="${nm(SLOT_NAMES[s])}">${id?(FXOK?fxCanvas(id,"slot"):`<img src="${s==="pet"?petURL(id,2):iconURL(id,36)}" alt="">`):`<span class="g-slot-e">${nm(SLOT_NAMES[s])}</span>`}${id&&stars(id)?`<span class="g-stars">${"★".repeat(stars(id))}</span>`:""}</button>`; };
     const pid=equipped("pet");
     const owned=ownedCount(), total=ITEMS.length;
     const list=ITEMS.filter(i=>i.slot===gCat).sort((a,b)=>a.lvl-b.lvl||a.price-b.price);
     box.innerHTML=`<div class="card g-stage">
         <div class="g-stage-grid">
           <div class="g-col">${slot("head")}${slot("chest")}${slot("legs")}</div>
-          <div class="g-stage-hero"><img class="g-hero-img" src="${heroURL(5)}" alt="${gEsc(G.hero.name||L2("Héros","Hero"))}">${pid?`<img class="g-pet-img" src="${petURL(pid,3)}" alt="">`:""}</div>
+          <div class="g-stage-hero"><img class="g-hero-img" src="${heroURL(5)}" alt="${gEsc(G.hero.name||L2("Héros","Hero"))}">${pid?(FXOK?`<canvas class="g-pet-fx" data-gfx="${pid}" data-gfk="pet" aria-hidden="true"></canvas>`:`<img class="g-pet-img" src="${petURL(pid,3)}" alt="">`):""}</div>
           <div class="g-col">${slot("feet")}${slot("weapon")}${slot("pet")}</div>
         </div>
         <div class="g-stage-info"><div class="g-hname">${gEsc(G.hero.name||L2("Héros","Hero"))}</div>
           <div class="g-hsub">${gEsc(titleOf(L))} · ${L2("niveau ","level ")+L}${classAt(todayISO())?" · "+className(classAt(todayISO())):""}</div>
           <div class="g-hsub small">${L2("Acte ","Act ")}${actOf(L)} · ${L>=MAX_LVL?L2("niveau maximum","max level"):fmtInt(S.xp-t0)+" / "+fmtInt(t1-t0)+" XP"}</div>
-          <div class="g-stats"><span><b>${fmtInt(gloryScore())}</b>${L2("gloire","glory")}</span><span><b>${owned} / ${total}</b>${L2("collection","collection")}</span><span><b>${fmtInt(S.gold)}</b>${L2("or","gold")}</span></div>
+          <div class="g-stats"><span><b>${fmtInt(gloryScore())}</b>${L2("gloire","glory")}</span><span><b>${owned} / ${total}</b>${L2("collection","collection")}</span><span><b class="g-gold"><i class="px-coin" aria-hidden="true"></i>${fmtInt(S.gold)}</b>${L2("or","gold")}</span></div>
           ${S.chipped?`<div class="g-note warn">${L2("Armure ébréchée : la quête de la rédemption la répare, ou le forgeron pour ","Armour chipped: the redemption quest fixes it, or the smith for ")}${REPAIR_COST} ${L2("or","gold")}. <button class="g-btn" data-grepair ${S.gold<REPAIR_COST?"disabled":""}>${L2("Réparer","Repair")}</button></div>`:""}
           <div class="g-actions"><button class="g-btn" data-glook>${L2("Apparence","Appearance")}</button>${L>=10?`<button class="g-btn" data-gclass>${classAt(todayISO())?L2("Changer de classe","Change class"):L2("Choisir une classe","Pick a class")}</button>`:""}</div>
         </div></div>
       <div class="g-cats" role="tablist">${SLOT_ORDER.map(s=>`<button role="tab" data-gcat="${s}" aria-selected="${gCat===s}"><span class="g-cat-ico" style="background-image:url(${gCatIcon(s)})"></span><span>${nm(SLOT_NAMES[s])}</span></button>`).join("")}</div>
       <div class="g-grid">${list.map(i=>gTile(i.id)).join("")}</div>
       <p class="g-foot">${L2("Les objets se débloquent avec ton niveau et s'achètent avec l'or. Plus le niveau requis est haut, plus l'objet est rare et travaillé : commun, rare, épique, légendaire, mythique.","Items unlock with your level and are bought with gold. The higher the level, the rarer and finer the item: common, rare, epic, legendary, mythic.")}</p>`;
+    gMountFx(box); gHeroFx(box.querySelector(".g-stage-hero"));
     box.querySelectorAll("[data-gcat]").forEach(b=>b.addEventListener("click",()=>{ gCat=b.dataset.gcat; gRenderHero(); }));
     box.querySelectorAll("[data-gitem]").forEach(b=>b.addEventListener("click",()=>gOpenItem(b.dataset.gitem)));
     box.querySelectorAll("[data-gslot]").forEach(b=>b.addEventListener("click",()=>{ gCat=b.dataset.gslot; gRenderHero(); const g=box.querySelector(".g-cats"); if(g) g.scrollIntoView({block:"start",behavior:gReduce?"auto":"smooth"}); }));
@@ -6015,27 +6132,29 @@
   function gOpenItem(id){
     const it=ITEM[id], r=rarityOf(it), own=owns(id), S=lastState, lvl=S.level, eqd=equipped(it.slot)===id;
     const preview = it.slot==="pet"
-      ? `<div class="g-try"><img class="g-hero-img" src="${heroURL(4)}" alt=""><img class="g-pet-img" src="${petURL(id,3)}" alt=""></div>`
+      ? `<div class="g-try"><img class="g-hero-img" src="${heroURL(4)}" alt="">${FXOK?`<canvas class="g-pet-fx" data-gfx="${id}" data-gfk="pet" aria-hidden="true"></canvas>`:`<img class="g-pet-img" src="${petURL(id,3)}" alt="">`}</div>`
       : `<div class="g-try"><img class="g-hero-img" src="${heroURL(4,{[it.slot]:id})}" alt=""></div>`;
     let actions="";
     if(!own){
       if(lvl<it.lvl) actions=`<button class="btn secondary" disabled>${L2("Niveau ","Level ")+it.lvl+L2(" requis"," required")}</button>`;
-      else if(S.gold<it.price) actions=`<button class="btn secondary" disabled>${L2("Il manque ","Missing ")+fmtInt(it.price-S.gold)+" "+L2("or","gold")}</button>`;
-      else actions=`<button class="btn primary" data-gbuy>${L2("Acheter · ","Buy · ")+fmtInt(it.price)+" "+L2("or","gold")}</button>`;
+      else if(S.gold<it.price) actions=`<button class="btn secondary" disabled>${L2("Il manque ","Missing ")}${goldHTML(it.price-S.gold)} ${L2("or","gold")}</button>`;
+      else actions=`<button class="btn primary" data-gbuy>${L2("Acheter · ","Buy · ")}${goldHTML(it.price)} ${L2("or","gold")}</button>`;
     } else {
       const canUn = eqd && (it.slot==="head"||it.slot==="pet"||!it.starter);
       actions = (eqd ? (canUn?`<button class="btn secondary" data-gunequip>${L2("Retirer","Take off")}</button>`:"") : `<button class="btn primary" data-gequip>${L2("Équiper","Equip")}</button>`);
       const uc=upCost(id);
-      if(uc) actions+=`<button class="btn secondary" data-gup ${S.gold<uc?"disabled":""}>${L2("Forgeron : améliorer ","Smith: upgrade ")+"★".repeat(stars(id)+1)+" · "+fmtInt(uc)+" "+L2("or","gold")}</button>`;
+      if(uc) actions+=`<button class="btn secondary" data-gup ${S.gold<uc?"disabled":""}>${L2("Forgeron : améliorer ","Smith: upgrade ")+"★".repeat(stars(id)+1)+" · "}${goldHTML(uc)}</button>`;
     }
     sheetRoot.innerHTML=`<div class="sheet-backdrop" data-close="1"><div class="sheet g-sheet">
       ${preview}
       <h3>${gEsc(nm(it.n))} ${stars(id)?`<span class="g-stars inline">${"★".repeat(stars(id))}</span>`:""}</h3>
-      <p class="sub"><span class="g-rar r-${r}">${nm(RARITY[r])}</span> · ${nm(SLOT_NAMES[it.slot])} · ${L2("niveau ","level ")+it.lvl}${it.price?" · "+fmtInt(it.price)+" "+L2("or","gold"):(it.gift?" · "+L2("offert au niveau ","given at level ")+it.gift:" · "+L2("offert","free"))}</p>
+      <p class="sub"><span class="g-rar r-${r}">${nm(RARITY[r])}</span>${elName(it)?` · <span class="g-el g-el-${it.fx}">${elName(it)}</span>`:""} · ${nm(SLOT_NAMES[it.slot])} · ${L2("niveau ","level ")+it.lvl}${it.price?" · "+goldHTML(it.price):(it.gift?" · "+L2("offert au niveau ","given at level ")+it.gift:" · "+L2("offert","free"))}</p>
+      ${it.lore?`<p class="g-lore">${gEsc(nm(it.lore))}</p>`:""}
       ${!own && it.slot!=="pet"?`<p class="sub small">${L2("Aperçu : ton héros le porte déjà ici.","Preview: your hero is already wearing it here.")}</p>`:""}
       <div class="g-sheet-actions">${actions}<button class="btn secondary" data-act="close">${L2("Fermer","Close")}</button></div>
     </div></div>`;
     bindSheet();
+    gMountFx(sheetRoot); gHeroFx(sheetRoot.querySelector(".g-try"), it.slot==="pet"?null:{[it.slot]:id});
     const q=s=>sheetRoot.querySelector(s);
     if(q("[data-gbuy]")) q("[data-gbuy]").addEventListener("click",()=>{
       if(lastState.gold<it.price || lastState.level<it.lvl) return;
