@@ -1114,7 +1114,8 @@
   @font-face{font-family:"Pixel Texte";src:url("./fonts/jersey-10-latin-400-normal.woff2") format("woff2");font-weight:600 900;font-style:normal;font-display:swap;unicode-range:U+0030-0039;size-adjust:122%;}
   :root{--txt:"Pixel Texte","Jersey 10",ui-monospace,monospace;}
   body:not(.classic){font-family:var(--txt);}
-  body:not(.classic) input,body:not(.classic) textarea,body:not(.classic) select{font-family:var(--txt);}
+  /* les boutons et champs n'héritent pas de la police par défaut : on la leur donne, sans écraser les classes qui choisissent Jersey 10 */
+  :where(body:not(.classic)) :where(button,input,textarea,select,option){font-family:var(--txt);}
   /* l'or est toujours doré : pièce pixel + montant couleur or */
   .g-gold{display:inline-flex;align-items:center;gap:4px;color:var(--gold-l);font-family:var(--pix);font-weight:700;white-space:nowrap;vertical-align:-1px;}
   .g-gold .px-coin{width:13px;height:13px;}
@@ -5766,7 +5767,8 @@
   // ---------- effets de rareté et d'élément (v55) ----------
   const FXOK = PXOK && !!PX.fxTile;
   const RK={commun:0,rare:1,epique:2,legendaire:3,mythique:4};
-  const VOXH={weapon:1.2, head:2.2, chest:2.4, legs:1.8, feet:1.8, pet:3.2};   // épaisseur maximale du volume, en voxels
+  // volume de chaque famille d'objets : profondeur relative (1 = rond comme une sphère) et épaisseur maximale
+  const VOXD={weapon:{depth:.45,maxH:1.6}, head:{depth:.8,maxH:5}, chest:{depth:.75,maxH:5}, legs:{depth:.75,maxH:4}, feet:{depth:.8,maxH:4}, pet:{depth:.85,maxH:7}};
   function spriteOf(it){
     const key="sp"+it.id+(it.slot==="head"?JSON.stringify(lookOf()):""); if(pxCache[key]) return pxCache[key];
     const c= it.slot==="pet" ? PX.crop(PX.pet(it,0)) : PX.icon(it, lookOf()); pxCache[key]=c; return c;
@@ -5776,11 +5778,11 @@
     if(!FXOK || !root) return;
     root.querySelectorAll("canvas[data-gfx]").forEach(cv=>{
       if(cv.__fx) return; const it=ITEM[cv.dataset.gfx]; if(!it) return; const k=cv.dataset.gfk, r=rarityOf(it);
-      const vox={maxH:VOXH[it.slot]||1.8};
+      const vox=Object.assign({}, VOXD[it.slot]||{depth:.7,maxH:4});
       try{
-        if(k==="vit"){ const fx=PX.fxTile(cv, spriteOf(it), r, it.fx||null, {pad:6, vox:Object.assign(vox,{motion:{spin:.75}})}); const sc=Math.max(2,Math.floor(184/fx.H)); cv.style.width=fx.W*sc+"px"; cv.style.height=fx.H*sc+"px"; }
-        else if(k==="pet"){ const sp=spriteOf(it); const fx=PX.fxTile(cv, sp, r, it.fx||null, {pad:RK[r]>=3?5:4, bob:true, min:12, vox:Object.assign(vox,{motion:{amp:.45,speed:.7}})}); const sc=sp.width>22?2:3; cv.style.width=fx.W*sc+"px"; cv.style.height=fx.H*sc+"px"; }
-        else PX.fxTile(cv, spriteOf(it), r, it.fx||null, {lift:k==="tile"?2:0, pad:k==="slot"?(RK[r]>=3?5:3):undefined, min:k==="slot"?20:22, vox:k==="slot"?Object.assign(vox,{motion:{amp:.3,speed:.7}}):vox});
+        if(k==="vit"){ const sp=spriteOf(it); const fx=PX.fxTile(cv, sp, r, it.fx||null, {pad:Math.max(4,Math.round(Math.max(sp.width,sp.height)*.2)), min:34, vox:Object.assign(vox,{motion:{amp:.6,speed:.5}, full:true, lim:.75})}); const sc=Math.max(2,Math.min(5,Math.floor(184/fx.H))); cv.style.width=fx.W*sc+"px"; cv.style.height=fx.H*sc+"px"; }
+        else if(k==="pet"){ const sp=spriteOf(it); const fx=PX.fxTile(cv, sp, r, it.fx||null, {pad:RK[r]>=3?5:4, bob:true, min:12, vox:Object.assign(vox,{motion:{amp:.35,speed:.6}})}); const sc=sp.width>22?2:3; cv.style.width=fx.W*sc+"px"; cv.style.height=fx.H*sc+"px"; }
+        else PX.fxTile(cv, spriteOf(it), r, it.fx||null, {lift:k==="tile"?2:0, pad:k==="slot"?(RK[r]>=3?5:3):undefined, min:k==="slot"?20:22, vox:k==="slot"?Object.assign(vox,{motion:{amp:.22,speed:.7}}):vox});
       }catch(e){}
     });
   }

@@ -2014,27 +2014,30 @@
 })();
 
 /* ============================================================
-   Effets pixel : auras de rareté, rayons, éclats, particules élémentaires.
-   Tout est dessiné en pixels logiques (même taille que les pixels des sprites),
-   puis agrandi sans lissage par le CSS (image-rendering: pixelated).
-   Une seule boucle d'animation (14 images/s) anime toutes les toiles visibles.
+   Effets pixel et 3D : objets, familiers et héros en volume, auras de rareté, particules élémentaires.
+   - Volume : la forme du sprite est « gonflée » (équation de Poisson : sphère exacte pour un disque,
+     cylindre pour un membre), couverte par la couleur de ses pixels, éclairée par facettes.
+   - Rendu dans une petite image (2 px par pixel de sprite) agrandie sans lissage : la 3D garde son grain pixel.
+   - Le contour noir est dessiné à l'écran autour de la silhouette du moment : il ne traverse jamais le volume.
+   - La rotation reste dans un angle où un dessin de face reste crédible (pas de vue de dos).
+   - Effets composés en mémoire, une seule boucle (14 images/s) pour toutes les toiles visibles.
    ============================================================ */
 (function(){
   "use strict";
   const PX=window.PX; if(!PX) return;
-  const FPS=14, MAXP=160;
+  const FPS=14, MAXP=90, Q=2, LIM=0.7, PITCH=-0.14;
+  const OUTC=(255<<24)|(0x24<<16)|(0x14<<8)|0x1B;            // contour #1B1424
   const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+0.5)/16);
   const R=Math.random, rnd=(a,b)=>a+R()*(b-a), pick=a=>a[(R()*a.length)|0];
+  const clamp=(v,a,b)=>v<a?a:v>b?b:v;
   const RANK={commun:0,rare:1,epique:2,legendaire:3,mythique:4};
   const RCOL={rare:["#FFFFFF","#BFE0FF","#5EA7FF","#2C5AA8"],epique:["#FFFFFF","#E2C8FF","#B58CFF","#6A3EC0"],
     legendaire:["#FFFFFF","#FFE9A0","#F2C14E","#C98A1E"],mythique:["#FFFFFF","#FFB0D8","#FF5A6E","#8A2A6E"]};
   // teinte « mythique » : va-et-vient violet → magenta → rouge → orange → or (jamais de vert)
   const hue=(f,o)=>{ const t=((f*6+(o||0))%280+280)%280; return "hsl("+((290+(t<140?t:280-t))%360)+",100%,66%)"; };
-  const isOutline=(d,i)=>d[i+3]>20 && d[i]<40 && d[i+1]<34 && d[i+2]<48;   // contour sombre (#1B1424, #070A1C…)
+  const isDark=(d,i)=>d[i]<40 && d[i+1]<34 && d[i+2]<48;
 
-  // ---------- calque de pixels en mémoire ----------
-  // Les effets écrivent des milliers de pixels par image : on les compose dans un tableau
-  // (fusion alpha « par-dessus ») au lieu d'appeler le canvas pixel par pixel.
+  // ---------- calque de pixels en mémoire (fusion « par-dessus ») ----------
   const COLC=new Map();
   function rgbOf(s){
     let v=COLC.get(s); if(v) return v;
@@ -2055,9 +2058,8 @@
       if(a>=1||da<=0){ d[i]=c[0]; d[i+1]=c[1]; d[i+2]=c[2]; d[i+3]=a>=1?1:a; continue; }
       const na=a+da*(1-a), k=da*(1-a); d[i]=(c[0]*a+d[i]*k)/na; d[i+1]=(c[1]*a+d[i+1]*k)/na; d[i+2]=(c[2]*a+d[i+2]*k)/na; d[i+3]=na; }
   };
-  // géométrie mise en cache : pixels d'un disque, avec distance et angle au centre
   function geo(fx,cx,cy,rad){
-    const key=cx+","+cy+","+rad; fx._geo=fx._geo||{}; let g=fx._geo[key]; if(g) return g;
+    const key=cx+","+cy+","+rad; let g=fx._geo[key]; if(g) return g;
     const xs=[],ys=[],ds=[],as=[];
     for(let y=Math.max(0,Math.floor(cy-rad));y<=Math.min(fx.H-1,Math.ceil(cy+rad));y++) for(let x=Math.max(0,Math.floor(cx-rad));x<=Math.min(fx.W-1,Math.ceil(cx+rad));x++){
       const dx=x+.5-cx, dy=y+.5-cy, d=Math.hypot(dx,dy)/rad; if(d>=1) continue; xs.push(x); ys.push(y); ds.push(d); as.push(Math.atan2(dy,dx)); }
@@ -2065,330 +2067,315 @@
   }
 
   // ---------- primitives ----------
-  function dot(c,x,y,col,a){ x=Math.round(x); y=Math.round(y); c.globalAlpha=a==null?1:a; c.fillStyle=col; c.fillRect(x,y,1,1); }
+  function dot(c,x,y,col,a){ c.globalAlpha=a==null?1:a; c.fillStyle=col; c.fillRect(Math.round(x),Math.round(y),1,1); }
   function plus(c,x,y,r,core,arm,a){ x=Math.round(x); y=Math.round(y); c.globalAlpha=a==null?1:a; c.fillStyle=arm;
     for(let k=1;k<=r;k++){ c.fillRect(x+k,y,1,1); c.fillRect(x-k,y,1,1); c.fillRect(x,y+k,1,1); c.fillRect(x,y-k,1,1); }
     if(r>=2){ c.fillRect(x+1,y+1,1,1); c.fillRect(x-1,y-1,1,1); c.fillRect(x+1,y-1,1,1); c.fillRect(x-1,y+1,1,1); }
     c.fillStyle=core; c.fillRect(x,y,1,1); }
-  // halo tramé : plus dense au centre, en motif de Bayer (pas de flou)
   function glow(fx,c,cx,cy,rad,col,str,a){
     const g=geo(fx,cx,cy,rad); c.fillStyle=col;
     for(let k=0;k<g.xs.length;k++){ const x=g.xs[k], y=g.ys[k], v=(1-g.ds[k])*str; const lv=v>.62?3:v>.38?2:v>.16?1:((x+y)&1)&&v>.06?.5:0; if(!lv) continue;
       c.globalAlpha=Math.min(1,a*lv/2); c.fillRect(x,y,1,1); }
   }
   const LUTS={}; function lut(sh){ if(LUTS[sh]) return LUTS[sh]; const t=new Float32Array(256); for(let i=0;i<256;i++) t[i]=Math.pow(.5+.5*Math.cos(i/256*Math.PI*2),sh); return LUTS[sh]=t; }
-  // rayons tournants tramés
   function rays(fx,c,cx,cy,rad,n,rot,col,a,sharp){
-    const g=geo(fx,cx,cy,rad); c.fillStyle=col; sharp=sharp||6; const T=lut(sharp), K=256/(Math.PI*2);
-    for(let k=0;k<g.xs.length;k++){ const d=g.ds[k]; if(d<.15) continue; const x=g.xs[k], y=g.ys[k];
+    const g=geo(fx,cx,cy,rad); c.fillStyle=col; const T=lut(sharp||6), K=256/(Math.PI*2);
+    for(let k=0;k<g.xs.length;k++){ const d=g.ds[k]; if(d<.2) continue; const x=g.xs[k], y=g.ys[k];
       const v=T[((n*(g.as[k]-rot)*K)%256+256)&255]*(1.15-d);
       const lv=v>.55?2:v>.3?1:(v>.14&&((x+y)&1))?.6:0; if(!lv) continue; c.globalAlpha=a*lv/2; c.fillRect(x,y,1,1); }
   }
-  function ringAt(fx,c,cx,cy,r,col,a){ c.globalAlpha=a; c.fillStyle=col; const n=Math.max(8,Math.round(r*7));
-    let lx=-99,ly=-99; for(let i=0;i<n;i++){ const t=i/n*Math.PI*2, x=Math.round(cx+Math.cos(t)*r), y=Math.round(cy+Math.sin(t)*r*.8); if(x===lx&&y===ly) continue; lx=x; ly=y; c.fillRect(x,y,1,1); } }
 
-  // ---------- éléments ----------
+  // ---------- éléments (taux volontairement bas : l'objet doit rester lisible) ----------
   const FIRE=["#FFFBE0","#FFE08A","#FFB040","#FF6A1E","#D8301A","#7A1410"];
   const ramp=(cols,t)=>cols[Math.min(cols.length-1,Math.floor(t*cols.length))];
   function spawnN(rate){ let n=Math.floor(rate); if(R()<rate-n) n++; return n; }
-  function P(fx,o){ if(fx.parts.length>=MAXP) return; fx.parts.push(Object.assign({vx:0,vy:0,age:0,life:10,kind:"dot",layer:"front",ph:R()*6.28},o)); }
+  // les particules passent surtout derrière l'objet ; une sur quatre devant
+  function P(fx,o){ if(fx.parts.length>=MAXP) return; fx.parts.push(Object.assign({vx:0,vy:0,age:0,life:10,kind:"dot",layer:R()<.25?"front":"back",ph:R()*6.28},o)); }
   const EL={
-    fire:{n:["Feu","Fire"],glow:"#FF6A1E",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#FF5A1A",.55+.2*Math.sin(fx.f*.9),.32); },
-      spawn(fx,s){ for(let k=spawnN(2.4*s.I);k--;){ const p=(s.top.length&&R()<.65)?pick(s.top):pick(s.pts); if(!p) return;
-        P(fx,{x:p.x+rnd(-.4,.4),y:p.y+fx.by-.6,vx:rnd(-.1,.1),vy:-rnd(.35,.85),life:(rnd(5,12))|0,kind:"fire"}); } },
-      front(fx,s,c){ for(const p of s.top){ if(R()<.4){ dot(c,p.x,p.y-1+fx.by,R()<.5?"#FFE08A":"#FFB040",1); if(R()<.35) dot(c,p.x,p.y-2+fx.by,"#FF6A1E",1); } } }
+    fire:{n:["Feu","Fire"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#FF5A1A",.5+.15*Math.sin(fx.f*.9),.22); },
+      spawn(fx,s){ for(let k=spawnN(1.1*s.I*fx.sz);k--;){ const p=(s.top.length&&R()<.7)?pick(s.top):pick(s.pts); if(!p) return;
+        P(fx,{x:p.x+rnd(-.4,.4),y:p.y-.6,vx:rnd(-.1,.1),vy:-rnd(.35,.8),life:(rnd(5,11))|0,kind:"fire"}); } },
+      front(fx,s,c){ for(const p of s.top){ if(R()<.22){ dot(c,p.x,p.y-1,R()<.5?"#FFE08A":"#FFB040",1); if(R()<.3) dot(c,p.x,p.y-2,"#FF6A1E",.9); } } }
     },
-    ice:{n:["Glace","Ice"],glow:"#9ADFFF",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#9ADFFF",.5,.3); },
-      spawn(fx,s){ if(R()<.55*s.I){ const b=s.bb; P(fx,{x:rnd(b[0]-4,b[2]+4),y:rnd(b[1]-5,b[1]+2),vy:rnd(.12,.26),life:(rnd(16,30))|0,kind:R()<.4?"flake":"dot",cols:["#FFFFFF","#E6F8FF","#C8EEFF","#82C4E8"],
+    ice:{n:["Glace","Ice"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#9ADFFF",.45,.22); },
+      spawn(fx,s){ if(R()<.3*s.I*fx.sz){ const b=s.bb; P(fx,{x:rnd(b[0]-4,b[2]+4),y:rnd(b[1]-5,b[1]+2),vy:rnd(.12,.24),life:(rnd(16,28))|0,kind:R()<.4?"flake":"dot",cols:["#FFFFFF","#E6F8FF","#C8EEFF","#82C4E8"],
           upd(p){ p.vx=Math.sin(p.age*.25+p.ph)*.16; }}); } },
-      front(fx,s,c){ for(let k=0;k<2;k++) if(R()<.55){ const p=pick(s.edge); if(p) dot(c,p.x,p.y+fx.by,"#FFFFFF",1); }
-        if(R()<.06*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y+fx.by,life:7,kind:"twinkle",cols:["#FFFFFF","#C8EEFF"]}); } }
+      front(fx,s,c){ if(R()<.4){ const p=pick(s.edge); if(p) dot(c,p.x,p.y,"#FFFFFF",.9); } }
     },
-    spectral:{n:["Spectral","Spectral"],glow:"#7AF5D0",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#3EC2A0",.45,.28);
-        const dx=Math.round(Math.sin(fx.f*.32)*1.6), dy=Math.round(Math.cos(fx.f*.21)*1.2)-1; c.globalAlpha=.32; c.fillStyle="#7AF5D0";
-        for(const p of s.pts){ if(BAYER[((p.y&3)*4)+(p.x&3)]<.7) c.fillRect(p.x+dx,p.y+dy+fx.by,1,1); } },
-      spawn(fx,s){ for(let k=spawnN(1.0*s.I);k--;){ const p=pick(s.pts); if(!p) return;
-        P(fx,{x:p.x,y:p.y+fx.by,x0:p.x,vy:-rnd(.15,.35),life:(rnd(14,26))|0,kind:"wisp",cols:["#F0FFFA","#A8FFE8","#7AF5D0","#3EC2A0","#8A6EE0","#5A3EA8"],
+    spectral:{n:["Spectral","Spectral"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#3EC2A0",.4,.2);
+        const dx=Math.round(Math.sin(fx.f*.32)*1.6), dy=Math.round(Math.cos(fx.f*.21)*1.2)-1; c.globalAlpha=.22; c.fillStyle="#7AF5D0";
+        for(const p of s.pts){ if(BAYER[((p.y&3)*4)+(p.x&3)]<.55) c.fillRect(p.x+dx,p.y+dy,1,1); } },
+      spawn(fx,s){ for(let k=spawnN(.45*s.I*fx.sz);k--;){ const p=pick(s.pts); if(!p) return;
+        P(fx,{x:p.x,y:p.y,x0:p.x,vy:-rnd(.15,.32),life:(rnd(14,24))|0,kind:"wisp",cols:["#F0FFFA","#A8FFE8","#7AF5D0","#3EC2A0","#8A6EE0","#5A3EA8"],
           upd(q){ q.x=q.x0+Math.sin(q.age*.4+q.ph)*1.3; }}); } },
     },
-    storm:{n:["Foudre","Storm"],glow:"#7FC8FF",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#5EA7FF",(fx.bolts.length?.9:.45),.3); },
+    storm:{n:["Foudre","Storm"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#5EA7FF",(fx.bolts.length?.8:.4),.22); },
       spawn(fx,s){
-        if(R()<.2*s.I && s.edge.length){ const a=pick(s.edge), ang=R()*6.28, len=rnd(5,10); const pts=[]; let x=a.x, y=a.y+fx.by;
+        if(R()<.09*s.I && s.edge.length){ const a=pick(s.edge), ang=R()*6.28, len=rnd(4,8); const pts=[]; const x=a.x, y=a.y;
           const tx=x+Math.cos(ang)*len, ty=y+Math.sin(ang)*len, steps=Math.round(len);
           for(let i=0;i<=steps;i++){ const t=i/steps; pts.push([Math.round(x+(tx-x)*t+(i%2?rnd(-1.2,1.2):0)), Math.round(y+(ty-y)*t+(i%2?rnd(-1.2,1.2):0))]); }
           fx.bolts.push({pts,age:0,life:3});
-          for(let k=0;k<3;k++) P(fx,{x:tx,y:ty,vx:rnd(-.8,.8),vy:rnd(-.8,.8),life:(rnd(3,6))|0,cols:["#FFFFFF","#FFF6A0","#9AD8FF"]}); }
-        if(R()<.4*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.6,.6),vy:rnd(-.6,.3),life:(rnd(2,5))|0,cols:["#FFFFFF","#FFF6A0"]}); } }
+          for(let k=0;k<2;k++) P(fx,{x:tx,y:ty,vx:rnd(-.8,.8),vy:rnd(-.8,.8),life:(rnd(3,6))|0,cols:["#FFFFFF","#FFF6A0","#9AD8FF"]}); }
+        if(R()<.15*s.I*fx.sz){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y,vx:rnd(-.6,.6),vy:rnd(-.6,.3),life:(rnd(2,5))|0,cols:["#FFFFFF","#FFF6A0"]}); } }
     },
-    cosmic:{n:["Cosmique","Cosmic"],glow:"#B58CFF",
-      back(fx,s,c){ const f=fx.f, rad=s.r+5, cx=s.cx, cy=s.cy+fx.by;
-        for(let y=Math.max(0,Math.floor(cy-rad));y<Math.min(fx.H,cy+rad);y++) for(let x=Math.max(0,Math.floor(cx-rad));x<Math.min(fx.W,cx+rad);x++){
-          const d=Math.hypot(x-cx,y-cy)/rad; if(d>1) continue; const n=Math.sin(x*.55+f*.07)*Math.cos(y*.5-f*.05)+Math.sin((x+y)*.28+f*.04)*(1-d);
-          if(n>.55 && BAYER[(y&3)*4+(x&3)]<.6){ c.globalAlpha=.42; c.fillStyle=n>1.05?"#F07CC8":"#6A3EC0"; c.fillRect(x,y,1,1); } }
-        for(const st of fx.starsOf(s)){ const v=Math.sin(f*.35+st.ph); if(v>.75) plus(c,st.x,st.y,1,"#FFFFFF","#B58CFF",.9); else if(v>-.2) dot(c,st.x,st.y,v>.3?"#FFFFFF":"#8A7AE0",.9); }
-        comets(fx,s,c,false); },
-      front(fx,s,c){ comets(fx,s,c,true); },
-      spawn(fx,s){ if(R()<.5*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.25,.25),vy:rnd(-.3,.1),life:(rnd(10,18))|0,cols:["#FFFFFF","#FFD0EE","#B58CFF","#6A3EC0"]}); } }
+    cosmic:{n:["Cosmique","Cosmic"],
+      back(fx,s,c){ const f=fx.f, rad=s.r+5, cx=s.cx, cy=s.cy, g=geo(fx,Math.round(cx),Math.round(cy),Math.round(rad));
+        c.globalAlpha=.2;
+        for(let k=0;k<g.xs.length;k++){ const x=g.xs[k], y=g.ys[k], n=Math.sin(x*.55+f*.07)*Math.cos(y*.5-f*.05)+Math.sin((x+y)*.28+f*.04)*(1-g.ds[k]);
+          if(n>.65 && BAYER[(y&3)*4+(x&3)]<.5){ c.fillStyle=n>1.1?"#F07CC8":"#6A3EC0"; c.fillRect(x,y,1,1); } }
+        for(const st of fx.starsOf(s)){ const v=Math.sin(f*.35+st.ph); if(v>.85) plus(c,st.x,st.y,1,"#FFFFFF","#B58CFF",.8); else if(v>0) dot(c,st.x,st.y,v>.5?"#FFFFFF":"#8A7AE0",.8); }
+        comet(fx,s,c,false); },
+      front(fx,s,c){ comet(fx,s,c,true); },
+      spawn(fx,s){ if(R()<.2*s.I*fx.sz){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y,vx:rnd(-.25,.25),vy:rnd(-.3,.1),life:(rnd(10,16))|0,cols:["#FFFFFF","#FFD0EE","#B58CFF","#6A3EC0"]}); } }
     },
-    holy:{n:["Sacré","Holy"],glow:"#FFE08A",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#FFE08A",.5,.3);
-        const b=s.bb; for(let k=0;k<3;k++){ const x=Math.round(b[0]+(b[2]-b[0])*(.2+.3*k)+Math.sin(fx.f*.05+k*2)*2), v=.5+.5*Math.sin(fx.f*.18+k*2.1);
-          c.globalAlpha=.22+.25*v; c.fillStyle="#FFF6C8"; for(let y=0;y<Math.min(fx.H,b[3]+2);y++) if(BAYER[(y&3)*4+(x&3)]<.35+.5*v*(y/(b[3]+2))) c.fillRect(x,y,1,1); } },
-      spawn(fx,s){ if(R()<.7*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x+rnd(-2,2),y:p.y+fx.by,vy:-rnd(.15,.3),life:(rnd(14,24))|0,cols:["#FFFFFF","#FFF6C8","#FFE08A","#F2C14E"]}); }
-        if(R()<.08*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y+fx.by,life:8,kind:"twinkle",cols:["#FFFFFF","#FFE08A"]}); } }
+    holy:{n:["Sacré","Holy"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#FFE08A",.45,.22);
+        const b=s.bb; for(let k=0;k<2;k++){ const x=Math.round(b[0]+(b[2]-b[0])*(.3+.4*k)+Math.sin(fx.f*.05+k*2)*2), v=.5+.5*Math.sin(fx.f*.18+k*2.1);
+          c.globalAlpha=.15+.18*v; c.fillStyle="#FFF6C8"; for(let y=0;y<Math.min(fx.H,b[3]+2);y++) if(BAYER[(y&3)*4+(x&3)]<.3+.45*v*(y/(b[3]+2))) c.fillRect(x,y,1,1); } },
+      spawn(fx,s){ if(R()<.3*s.I*fx.sz){ const p=pick(s.pts); if(p) P(fx,{x:p.x+rnd(-2,2),y:p.y,vy:-rnd(.15,.28),life:(rnd(14,22))|0,cols:["#FFFFFF","#FFF6C8","#FFE08A","#F2C14E"]}); }
+        if(R()<.04*s.I){ const p=pick(s.edge); if(p) P(fx,{x:p.x,y:p.y,life:8,kind:"twinkle",layer:"front",cols:["#FFFFFF","#FFE08A"]}); } }
     },
-    nature:{n:["Nature","Nature"],glow:"#7FE07A",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#58B04E",.45,.28); },
-      spawn(fx,s){ if(R()<.35*s.I){ const b=s.bb; const col=pick([["#A8E68A","#58B04E"],["#58B04E","#347A38"],["#FFE04A","#D9A420"]]);
-          P(fx,{x:rnd(b[0]-2,b[2]+2),y:rnd(b[1]-3,b[1]+3),vy:rnd(.12,.24),life:(rnd(18,30))|0,kind:"leaf",col,upd(p){ p.vx=Math.sin(p.age*.3+p.ph)*.22; }}); }
-        if(R()<.45*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vy:-rnd(.12,.25),vx:rnd(-.1,.1),life:(rnd(10,18))|0,cols:["#FFFFFF","#FFF6A0","#E6FF9A","#9AE03A"]}); } }
+    nature:{n:["Nature","Nature"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#58B04E",.4,.2); },
+      spawn(fx,s){ if(R()<.15*s.I*fx.sz){ const b=s.bb; const col=pick([["#A8E68A","#58B04E"],["#58B04E","#347A38"],["#FFE04A","#D9A420"]]);
+          P(fx,{x:rnd(b[0]-2,b[2]+2),y:rnd(b[1]-3,b[1]+3),vy:rnd(.12,.22),life:(rnd(18,28))|0,kind:"leaf",col,upd(p){ p.vx=Math.sin(p.age*.3+p.ph)*.22; }}); }
+        if(R()<.2*s.I*fx.sz){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y,vy:-rnd(.12,.22),vx:rnd(-.1,.1),life:(rnd(10,16))|0,cols:["#FFFFFF","#FFF6A0","#E6FF9A","#9AE03A"]}); } }
     },
-    tech:{n:["Techno","Tech"],glow:"#49E0F0",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#1F9DB8",.55,.32); },
-      front(fx,s,c){ const b=s.bb, h=b[3]-b[1]+8, row=b[1]-4+(fx.f*.8%h|0);
-        for(const p of s.pts){ const y=p.y; if(y===row) dot(c,p.x,y+fx.by,"#C8FFFF",.8); else if(y===row-1) dot(c,p.x,y+fx.by,"#49E0F0",.45); }
-        if(fx.glitch>0){ fx.glitch--; const r0=fx.gRow; for(const p of s.pts){ if(p.y>=r0&&p.y<r0+3){ dot(c,p.x+1,p.y+fx.by,"#FF4AD8",.55); dot(c,p.x-1,p.y+fx.by,"#49E0F0",.55); } } }
-        else if(R()<.05){ fx.glitch=2; fx.gRow=Math.round(rnd(b[1],b[3])); } },
-      spawn(fx,s){ for(let k=spawnN(.8*s.I);k--;){ const p=pick(s.pts); if(!p) return; P(fx,{x:p.x+rnd(-1,1),y:p.y+fx.by,vy:-rnd(.2,.45),life:(rnd(8,16))|0,kind:"bit",cols:["#FFFFFF","#A8FFF0","#49E0F0","#1F9DB8"]}); } }
+    tech:{n:["Techno","Tech"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#1F9DB8",.5,.22); },
+      front(fx,s,c){ const b=s.bb, h=b[3]-b[1]+10, row=b[1]-5+((fx.f*.7)%h|0);
+        for(const p of s.pts){ if(p.y===row) dot(c,p.x,p.y,"#C8FFFF",.55); }
+        if(fx.glitch>0){ fx.glitch--; const r0=fx.gRow; for(const p of s.pts){ if(p.y>=r0&&p.y<r0+2){ dot(c,p.x+1,p.y,"#FF4AD8",.4); dot(c,p.x-1,p.y,"#49E0F0",.4); } } }
+        else if(R()<.025){ fx.glitch=2; fx.gRow=Math.round(rnd(b[1],b[3])); } },
+      spawn(fx,s){ for(let k=spawnN(.35*s.I*fx.sz);k--;){ const p=pick(s.pts); if(!p) return; P(fx,{x:p.x+rnd(-1,1),y:p.y,vy:-rnd(.2,.4),life:(rnd(8,14))|0,kind:"bit",cols:["#FFFFFF","#A8FFF0","#49E0F0","#1F9DB8"]}); } }
     },
-    water:{n:["Eau","Water"],glow:"#5EC8F0",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+4,"#2A7AC0",.55,.32); const f=fx.f, rad=s.r+4;
-        c.globalAlpha=.3; c.fillStyle="#8FD8FF";
-        for(let y=Math.max(0,Math.floor(s.cy-rad));y<Math.min(fx.H,s.cy+rad);y++) for(let x=Math.max(0,Math.floor(s.cx-rad));x<Math.min(fx.W,s.cx+rad);x++){
-          if(Math.hypot(x-s.cx,y-s.cy)>rad) continue; if(Math.sin(x*.9+f*.22)+Math.sin(y*.8-f*.17+x*.3)>1.45) c.fillRect(x,y+fx.by,1,1); } },
-      spawn(fx,s){ if(R()<.5*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vy:-rnd(.15,.32),life:(rnd(14,24))|0,kind:R()<.45?"bubble":"dot",cols:["#FFFFFF","#C8F4FF","#5EC8F0","#2A7AC0"],upd(q){ q.vx=Math.sin(q.age*.35+q.ph)*.15; }}); }
-        if(R()<.18*s.I){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y+fx.by,vy:rnd(.3,.5),life:(rnd(6,10))|0,cols:["#C8F4FF","#5EC8F0"]}); } }
+    water:{n:["Eau","Water"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+4,"#2A7AC0",.5,.22); const f=fx.f, g=geo(fx,Math.round(s.cx),Math.round(s.cy),Math.round(s.r+4));
+        c.globalAlpha=.2; c.fillStyle="#8FD8FF";
+        for(let k=0;k<g.xs.length;k++){ const x=g.xs[k], y=g.ys[k]; if(Math.sin(x*.9+f*.22)+Math.sin(y*.8-f*.17+x*.3)>1.55) c.fillRect(x,y,1,1); } },
+      spawn(fx,s){ if(R()<.22*s.I*fx.sz){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y,vy:-rnd(.15,.3),life:(rnd(14,22))|0,kind:R()<.45?"bubble":"dot",cols:["#FFFFFF","#C8F4FF","#5EC8F0","#2A7AC0"],upd(q){ q.vx=Math.sin(q.age*.35+q.ph)*.15; }}); }
+        if(R()<.08*s.I*fx.sz){ const p=pick(s.pts); if(p) P(fx,{x:p.x,y:p.y,vy:rnd(.3,.5),life:(rnd(6,10))|0,cols:["#C8F4FF","#5EC8F0"]}); } }
     },
-    shadow:{n:["Ombre","Shadow"],glow:"#6A3EC0",
-      back(fx,s,c){ glow(fx,c,s.cx,s.cy+fx.by,s.r+5,"#6A3EC0",.5,.3); glow(fx,c,s.cx,s.cy+fx.by,s.r+2,"#0A0414",.6,.45); },
-      spawn(fx,s){ for(let k=spawnN(.8*s.I);k--;){ const p=pick(s.pts); if(!p) return; P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.12,.12),vy:-rnd(.12,.3),life:(rnd(12,22))|0,kind:"smoke",cols:["#7A52B8","#4A2E7A","#2E1A50","#180C2C"]}); }
-        if(R()<.025*s.I){ const b=s.bb; P(fx,{x:rnd(b[0]-3,b[2]+1),y:rnd(b[1],b[3]),life:7,kind:"eyes",cols:["#FF3A4A"]}); } }
+    shadow:{n:["Ombre","Shadow"],
+      back(fx,s,c){ glow(fx,c,s.cx,s.cy,s.r+5,"#6A3EC0",.45,.22); glow(fx,c,s.cx,s.cy,s.r+2,"#0A0414",.5,.3); },
+      spawn(fx,s){ for(let k=spawnN(.35*s.I*fx.sz);k--;){ const p=pick(s.pts); if(!p) return; P(fx,{x:p.x,y:p.y,vx:rnd(-.12,.12),vy:-rnd(.12,.28),life:(rnd(12,20))|0,kind:"smoke",cols:["#7A52B8","#4A2E7A","#2E1A50","#180C2C"]}); }
+        if(R()<.015*s.I){ const b=s.bb; P(fx,{x:rnd(b[0]-3,b[2]+1),y:rnd(b[1],b[3]),life:7,kind:"eyes",layer:"back",cols:["#FF3A4A"]}); } }
     }
   };
-  function comets(fx,s,c,front){
-    for(let k=0;k<2;k++){ const dir=k?1:-1, rx=s.r+3, ry=(s.r+3)*.45;
-      for(let t=4;t>=0;t--){ const a=fx.f*.16*dir+k*Math.PI-t*.12*dir, sn=Math.sin(a); if((sn>0)!==front) continue;
-        const x=s.cx+Math.cos(a)*rx, y=s.cy+fx.by+sn*ry; dot(c,x,y,t===0?"#FFFFFF":t===1?"#FFE08A":t<3?"#F07CC8":"#6A3EC0",t===0?1:.9-t*.15); } }
+  function comet(fx,s,c,front){
+    const rx=s.r+3, ry=(s.r+3)*.45;
+    for(let t=3;t>=0;t--){ const a=fx.f*.15-t*.12, sn=Math.sin(a); if((sn>0)!==front) continue;
+      dot(c,s.cx+Math.cos(a)*rx,s.cy+sn*ry,t===0?"#FFFFFF":t===1?"#FFE08A":"#F07CC8",t===0?1:.85-t*.2); }
   }
 
-  // ---------- 3D : voxels pixelisés ----------
-  // Chaque pixel du sprite devient une colonne de voxels ; l'épaisseur grandit vers l'intérieur de la forme
-  // (bords fins, cœur épais : un volume arrondi). Rendu par tampon de profondeur dans une petite image (2 px par voxel),
-  // agrandie sans lissage : la 3D garde son grain pixel.
+  // ---------- volume : forme gonflée ----------
   const LIGHT=(()=>{ const v=[-0.45,-0.62,0.64], n=Math.hypot(v[0],v[1],v[2]); return v.map(x=>x/n); })();
-  const AMB=.46, DIF=.62;
-  const FACE=[ {n:[0,0,1],e1:[1,0,0],e2:[0,1,0]}, {n:[0,0,-1],e1:[1,0,0],e2:[0,1,0]},
-    {n:[-1,0,0],e1:[0,1,0],e2:[0,0,1]}, {n:[1,0,0],e1:[0,1,0],e2:[0,0,1]},
-    {n:[0,-1,0],e1:[1,0,0],e2:[0,0,1]}, {n:[0,1,0],e1:[1,0,0],e2:[0,0,1]} ];
-  function voxModel(cv, o){
-    const w=cv.width, h=cv.height, d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,w,h).data;
-    const N=w*h, A=new Uint8Array(N), D=new Float32Array(N), H=new Float32Array(N), C=new Int32Array(N);
-    for(let i=0;i<N;i++){ if(d[i*4+3]>200){ A[i]=1; D[i]=1e9; C[i]=(255<<24)|(d[i*4+2]<<16)|(d[i*4+1]<<8)|d[i*4]; } }
-    const at=(x,y)=>(x<0||y<0||x>=w||y>=h)?0:D[y*w+x];
-    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(A[i]) D[i]=Math.min(D[i],at(x-1,y)+1,at(x,y-1)+1,at(x-1,y-1)+1.4,at(x+1,y-1)+1.4); }
-    for(let y=h-1;y>=0;y--) for(let x=w-1;x>=0;x--){ const i=y*w+x; if(A[i]) D[i]=Math.min(D[i],at(x+1,y)+1,at(x,y+1)+1,at(x+1,y+1)+1.4,at(x-1,y+1)+1.4); }
-    for(let i=0;i<N;i++) if(A[i]) H[i]=Math.min(o.maxH, o.base+(D[i]-1)*o.k);
-    const F=[], hh=(x,y)=>(x<0||y<0||x>=w||y>=h)?0:H[y*w+x];
-    const side=(t,x,y,hz,hn,c)=>{ if(hn>=hz) return; if(hn<=0){ F.push(t,x,y,-hz,2*hz,c); return; } F.push(t,x,y,hn,hz-hn,c,t,x,y,-hz,hz-hn,c); };
-    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!A[i]) continue; const hz=H[i], c=C[i];
-      F.push(0,x,y,hz,1,c, 1,x,y,-hz,1,c);
-      side(2,x,y,hz,hh(x-1,y),c); side(3,x,y,hz,hh(x+1,y),c); side(4,x,y,hz,hh(x,y-1),c); side(5,x,y,hz,hh(x,y+1),c); }
-    return {w,h,H,F:new Float64Array(F), cx:o.cx!=null?o.cx:w/2, cy:o.cy!=null?o.cy:h/2};
+  const AMB=.4, DIF=.72;   // contraste marqué : les flancs s'assombrissent, le volume se lit
+  function inflate(cv, o){
+    const w=cv.width, h=cv.height, d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,w,h).data, N=w*h;
+    const A=new Uint8Array(N), C=new Int32Array(N);
+    for(let i=0;i<N;i++) if(d[i*4+3]>200){ A[i]=1; C[i]=(255<<24)|(d[i*4+2]<<16)|(d[i*4+1]<<8)|d[i*4]; }   // l'ombre au sol, translucide, n'a pas de volume
+    // le contour extérieur sombre ne fait pas partie du volume : il est redessiné autour de la silhouette du moment
+    const out=(x,y)=>x<0||y<0||x>=w||y>=h||!A[y*w+x];
+    let M=new Uint8Array(N), nA=0, nM=0;
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!A[i]) continue; nA++;
+      if(isDark(d,i*4) && (out(x-1,y)||out(x+1,y)||out(x,y-1)||out(x,y+1))) continue; M[i]=1; nM++; }
+    if(nM<nA*.35) { M=A.slice(); }
+    // Poisson : Δu = −1 dans la forme, u = 0 au bord ; h = √(4u) donne une sphère exacte pour un disque
+    const U=new Float32Array(N), it=Math.round(2.2*Math.max(w,h))+20;
+    for(let k=0;k<it;k++) for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!M[i]) continue;
+      const s=(x>0&&M[i-1]?U[i-1]:0)+(x<w-1&&M[i+1]?U[i+1]:0)+(y>0&&M[i-w]?U[i-w]:0)+(y<h-1&&M[i+w]?U[i+w]:0);
+      U[i]+=1.8*((s+1)/4-U[i]); }
+    const H=new Float32Array(N); for(let i=0;i<N;i++) if(M[i]) H[i]=Math.min(o.maxH, o.depth*Math.sqrt(4*Math.max(0,U[i])));
+    // sommets aux coins des pixels : hauteur moyenne, amincie au bord (une tranche fine ferme le volume)
+    const W1=w+1, H1=h+1, HC=new Float32Array(W1*H1);
+    const inM=(x,y)=>x>=0&&y>=0&&x<w&&y<h&&M[y*w+x];
+    for(let y=0;y<H1;y++) for(let x=0;x<W1;x++){ let n=0,s=0;
+      for(const [px,py] of [[x-1,y-1],[x,y-1],[x-1,y],[x,y]]) if(inM(px,py)){ n++; s+=H[py*w+px]; }
+      HC[y*W1+x]= n===4 ? s/4 : n ? o.rim+(s/n)*.3 : 0; }
+    // triangles : face avant, face arrière, tranches au bord ; orientés vers l'extérieur
+    const T=[]; const vF=(x,y)=>y*W1+x, vB=(x,y)=>W1*H1+y*W1+x;
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!M[i]) continue;
+      const a=vF(x,y), b=vF(x+1,y), c=vF(x+1,y+1), e=vF(x,y+1), A2=vB(x,y), B2=vB(x+1,y), C2=vB(x+1,y+1), E2=vB(x,y+1);
+      T.push(a,b,c,i, a,c,e,i,  A2,C2,B2,i, A2,E2,C2,i);
+      if(!inM(x,y-1)) T.push(a,A2,B2,i, a,B2,b,i);
+      if(!inM(x+1,y)) T.push(b,B2,C2,i, b,C2,c,i);
+      if(!inM(x,y+1)) T.push(c,C2,E2,i, c,E2,e,i);
+      if(!inM(x-1,y)) T.push(e,E2,A2,i, e,A2,a,i);
+    }
+    const NV=2*W1*H1, VX=new Float32Array(NV), VY=new Float32Array(NV), VZ=new Float32Array(NV);
+    for(let y=0;y<H1;y++) for(let x=0;x<W1;x++){ const k=y*W1+x; VX[k]=VX[k+W1*H1]=x; VY[k]=VY[k+W1*H1]=y; VZ[k]=HC[k]; VZ[k+W1*H1]=-HC[k]; }
+    // oriente chaque triangle vers l'extérieur (normale attendue : +z devant, −z derrière, latérale sur les tranches)
+    const TT=new Int32Array(T);
+    for(let k=0;k<TT.length;k+=4){ const i0=TT[k],i1=TT[k+1],i2=TT[k+2];
+      const ux=VX[i1]-VX[i0], uy=VY[i1]-VY[i0], uz=VZ[i1]-VZ[i0], wx=VX[i2]-VX[i0], wy=VY[i2]-VY[i0], wz=VZ[i2]-VZ[i0];
+      const nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx;
+      const pi=TT[k+3], px=pi%w+.5, py=(pi/w|0)+.5, mx=(VX[i0]+VX[i1]+VX[i2])/3-px, my=(VY[i0]+VY[i1]+VY[i2])/3-py, mz=(VZ[i0]+VZ[i1]+VZ[i2])/3;
+      if(nx*mx+ny*my+nz*mz<0){ TT[k+1]=i2; TT[k+2]=i1; } }
+    return {w,h,C,H,TT,VX,VY,VZ,NV, cx:o.cx!=null?o.cx:w/2, cy:o.cy!=null?o.cy:h/2,
+      RX:new Float32Array(NV), RY:new Float32Array(NV), RZ:new Float32Array(NV)};
   }
-  function rotV(R3,x,y,z){ const x1=x*R3.cy+z*R3.sy, z1=-x*R3.sy+z*R3.cy; return [x1, y*R3.cp-z1*R3.sp, y*R3.sp+z1*R3.cp]; }
-  function voxRender(fx){
-    const M=fx.M, R3=fx.R3, Q=fx.Q, W2=fx.W*Q, H2=fx.H*Q, img=fx.img32, zb=fx.zb;
+  function render(fx){
+    const M=fx.M, W2=fx.W*Q, H2=fx.H*Q, img=fx.img32, zb=fx.zb, yaw=fx.yaw;
     img.fill(0); zb.fill(-1e9);
-    R3.cy=Math.cos(R3.yaw); R3.sy=Math.sin(R3.yaw); R3.cp=Math.cos(R3.pitch); R3.sp=Math.sin(R3.pitch);
-    const n0=[0,-R3.sp,R3.cp], ref=AMB+DIF*Math.max(0,n0[0]*LIGHT[0]+n0[1]*LIGHT[1]+n0[2]*LIGHT[2]);
-    const vis=[], sh=[], E1=[], E2=[];
-    for(let t=0;t<6;t++){ const n=rotV(R3,...FACE[t].n); vis[t]=n[2]>0.03;
-      sh[t]=Math.min(1.3,(AMB+DIF*Math.max(0,n[0]*LIGHT[0]+n[1]*LIGHT[1]+n[2]*LIGHT[2]))/ref); E1[t]=rotV(R3,...FACE[t].e1); E2[t]=rotV(R3,...FACE[t].e2); }
-    const F=M.F, L=F.length, ccx=M.cx, ccy=M.cy, ox=fx.ox, oy=fx.oy+fx.vb;
-    for(let k=0;k<L;k+=6){ const t=F[k]; if(!vis[t]) continue;
-      let x=F[k+1], y=F[k+2]; const z=F[k+3], len=t<2?1:F[k+4], col=F[k+5];
-      if(t===3) x+=1; else if(t===5) y+=1;
-      const p=rotV(R3,x-ccx,y-ccy,z), sx=(ox+ccx+p[0])*Q, sy=(oy+ccy+p[1])*Q, sz=p[2];
-      const a=E1[t], b=E2[t], ax=a[0]*Q, ay=a[1]*Q, bx=b[0]*Q*len, byy=b[1]*Q*len, bz=b[2]*len;
-      const det=ax*byy-ay*bx; if(det>-1e-3&&det<1e-3) continue;
-      const xs=[sx,sx+ax,sx+bx,sx+ax+bx], ys=[sy,sy+ay,sy+byy,sy+ay+byy];
-      const x0=Math.max(0,Math.floor(Math.min(xs[0],xs[1],xs[2],xs[3]))), x1=Math.min(W2-1,Math.ceil(Math.max(xs[0],xs[1],xs[2],xs[3])));
-      const y0=Math.max(0,Math.floor(Math.min(ys[0],ys[1],ys[2],ys[3]))), y1=Math.min(H2-1,Math.ceil(Math.max(ys[0],ys[1],ys[2],ys[3])));
-      const s=sh[t], r=Math.min(255,(col&255)*s)|0, g=Math.min(255,((col>>8)&255)*s)|0, bl=Math.min(255,((col>>16)&255)*s)|0, cc=(255<<24)|(bl<<16)|(g<<8)|r;
-      for(let py=y0;py<=y1;py++){ const dy=py+.5-sy; for(let px=x0;px<=x1;px++){ const dx=px+.5-sx;
-        const u=(dx*byy-dy*bx)/det; if(u<0||u>=1) continue; const v=(ax*dy-ay*dx)/det; if(v<0||v>=1) continue;
-        const zz=sz+u*a[2]+v*bz, i=py*W2+px; if(zz>zb[i]){ zb[i]=zz; img[i]=cc; } } }
+    const cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(PITCH), sp=Math.sin(PITCH), ccx=M.cx, ccy=M.cy;
+    const RX=M.RX, RY=M.RY, RZ=M.RZ, ox=(fx.ox+ccx)*Q, oy=(fx.oy+fx.vb+ccy)*Q;
+    for(let k=0;k<M.NV;k++){ const x=M.VX[k]-ccx, y=M.VY[k]-ccy, z=M.VZ[k], x1=x*cy+z*sy, z1=-x*sy+z*cy; RX[k]=x1; RY[k]=y*cp-z1*sp; RZ[k]=y*sp+z1*cp; }
+    const ref=AMB+DIF*Math.max(0,-sp*LIGHT[1]+cp*LIGHT[2]);
+    const TT=M.TT, C=M.C;
+    for(let k=0;k<TT.length;k+=4){ const i0=TT[k],i1=TT[k+1],i2=TT[k+2];
+      const ax=RX[i0]*Q+ox, ay=RY[i0]*Q+oy, bx=RX[i1]*Q+ox, by=RY[i1]*Q+oy, qx=RX[i2]*Q+ox, qy=RY[i2]*Q+oy;
+      const area=(bx-ax)*(qy-ay)-(by-ay)*(qx-ax); if(area<=1e-4) continue;    // tourné vers l'arrière
+      // ombrage par facette, en paliers (aspect pixel)
+      const ux=RX[i1]-RX[i0], uy=RY[i1]-RY[i0], uz=RZ[i1]-RZ[i0], wx=RX[i2]-RX[i0], wy=RY[i2]-RY[i0], wz=RZ[i2]-RZ[i0];
+      let nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx; const nl=Math.hypot(nx,ny,nz)||1; nx/=nl; ny/=nl; nz/=nl;
+      let s=(AMB+DIF*Math.max(0,nx*LIGHT[0]+ny*LIGHT[1]+nz*LIGHT[2]))/ref; s=Math.round(s*7)/7; if(s>1.25) s=1.25;
+      const col=C[TT[k+3]], r=Math.min(255,(col&255)*s)|0, g=Math.min(255,((col>>8)&255)*s)|0, b=Math.min(255,((col>>16)&255)*s)|0, cc=(255<<24)|(b<<16)|(g<<8)|r;
+      const az=RZ[i0], bz=RZ[i1], qz=RZ[i2], inv=1/area;
+      const x0=Math.max(0,Math.floor(Math.min(ax,bx,qx))), x1=Math.min(W2-1,Math.ceil(Math.max(ax,bx,qx)));
+      const y0=Math.max(0,Math.floor(Math.min(ay,by,qy))), y1=Math.min(H2-1,Math.ceil(Math.max(ay,by,qy)));
+      for(let py=y0;py<=y1;py++){ const Y=py+.5; for(let px=x0;px<=x1;px++){ const X=px+.5;
+        const w0=((qx-bx)*(Y-by)-(qy-by)*(X-bx))*inv; if(w0<-1e-5) continue;
+        const w1=((ax-qx)*(Y-qy)-(ay-qy)*(X-qx))*inv; if(w1<-1e-5) continue;
+        const w2=1-w0-w1; if(w2<-1e-5) continue;
+        const z=w0*az+w1*bz+w2*qz, i=py*W2+px; if(z>zb[i]){ zb[i]=z; img[i]=cc; } } }
     }
   }
 
   // ---------- instance ----------
   function Fx(o){
-    this.cv=o.front; this.ctx=o.front.getContext("2d"); this.bcv=o.back||null; this.bctx=o.back?o.back.getContext("2d"):null;
-    this.W=o.W; this.H=o.H; this.f=0; this.parts=[]; this.bolts=[]; this.vis=true; this.by=0; this.vb=0; this.glitch=0;
-    this.Q=(o.vox&&o.sprite)?(o.vox.Q||2):1;
-    this.cv.width=o.W*this.Q; this.cv.height=o.H*this.Q; if(this.bcv){ this.bcv.width=o.W; this.bcv.height=o.H; }
-    this.ctx.imageSmoothingEnabled=false;
-    this.sprite=o.sprite||null; this.ox=o.ox||0; this.oy=o.oy||0; this.bob=!!o.bob; this.hero=!!o.hero;
-    this.rank=RANK[o.rarity]||0;
-    this.sil=new Uint8Array(o.W*o.H); this.inner=[]; this.bb=[1e9,1e9,-1e9,-1e9];
-    if(o.silFrom||this.sprite) this.silhouette(o.silFrom||this.sprite, this.ox, this.oy);
-    this.rings();
+    this.cv=o.canvas; this.ctx=o.canvas.getContext("2d"); this.W=o.W; this.H=o.H;
+    this.cv.width=o.W*Q; this.cv.height=o.H*Q;
+    this.f=0; this.parts=[]; this.bolts=[]; this.vis=true; this.vb=0; this.glitch=0; this._geo={};
+    this.ox=o.ox; this.oy=o.oy; this.bob=!!o.bob; this.hero=!!o.hero; this.rank=RANK[o.rarity]||0;
+    this.motion=o.motion||null; this.lim=o.lim||LIM; this.ta=o.phase!=null?o.phase:R()*20; this.drag=0; this.dragging=false; this.yaw=0;
+    this.M=inflate(o.sprite,{maxH:o.maxH||6, depth:o.depth||.8, rim:o.rim!=null?o.rim:.4});
+    const N2=o.W*Q*o.H*Q; this.out=this.ctx.createImageData(o.W*Q,o.H*Q); this.out32=new Int32Array(this.out.data.buffer);
+    this.img32=new Int32Array(N2); this.zb=new Float32Array(N2);
+    this.sil=new Uint8Array(o.W*o.H); this.r1=new Uint8Array(o.W*o.H); this.inner=[]; this.ring1=[]; this.ring2=[]; this.ring3=[];
+    this.pb=new PCtx(o.W,o.H); this.pf=new PCtx(o.W,o.H);
+    // première image : silhouette de face, centre et rayon de l'aura (fixes)
+    this.angle(); render(this); this.silhouette();
     const b=this.bb; this.cx=(b[0]+b[2]+1)/2; this.cy=(b[1]+b[3]+1)/2; this.rad=Math.max(b[2]-b[0],b[3]-b[1])/2+(o.radPad||6);
-    if(this.Q>1){ const v=o.vox;
-      this.M=voxModel(this.sprite,{maxH:v.maxH||2,base:v.base!=null?v.base:.5,k:v.k||.6,cx:v.cx,cy:v.cy});
-      this.R3={yaw:v.yaw0||0,pitch:v.pitch!=null?v.pitch:-.2}; this.motion=v.motion||null; this.ta=v.phase!=null?v.phase:R()*20; this.drag=0; this.dragging=false;
-      const W2=o.W*this.Q, H2=o.H*this.Q; this.fcv=document.createElement("canvas"); this.fcv.width=W2; this.fcv.height=H2; this.fctx=this.fcv.getContext("2d");
-      this.imgData=this.fctx.createImageData(W2,H2); this.img32=new Int32Array(this.imgData.data.buffer); this.zb=new Float32Array(W2*H2);
-      this.outData=this.ctx.createImageData(W2,H2); this.out32=new Int32Array(this.outData.data.buffer);
-      this.bob3=this.bob; this.bob=false; this.pb=new PCtx(o.W,o.H); this.pf=new PCtx(o.W,o.H); }
+    this.sz=clamp(this.inner.length/220,.35,1);   // les petits objets ont moins de particules
     this.src=(o.sources||[]).map(s=>this.source(s)).filter(s=>s.pts.length);
-    this._stars=null;
   }
-  // angle du moment : balancement ou rotation complète, plus ce que le doigt a tourné
+  // angle : balancement doux ; le doigt ajoute sa rotation, qui revient en douceur au lâcher ; jamais au-delà de ±lim
   Fx.prototype.angle=function(){
     const m=this.motion; if(!this.dragging) this.ta+=1/FPS;
-    let a=0; if(m){ a = m.spin ? this.ta*m.spin : Math.sin(this.ta*(m.speed||.8))*(m.amp||.4);
-      if(m.piro){ const u=((this.ta+m.piro*3)%9)/1.8; if(u<1) a+=Math.PI*2*(u<.5?2*u*u:1-2*(1-u)*(1-u)); } }   // pirouette de temps en temps
-    this.R3.yaw=a+this.drag;
+    if(!this.dragging && !this.still) this.drag*=.93;
+    const a=m ? Math.sin(this.ta*(m.speed||.8))*(m.amp||.3) : 0;
+    this.drag=clamp(this.drag,-this.lim-a,this.lim-a); this.yaw=clamp(a+this.drag,-this.lim,this.lim);
   };
-  // silhouette, intérieur et anneaux recalculés depuis l'image 3D du moment (à la résolution des pixels logiques)
-  Fx.prototype.sil3d=function(){
-    const W=this.W,H=this.H,Q=this.Q,W2=W*Q,I=this.img32,S=this.sil; S.fill(0); const inner=[], bb=[1e9,1e9,-1e9,-1e9];
-    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ let any=0, inn=0;
-      for(let j=0;j<Q;j++) for(let i=0;i<Q;i++){ const c=I[(y*Q+j)*W2+x*Q+i]; if(c){ any=1; if(((c&255)>=40)||(((c>>8)&255)>=34)||(((c>>16)&255)>=48)) inn=1; } }
-      if(any){ S[y*W+x]=1; if(x<bb[0])bb[0]=x; if(y<bb[1])bb[1]=y; if(x>bb[2])bb[2]=x; if(y>bb[3])bb[3]=y; } if(inn) inner.push({x,y}); }
-    this.inner=inner; if(bb[2]>=0) this.bb=bb; this.rings();
-  };
-  // points d'émission : chaque point garde sa place sur la surface avant du volume et suit la rotation
-  Fx.prototype.reproj=function(){
-    const M=this.M, R3=this.R3, ox=this.ox, oy=this.oy+this.vb;
-    for(const s of this.src) for(const arr of [s.pts,s.edge,s.top]) for(const p of arr){
-      if(p.mx===undefined) continue; const q=rotV(R3,p.mx-M.cx,p.my-M.cy,p.mz); p.x=Math.round(ox+M.cx+q[0]-.5); p.y=Math.round(oy+M.cy+q[1]-.5); }
-  };
-  Fx.prototype.silhouette=function(cv,ox,oy){
-    const d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height).data, W=this.W, H=this.H;
-    for(let y=0;y<cv.height;y++) for(let x=0;x<cv.width;x++){ const i=(y*cv.width+x)*4; if(d[i+3]<=20) continue; const X=x+ox, Y=y+oy; if(X<0||Y<0||X>=W||Y>=H) continue;
-      this.sil[Y*W+X]=1; if(!isOutline(d,i)) this.inner.push({x:X,y:Y}); const b=this.bb; if(X<b[0])b[0]=X; if(Y<b[1])b[1]=Y; if(X>b[2])b[2]=X; if(Y>b[3])b[3]=Y; }
-    if(this.bb[2]<0) this.bb=[0,0,W-1,H-1];
-  };
-  Fx.prototype.rings=function(){
-    const W=this.W,H=this.H,S=this.sil, r1=new Uint8Array(W*H); this.ring1=[]; this.ring2=[];
+  // silhouette de l'image du moment, à la résolution des pixels logiques ; anneaux : contour, puis halos
+  Fx.prototype.silhouette=function(){
+    const W=this.W,H=this.H,W2=W*Q,I=this.img32,S=this.sil; S.fill(0); const inner=[], bb=[1e9,1e9,-1e9,-1e9];
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const o=(y*Q)*W2+x*Q; if(I[o]|I[o+1]|I[o+W2]|I[o+W2+1]){ S[y*W+x]=1; inner.push({x,y});
+      if(x<bb[0])bb[0]=x; if(y<bb[1])bb[1]=y; if(x>bb[2])bb[2]=x; if(y>bb[3])bb[3]=y; } }
+    this.inner=inner; if(bb[2]>=0) this.bb=bb; else this.bb=this.bb||[0,0,W-1,H-1];
+    const r1=this.r1; r1.fill(0); this.ring1=[]; this.ring2=[]; this.ring3=[];
+    const r2=new Uint8Array(W*H);
     const nb=(x,y,A)=>(x>0&&A[y*W+x-1])||(x<W-1&&A[y*W+x+1])||(y>0&&A[(y-1)*W+x])||(y<H-1&&A[(y+1)*W+x]);
-    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(S[y*W+x]) continue; if(nb(x,y,S)){ r1[y*W+x]=1; this.ring1.push({x,y}); } }
-    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(S[i]||r1[i]) continue; if(nb(x,y,r1)) this.ring2.push({x,y}); }
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(!S[i]&&nb(x,y,S)){ r1[i]=1; this.ring1.push({x,y}); } }
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(!S[i]&&!r1[i]&&nb(x,y,r1)){ r2[i]=1; this.ring2.push({x,y}); } }
+    if(this.rank>=3) for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(!S[i]&&!r1[i]&&!r2[i]&&nb(x,y,r2)) this.ring3.push({x,y}); }
   };
-  // source d'effet élémentaire : pixels émetteurs (hors contour), bords, sommets
+  // source d'effet : pixels émetteurs du sprite (hors contour), avec leur place sur la surface avant du volume
   Fx.prototype.source=function(s){
-    const cv=s.mask||this.sprite, ox=s.mask?(s.ox||0):this.ox, oy=s.mask?(s.oy||0):this.oy;
-    const d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height).data, w=cv.width, h=cv.height;
+    const cv=s.mask||null, M=this.M; let d,w,h;
+    if(cv){ d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height).data; w=cv.width; h=cv.height; }
+    else { w=M.w; h=M.h; d=new Uint8ClampedArray(w*h*4); for(let i=0;i<w*h;i++){ const c=M.C[i]; if(!c) continue; d[i*4]=c&255; d[i*4+1]=(c>>8)&255; d[i*4+2]=(c>>16)&255; d[i*4+3]=255; } }
     const op=(x,y)=>x>=0&&y>=0&&x<w&&y<h&&d[(y*w+x)*4+3]>20;
     const pts=[], edge=[], top=[], bb=[1e9,1e9,-1e9,-1e9];
-    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=(y*w+x)*4; if(d[i+3]<=20) continue; const X=x+ox, Y=y+oy;
-      if(X<0||Y<0||X>=this.W||Y>=this.H) continue;
-      if(X<bb[0])bb[0]=X; if(Y<bb[1])bb[1]=Y; if(X>bb[2])bb[2]=X; if(Y>bb[3])bb[3]=Y;
-      const M=this.M, mx=X-this.ox, my=Y-this.oy, mz=(M&&mx>=0&&my>=0&&mx<M.w&&my<M.h)?M.H[my*M.w+mx]:0;
-      const pt=(yy)=>M?{x:X,y:yy,mx:mx+.5,my:yy-this.oy+.5,mz:mz}:{x:X,y:yy};
-      if(!op(x-1,y)||!op(x+1,y)||!op(x,y-1)||!op(x,y+1)) edge.push(pt(Y));
-      if(isOutline(d,i)) continue; pts.push(pt(Y));
-      let up=y-1; while(up>=0 && op(x,up) && isOutline(d,(up*w+x)*4)) up--; if(up<0||!op(x,up)) top.push(pt(Y-(y-1-up))); }
-    const cx=(bb[0]+bb[2]+1)/2, cy=(bb[1]+bb[3]+1)/2, r=Math.max(bb[2]-bb[0],bb[3]-bb[1])/2;
-    return {el:s.el, I:s.I||1, pts, edge, top, bb, cx, cy, r};
+    const mk=(x,y)=>{ const mz=(x<M.w&&y<M.h)?M.H[y*M.w+x]:0; return {x:x+this.ox,y:y+this.oy,mx:x+.5,my:y+.5,mz}; };
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=(y*w+x)*4; if(d[i+3]<=20) continue;
+      const X=x+this.ox, Y=y+this.oy; if(X<bb[0])bb[0]=X; if(Y<bb[1])bb[1]=Y; if(X>bb[2])bb[2]=X; if(Y>bb[3])bb[3]=Y;
+      if(!op(x-1,y)||!op(x+1,y)||!op(x,y-1)||!op(x,y+1)) edge.push(mk(x,y));
+      if(isDark(d,i)) continue; pts.push(mk(x,y));
+      let up=y-1; while(up>=0 && op(x,up) && isDark(d,(up*w+x)*4)) up--; if(up<0||!op(x,up)){ const p=mk(x,y); p.my=up+1.5; p.top=1; top.push(p); } }
+    return {el:s.el, I:s.I||1, pts, edge, top, bb, cx:(bb[0]+bb[2]+1)/2, cy:(bb[1]+bb[3]+1)/2, r:Math.max(bb[2]-bb[0],bb[3]-bb[1])/2};
+  };
+  // les points d'émission suivent la rotation du volume
+  Fx.prototype.reproj=function(){
+    const M=this.M, cy=Math.cos(this.yaw), sy=Math.sin(this.yaw), cp=Math.cos(PITCH), sp=Math.sin(PITCH), ox=this.ox+M.cx, oy=this.oy+this.vb+M.cy;
+    for(const s of this.src) for(const arr of [s.pts,s.edge,s.top]) for(const p of arr){
+      const x=p.mx-M.cx, y=p.my-M.cy, z=p.mz, x1=x*cy+z*sy, z1=-x*sy+z*cy;
+      p.x=Math.round(ox+x1-.5); p.y=Math.round(oy+y*cp-z1*sp-.5); }
   };
   Fx.prototype.starsOf=function(s){
-    if(!s._stars){ s._stars=[]; for(let k=0;k<11;k++){ const a=R()*6.28, d=s.r+rnd(1,6); s._stars.push({x:Math.round(s.cx+Math.cos(a)*d), y:Math.round(s.cy+Math.sin(a)*d*.85), ph:R()*6.28}); } }
+    if(!s._stars){ s._stars=[]; for(let k=0;k<6;k++){ const a=R()*6.28, d=s.r+rnd(2,6); s._stars.push({x:Math.round(s.cx+Math.cos(a)*d), y:Math.round(s.cy+Math.sin(a)*d*.85), ph:R()*6.28}); } }
     return s._stars;
   };
   Fx.prototype.step=function(){
     const f=++this.f;
-    if(this.bob) this.by=(Math.floor(f/8)%2)?-1:0;
-    if(this.M){ if(this.bob3) this.vb=(Math.floor(f/8)%2)?-1:0; this.angle();
-      if(!this.half || (f&1) || this.dragging){ voxRender(this); this.sil3d(); this.reproj(); } }   // tuiles : le volume tourne lentement, une image sur deux suffit
+    if(this.bob) this.vb=(Math.floor(f/8)%2)?-1:0;
+    this.angle();
+    if(!this.half || (f&1) || this.dragging){ render(this); this.silhouette(); this.reproj(); }   // tuiles : une image sur deux suffit au volume
     for(const s of this.src){ const E=EL[s.el]; if(E&&E.spawn) E.spawn(this,s); }
     rarSpawn(this);
-    const P=this.parts; for(let i=P.length-1;i>=0;i--){ const p=P[i]; if(++p.age>=p.life){ P.splice(i,1); continue; } if(p.upd) p.upd(p,this); p.x+=p.vx; p.y+=p.vy; if(p.kind==="fire") p.vx+=rnd(-.06,.06); }
+    const Pa=this.parts; for(let i=Pa.length-1;i>=0;i--){ const p=Pa[i]; if(++p.age>=p.life){ Pa.splice(i,1); continue; } if(p.upd) p.upd(p,this); p.x+=p.vx; p.y+=p.vy; if(p.kind==="fire") p.vx+=rnd(-.06,.06); }
     for(let i=this.bolts.length-1;i>=0;i--){ if(++this.bolts[i].age>=this.bolts[i].life) this.bolts.splice(i,1); }
   };
+  // image : effets arrière, volume + contour, effets avant ; composés pixel par pixel puis posés d'un coup
   Fx.prototype.draw=function(){
-    if(this.M) return this.draw3d();
-    const W=this.W,H=this.H, c=this.ctx, b=this.bctx||c, Q=this.Q;
-    c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,W*Q,H*Q); c.setTransform(Q,0,0,Q,0,0);
-    if(this.bctx) b.clearRect(0,0,W,H);
-    rarBack(this,b);
-    for(const s of this.src){ const E=EL[s.el]; if(E&&E.back) E.back(this,s,b); }
-    drawParts(this,b,"back");
-    if(this.M){ this.fctx.putImageData(this.imgData,0,0); c.save(); c.setTransform(1,0,0,1,0,0); c.globalAlpha=1; c.drawImage(this.fcv,0,0); c.restore(); }
-    else if(this.sprite){ c.globalAlpha=1; c.drawImage(this.sprite,this.ox,this.oy+this.by); }
-    rarFront(this,c);
-    for(const s of this.src){ const E=EL[s.el]; if(E&&E.front) E.front(this,s,c); }
-    drawParts(this,c,"front");
-    for(const bo of this.bolts){ const a=bo.age; for(const [x,y] of bo.pts){
-      const halo=a===0?"#9AD8FF":"#5EA7FF"; c.globalAlpha=a===0?.85:.5; c.fillStyle=halo; c.fillRect(x+1,y,1,1); c.fillRect(x-1,y,1,1); c.fillRect(x,y-1,1,1); c.fillRect(x,y+1,1,1); }
-      for(const [x,y] of bo.pts) dot(c,x,y,a===0?"#FFFFFF":a===1?"#CFEFFF":"#5EA7FF",a<2?1:.6); }
-    c.globalAlpha=1; if(this.bctx) b.globalAlpha=1;
-  };
-
-  // image 3D : aura et effets arrière, volume, effets avant, composés pixel par pixel puis posés d'un coup
-  Fx.prototype.draw3d=function(){
     const pb=this.pb, pf=this.pf; pb.clear(); pf.clear();
     rarBack(this,pb); for(const s of this.src){ const E=EL[s.el]; if(E&&E.back) E.back(this,s,pb); } drawParts(this,pb,"back");
     rarFront(this,pf); for(const s of this.src){ const E=EL[s.el]; if(E&&E.front) E.front(this,s,pf); } drawParts(this,pf,"front");
     for(const bo of this.bolts){ const a=bo.age; for(const [x,y] of bo.pts){
-      pf.globalAlpha=a===0?.85:.5; pf.fillStyle=a===0?"#9AD8FF":"#5EA7FF"; pf.fillRect(x+1,y,1,1); pf.fillRect(x-1,y,1,1); pf.fillRect(x,y-1,1,1); pf.fillRect(x,y+1,1,1); }
+      pf.globalAlpha=a===0?.7:.4; pf.fillStyle=a===0?"#9AD8FF":"#5EA7FF"; pf.fillRect(x+1,y,1,1); pf.fillRect(x-1,y,1,1); pf.fillRect(x,y-1,1,1); pf.fillRect(x,y+1,1,1); }
       for(const [x,y] of bo.pts) dot(pf,x,y,a===0?"#FFFFFF":a===1?"#CFEFFF":"#5EA7FF",a<2?1:.6); }
-    const W=this.W, H=this.H, Q=this.Q, W2=W*Q, S=this.img32, O=this.out32, B=pb.d, F=pf.d;
-    for(let ly=0;ly<H;ly++) for(let lx=0;lx<W;lx++){ const li=(ly*W+lx)*4, fa=F[li+3], ba=B[li+3];
-      // fond seul (arrière + avant), calculé une fois par pixel logique
+    const W=this.W, H=this.H, W2=W*Q, S=this.img32, O=this.out32, B=pb.d, F=pf.d, r1=this.r1;
+    for(let ly=0;ly<H;ly++) for(let lx=0;lx<W;lx++){ const lp=ly*W+lx, li=lp*4, fa=F[li+3], ba=B[li+3];
       let bg=0;
-      if(ba>0||fa>0){ let r=B[li], g=B[li+1], b=B[li+2], a=ba;
+      if(r1[lp]) bg=OUTC;                                          // contour de la silhouette, toujours net
+      else if(ba>0||fa>0){ let r=B[li], g=B[li+1], b=B[li+2], a=ba;
         if(fa>0){ const na=fa+a*(1-fa), k=a*(1-fa); r=(F[li]*fa+r*k)/na; g=(F[li+1]*fa+g*k)/na; b=(F[li+2]*fa+b*k)/na; a=na; }
         bg=((a*255)<<24)|((b&255)<<16)|((g&255)<<8)|(r&255); }
-      for(let j=0;j<Q;j++){ let o=(ly*Q+j)*W2+lx*Q; for(let i=0;i<Q;i++,o++){ const sp=S[o];
+      for(let j=0;j<Q;j++){ let o=(ly*Q+j)*W2+lx*Q; for(let i=0;i<Q;i++,o++){ let sp=S[o]; if(!sp) sp=r1[lp]?OUTC:0;
         if(!sp){ O[o]=bg; continue; }
         if(!(fa>0)){ O[o]=sp; continue; }
-        { const k=1-fa; O[o]=(255<<24)|(((F[li+2]*fa+((sp>>16)&255)*k)&255)<<16)|(((F[li+1]*fa+((sp>>8)&255)*k)&255)<<8)|((F[li]*fa+(sp&255)*k)&255); } } } }
-    this.ctx.putImageData(this.outData,0,0);
+        const k=1-fa; O[o]=(255<<24)|(((F[li+2]*fa+((sp>>16)&255)*k)&255)<<16)|(((F[li+1]*fa+((sp>>8)&255)*k)&255)<<8)|((F[li]*fa+(sp&255)*k)&255); } } }
+    this.ctx.putImageData(this.out,0,0);
   };
 
-  // ---------- rareté ----------
+  // ---------- rareté (sobre : un halo, un liseré, quelques éclats) ----------
   function rarSpawn(fx){
     const k=fx.rank; if(!k) return; const C=RCOL[["","rare","epique","legendaire","mythique"][k]];
-    const tw=fx.hero?[0,0,0,.08,.12][k]:[0,.07,.11,.16,.22][k]; if(R()<tw){ const p=R()<.5?pick(fx.ring1):pick(fx.inner); if(p) P(fx,{x:p.x,y:p.y+fx.by,life:k>=3?10:8,kind:"twinkle",big:k>=3,cols:k===4?[C[0],"hue"]:[C[0],C[2]]}); }
+    const tw=(fx.hero?[0,0,0,.04,.06]:[0,.04,.06,.08,.1])[k]; if(R()<tw){ const p=pick(fx.ring2); if(p) P(fx,{x:p.x,y:p.y,life:k>=3?10:8,kind:"twinkle",layer:"front",big:k>=3,cols:k===4?[C[0],"hue"]:[C[0],C[2]]}); }
     if(fx.hero) return;
-    if(k>=2 && R()<[0,0,.35,.5,.7][k]){ const b=fx.bb; P(fx,{x:rnd(b[0]-3,b[2]+3),y:b[3]+rnd(0,3),vy:-rnd(.2,.42),life:(rnd(14,24))|0,cols:k===4?["#FFFFFF","hue","hue"]:[C[0],C[1],C[2],C[3]]}); }
-    if(k>=3 && R()<.45){ const p=pick(fx.inner); if(p) P(fx,{x:p.x,y:p.y+fx.by,vx:rnd(-.15,.15),vy:-rnd(.25,.5),life:(rnd(8,14))|0,cols:k===4?["#FFFFFF","hue","hue","#8A2A6E"]:["#FFFFFF","#FFE9A0","#F2C14E","#C98A1E"]}); }
+    if(k>=2 && R()<[0,0,.15,.2,.25][k]*fx.sz){ const b=fx.bb; P(fx,{x:rnd(b[0]-3,b[2]+3),y:b[3]+rnd(0,3),vy:-rnd(.2,.38),life:(rnd(14,22))|0,layer:"back",cols:k===4?["#FFFFFF","hue","hue"]:[C[0],C[1],C[2],C[3]]}); }
+    if(k>=3 && R()<.15*fx.sz){ const p=pick(fx.ring1); if(p) P(fx,{x:p.x,y:p.y,vx:rnd(-.15,.15),vy:-rnd(.25,.45),life:(rnd(8,12))|0,layer:"back",cols:k===4?["#FFFFFF","hue","hue","#8A2A6E"]:["#FFFFFF","#FFE9A0","#F2C14E","#C98A1E"]}); }
   }
   function rarBack(fx,c){
     const k=fx.rank, f=fx.f, pul=.5+.5*Math.sin(f*.22); if(!k) return;
-    const cx=fx.cx, cy=fx.cy+fx.by, rad=fx.rad, gm=fx.src.length?.6:1;
-    if(k===1){ glow(fx,c,cx,cy,rad,"#5EA7FF",.45+.2*pul,.4*gm); }
-    if(fx.hero){ // autour du héros : une aura sobre, le visage reste lisible
-      const col=k===4?hue(f,60):"#F2C14E"; glow(fx,c,cx,cy+2,rad+2,col,.55+.15*pul,.22); ringPx(fx,c,fx.ring1,k===4?hue(f,200):"#FFE08A",.3+.2*pul);
-      if(k===4) orbit(fx,c,false); return; }
-    if(k===2){ glow(fx,c,cx,cy,rad+1,"#B58CFF",.6+.25*pul,.45*gm); ringPx(fx,c,fx.ring1,"#D2B4FF",.3+.4*pul); }
-    if(k===3){ rays(fx,c,cx,cy,rad+5,8,f*.045,"#FFE08A",.5); glow(fx,c,cx,cy,rad,"#F2C14E",.7+.25*pul,.45*gm);
-      ringPx(fx,c,fx.ring1,"#FFE08A",fx.hero?.35:.55+.45*pul); if(!fx.hero) ringPx(fx,c,fx.ring2,"#C98A1E",.35); }
-    if(k===4){ rays(fx,c,cx,cy,rad+7,6,f*.06,hue(f),.5,5); rays(fx,c,cx,cy,rad+4,10,-f*.035,hue(f,140),.35,8);
-      glow(fx,c,cx,cy,rad,hue(f,60),.8+.2*pul,.45*gm);
-      ringPx(fx,c,fx.ring1,hue(f,200),fx.hero?.5:1); if(!fx.hero) ringPx(fx,c,fx.ring2,hue(f,20),.55);
-      const w=f%42; if(w<16) ringAt(fx,c,cx,cy,2+w*rad/12,hue(f,90),1-w/16);
+    const cx=fx.cx, cy=fx.cy+fx.vb, rad=fx.rad, gm=fx.src.length?.7:1;
+    if(fx.hero){ const col=k===4?hue(f,60):"#F2C14E"; glow(fx,c,cx,cy+2,rad+2,col,.5+.15*pul,.18); ringPx(c,fx.ring2,k===4?hue(f,200):"#FFE08A",.25+.2*pul); if(k===4) orbit(fx,c,false); return; }
+    if(k===1){ glow(fx,c,cx,cy,rad,"#5EA7FF",.4+.15*pul,.32*gm); }
+    if(k===2){ glow(fx,c,cx,cy,rad+1,"#B58CFF",.5+.2*pul,.34*gm); ringPx(c,fx.ring2,"#D2B4FF",.22+.22*pul); }
+    if(k===3){ rays(fx,c,cx,cy,rad+5,8,f*.04,"#FFE08A",.28); glow(fx,c,cx,cy,rad,"#F2C14E",.6+.2*pul,.34*gm);
+      ringPx(c,fx.ring2,"#FFE08A",.4+.3*pul); ringPx(c,fx.ring3,"#C98A1E",.25); }
+    if(k===4){ rays(fx,c,cx,cy,rad+6,6,f*.05,hue(f),.28,5); rays(fx,c,cx,cy,rad+3,10,-f*.03,hue(f,140),.16,8);
+      glow(fx,c,cx,cy,rad,hue(f,60),.65+.2*pul,.34*gm);
+      ringPx(c,fx.ring2,hue(f,200),.65); ringPx(c,fx.ring3,hue(f,20),.35);
       orbit(fx,c,false); }
   }
   function rarFront(fx,c){
     const k=fx.rank, f=fx.f; if(k<3) return;
     if(fx.hero){ if(k===4) orbit(fx,c,true); return; }
-    const per=k===4?30:40, b=fx.bb, lo=b[0]+b[1]-6, hi=b[2]+b[3]+6, s=lo+(f%per)/per*(hi-lo)*1.6;
-    if(s<hi) for(const p of fx.inner){ const v=p.x+p.y; if(v===Math.round(s)||v===Math.round(s)+1) dot(c,p.x,p.y+fx.by,"#FFFFFF",.75); else if(v===Math.round(s)+2) dot(c,p.x,p.y+fx.by,"#FFFFFF",.35); }
+    // reflet qui balaie l'objet, toutes les 3 à 4 secondes
+    const per=k===4?42:52, b=fx.bb, lo=b[0]+b[1]-6, hi=b[2]+b[3]+6, s=Math.round(lo+(f%per)/per*(hi-lo)*2.2);
+    if(s<hi) for(const p of fx.inner){ const v=p.x+p.y; if(v===s||v===s+1) dot(c,p.x,p.y,"#FFFFFF",.5); }
     if(k===4) orbit(fx,c,true);
   }
-  function ringPx(fx,c,ring,col,a){ c.globalAlpha=Math.max(0,Math.min(1,a)); c.fillStyle=col; for(const p of ring) c.fillRect(p.x,p.y+fx.by,1,1); }
+  function ringPx(c,ring,col,a){ c.globalAlpha=clamp(a,0,1); c.fillStyle=col; for(const p of ring) c.fillRect(p.x,p.y,1,1); }
   function orbit(fx,c,front){
-    const n=fx.hero?5:6, rx=(fx.bb[2]-fx.bb[0])/2+5, ry=Math.max(3,(fx.bb[3]-fx.bb[1])/2*.35);
-    for(let k=0;k<n;k++) for(let t=3;t>=0;t--){ const a=fx.f*.13+k*Math.PI*2/n-t*.11, sn=Math.sin(a); if((sn>0)!==front) continue;
-      dot(c,fx.cx+Math.cos(a)*rx,fx.cy+fx.by+sn*ry+Math.cos(a*2)*1.2,t===0?"#FFFFFF":hue(fx.f,k*60+t*20),t===0?1:.85-t*.2); }
+    const n=3, rx=(fx.bb[2]-fx.bb[0])/2+5, ry=Math.max(3,(fx.bb[3]-fx.bb[1])/2*.3);
+    for(let k=0;k<n;k++) for(let t=2;t>=0;t--){ const a=fx.f*.12+k*Math.PI*2/n-t*.11, sn=Math.sin(a); if((sn>0)!==front) continue;
+      dot(c,fx.cx+Math.cos(a)*rx,fx.cy+fx.vb+sn*ry,t===0?"#FFFFFF":hue(fx.f,k*60+t*20),t===0?.95:.7-t*.2); }
   }
 
   // ---------- particules ----------
@@ -2396,17 +2383,17 @@
     for(const p of fx.parts){ if(p.layer!==layer) continue; const t=p.age/p.life, f=fx.f;
       const col=(cols)=>{ const v=ramp(cols,t); return v==="hue"?hue(f,p.ph*57):v; };
       switch(p.kind){
-        case "fire": dot(c,p.x,p.y,ramp(FIRE,t),t>.8?.7:1); break;
-        case "flake": if(t<.85) plus(c,p.x,p.y,1,"#FFFFFF",col(p.cols),.9); else dot(c,p.x,p.y,col(p.cols),.6); break;
-        case "wisp": if(t>.6 && (p.age&1)) break; dot(c,p.x,p.y,col(p.cols),t>.7?.6:.9); if(t<.4) dot(c,p.x,p.y+1,col(p.cols.slice(2)),.45); break;
-        case "bit": if(p.age%3===2) break; dot(c,p.x,p.y,col(p.cols),1); if(p.ph>3) dot(c,p.x+1,p.y,col(p.cols),.7); break;
-        case "bubble": { const x=Math.round(p.x),y=Math.round(p.y),cc=col(p.cols); dot(c,x+1,y,cc,.8); dot(c,x-1,y,cc,.8); dot(c,x,y-1,cc,.8); dot(c,x,y+1,cc,.8); dot(c,x-1,y-1,"#FFFFFF",.9); break; }
+        case "fire": dot(c,p.x,p.y,ramp(FIRE,t),t>.8?.6:.95); break;
+        case "flake": if(t<.85) plus(c,p.x,p.y,1,"#FFFFFF",col(p.cols),.85); else dot(c,p.x,p.y,col(p.cols),.6); break;
+        case "wisp": if(t>.6 && (p.age&1)) break; dot(c,p.x,p.y,col(p.cols),t>.7?.55:.85); break;
+        case "bit": if(p.age%3===2) break; dot(c,p.x,p.y,col(p.cols),.9); break;
+        case "bubble": { const x=Math.round(p.x),y=Math.round(p.y),cc=col(p.cols); dot(c,x+1,y,cc,.7); dot(c,x-1,y,cc,.7); dot(c,x,y-1,cc,.7); dot(c,x,y+1,cc,.7); break; }
         case "leaf": { const fl=(p.age>>2)&1; dot(c,p.x,p.y,p.col[0],1); dot(c,p.x+(fl?1:-1),p.y+(fl?0:1),p.col[1],1); break; }
-        case "smoke": { const cc=col(p.cols); if(t<.5){ c.globalAlpha=.75; c.fillStyle=cc; c.fillRect(Math.round(p.x),Math.round(p.y),2,2); } else dot(c,p.x,p.y,cc,.6); break; }
+        case "smoke": { const cc=col(p.cols); if(t<.5){ c.globalAlpha=.6; c.fillStyle=cc; c.fillRect(Math.round(p.x),Math.round(p.y),2,2); } else dot(c,p.x,p.y,cc,.5); break; }
         case "eyes": if(p.age%4<3){ dot(c,p.x,p.y,"#FF3A4A",1); dot(c,p.x+2,p.y,"#FF3A4A",1); } break;
-        case "twinkle": { const sz=p.big?[0,1,2,2,2,1,1,0,0,0][p.age]||0:[0,1,1,2,1,0,0,0][p.age]||0; const arm=p.cols[1]==="hue"?hue(f,p.ph*57):p.cols[1];
-          if(sz===0) dot(c,p.x,p.y,p.cols[0],.9); else plus(c,p.x,p.y,sz,p.cols[0],arm,.95); break; }
-        default: dot(c,p.x,p.y,col(p.cols||["#FFFFFF"]),t>.75?.6:1);
+        case "twinkle": { const sz=p.big?[0,1,2,2,1,1,0,0,0,0][p.age]||0:[0,1,1,1,0,0,0,0][p.age]||0; const arm=p.cols[1]==="hue"?hue(f,p.ph*57):p.cols[1];
+          if(sz===0) dot(c,p.x,p.y,p.cols[0],.85); else plus(c,p.x,p.y,sz,p.cols[0],arm,.9); break; }
+        default: dot(c,p.x,p.y,col(p.cols||["#FFFFFF"]),t>.75?.55:.9);
       }
     }
     c.globalAlpha=1;
@@ -2422,47 +2409,42 @@
     if(!LIVE.size){ cancelAnimationFrame(raf); raf=0; }
   }
   function start(fx){
-    if(reduce && fx.M){ fx.motion=null; fx.drag=.45; }   // mouvement réduit : vue de trois quarts, immobile
-    for(let i=0;i<24;i++) fx.step();   // l'effet démarre déjà installé
+    if(reduce){ fx.motion=null; fx.drag=.35; fx.still=true; }   // mouvement réduit : vue de trois quarts, immobile
+    for(let i=0;i<20;i++) fx.step();   // l'effet démarre déjà installé
     fx.draw(); fx.cv.__fx=fx;
-    const still = reduce || (!fx.rank && !fx.src.length && !fx.bob && !(fx.M && fx.motion));
-    if(still) return fx;
+    if(reduce) return fx;
     LIVE.add(fx); if(io) io.observe(fx.cv);
     if(!raf) raf=requestAnimationFrame(loop);
     return fx;
   }
 
   // ---------- API ----------
-  // Tuile : sprite centré dans une toile carrée, l'effet tient dans la toile.
+  // Tuile : sprite centré dans une toile carrée.
   PX.fxTile=function(cv, sprite, rarity, el, opts){
     opts=opts||{}; const sw=sprite.width, sh=sprite.height, rank=RANK[rarity]||0;
-    const pad=opts.pad!=null?opts.pad:(rank>=3||el?7:rank?6:5);
+    const pad=opts.pad!=null?opts.pad:(rank>=3||el?6:rank?5:4);
     const S=Math.max(opts.min||22, Math.max(sw,sh)+pad*2);
     const ox=Math.floor((S-sw)/2), oy=Math.max(1,Math.floor((S-sh)/2)-(opts.lift||0));
-    const vox=opts.vox===false?null:Object.assign({Q:2, maxH:1.6, motion:{amp:[.32,.38,.46,.55,.62][rank], speed:.9, piro:rank>=3?R()+1:0}}, opts.vox||{});
-    const fx=new Fx({front:cv, W:S, H:S, sprite, ox, oy, rarity, sources:el?[{el, I:[1,1,1,1.3,1.6][rank]}]:[], bob:!!opts.bob, radPad:opts.radPad, vox});
-    fx.half=!opts.bob; return start(fx);
+    const v=opts.vox||{};
+    const fx=new Fx({canvas:cv, W:S, H:S, sprite, ox, oy, rarity, sources:el?[{el, I:[1,1,1,1.1,1.2][rank]}]:[], bob:!!opts.bob, radPad:opts.radPad,
+      maxH:v.maxH, depth:v.depth, motion:v.motion||{amp:[.24,.27,.3,.33,.36][rank], speed:.8}, lim:v.lim});
+    fx.half=!opts.bob && !v.full; return start(fx);
   };
-  // Héros en 3D : une seule toile (aura, héros en voxels, particules), marges m autour du sprite.
+  // Héros : une seule toile (aura, héros en volume, particules), marges m autour du sprite.
   PX.fxHero=function(cv, o){
     const m=o.m||6, W=o.sprite.width+2*m, H=o.sprite.height+2*m;
-    return start(new Fx({front:cv, W, H, sprite:o.sprite, ox:m, oy:m, hero:true, rarity:o.rarity, radPad:3,
-      vox:Object.assign({Q:2, maxH:3, k:.55, motion:{amp:.42, speed:.6}}, o.vox||{}),
-      sources:(o.layers||[]).map(l=>({el:l.el, mask:l.mask, ox:m, oy:m, I:l.I||.55}))}));
+    const v=o.vox||{};
+    return start(new Fx({canvas:cv, W, H, sprite:o.sprite, ox:m, oy:m, hero:true, rarity:o.rarity, radPad:3,
+      maxH:v.maxH||6, depth:v.depth||.72, motion:v.motion||{amp:.3, speed:.55}, lim:v.lim||.6,
+      sources:(o.layers||[]).map(l=>({el:l.el, mask:l.mask, I:l.I||.6}))}));
   };
-  // Le doigt fait tourner le volume ; au lâcher, l'objet reprend son mouvement
+  // Le doigt fait tourner le volume ; au lâcher, il revient doucement
   PX.fxDrag=function(el, getFx){
     let x0=null; el.style.touchAction="pan-y";
-    el.addEventListener("pointerdown",e=>{ const fx=getFx(); if(!fx||!fx.M) return; x0=e.clientX; fx.dragging=true; });
-    el.addEventListener("pointermove",e=>{ const fx=getFx(); if(x0==null||!fx) return; fx.drag+=(e.clientX-x0)*.025; x0=e.clientX; if(reduce){ fx.step(); fx.draw(); } });
+    el.addEventListener("pointerdown",e=>{ const fx=getFx(); if(!fx) return; x0=e.clientX; fx.dragging=true; });
+    el.addEventListener("pointermove",e=>{ const fx=getFx(); if(x0==null||!fx) return; fx.drag+=(e.clientX-x0)*.02; x0=e.clientX; if(reduce){ fx.angle(); render(fx); fx.silhouette(); fx.reproj(); fx.draw(); } });
     const up=()=>{ const fx=getFx(); x0=null; if(fx) fx.dragging=false; };
     el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up); el.addEventListener("pointerleave",up);
-  };
-  // Surimpression autour d'une image (héros) : toile arrière + toile avant, marges m.
-  PX.fxOverlay=function(back, front, o){
-    const m=o.m||6, W=o.w+2*m, H=o.h+2*m;
-    return start(new Fx({front, back, W, H, ox:m, oy:m, silFrom:o.sil, hero:true, rarity:o.rarity, radPad:3,
-      sources:(o.layers||[]).map(l=>({el:l.el, mask:l.mask, ox:m, oy:m, I:l.I||.55}))}));
   };
   PX.FX_EL=EL; PX.fxStopAll=function(){ LIVE.clear(); };
 })();
