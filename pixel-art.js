@@ -2181,10 +2181,18 @@
     for(let i=0;i<N;i++) if(d[i*4+3]>200){ A[i]=1; C[i]=(255<<24)|(d[i*4+2]<<16)|(d[i*4+1]<<8)|d[i*4]; }   // l'ombre au sol, translucide, n'a pas de volume
     // le contour extérieur sombre ne fait pas partie du volume : il est redessiné autour de la silhouette du moment
     const out=(x,y)=>x<0||y<0||x>=w||y>=h||!A[y*w+x];
-    let M=new Uint8Array(N), nA=0, nM=0;
-    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!A[i]) continue; nA++;
-      if(isDark(d,i*4) && (out(x-1,y)||out(x+1,y)||out(x,y-1)||out(x,y+1))) continue; M[i]=1; nM++; }
+    let M=A.slice(), nA=0, nM=0; for(let i=0;i<N;i++) if(A[i]) nA++;
+    for(let pass=0;pass<2;pass++){ const cut=[];
+      const gone=(x,y)=>x<0||y<0||x>=w||y>=h||!M[y*w+x];
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(M[i] && isDark(d,i*4) && (gone(x-1,y)||gone(x+1,y)||gone(x,y-1)||gone(x,y+1))) cut.push(i); }
+      for(const i of cut) M[i]=0; }
+    for(let i=0;i<N;i++) if(M[i]) nM++;
     if(nM<nA*.35) { M=A.slice(); }
+    // un pixel sombre resté au bord prend la couleur de son voisin clair : les tranches latérales ne font pas de bande noire
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!M[i]||!isDark(d,i*4)) continue;
+      const edge=(x>0&&!M[i-1])||(x<w-1&&!M[i+1])||(y>0&&!M[i-w])||(y<h-1&&!M[i+w])||x===0||y===0||x===w-1||y===h-1; if(!edge) continue;
+      for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]]){ const X=x+dx, Y=y+dy; if(X<0||Y<0||X>=w||Y>=h) continue; const j=Y*w+X;
+        if(M[j] && !isDark(d,j*4)){ C[i]=(255<<24)|((d[j*4+2]*.7|0)<<16)|((d[j*4+1]*.7|0)<<8)|(d[j*4]*.7|0); break; } } }
     // Poisson : Δu = −1 dans la forme, u = 0 au bord ; h = √(4u) donne une sphère exacte pour un disque
     const U=new Float32Array(N), it=Math.round(2.2*Math.max(w,h))+20;
     for(let k=0;k<it;k++) for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; if(!M[i]) continue;
@@ -2255,6 +2263,7 @@
     this.motion=o.motion||null; this.lim=o.lim||LIM; this.ta=o.phase!=null?o.phase:R()*20; this.drag=0; this.dragging=false; this.yaw=0;
     this.M=inflate(o.sprite,{maxH:o.maxH||6, depth:o.depth||.8, rim:o.rim!=null?o.rim:.4});
     const N2=o.W*Q*o.H*Q; this.out=this.ctx.createImageData(o.W*Q,o.H*Q); this.out32=new Int32Array(this.out.data.buffer);
+    this.o1=new Uint8Array(N2); this.o1a=new Uint8Array(N2);
     this.img32=new Int32Array(N2); this.zb=new Float32Array(N2);
     this.sil=new Uint8Array(o.W*o.H); this.r1=new Uint8Array(o.W*o.H); this.inner=[]; this.ring1=[]; this.ring2=[]; this.ring3=[];
     this.pb=new PCtx(o.W,o.H); this.pf=new PCtx(o.W,o.H);
@@ -2283,6 +2292,12 @@
     for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(!S[i]&&nb(x,y,S)){ r1[i]=1; this.ring1.push({x,y}); } }
     for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(!S[i]&&!r1[i]&&nb(x,y,r1)){ r2[i]=1; this.ring2.push({x,y}); } }
     if(this.rank>=3) for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=y*W+x; if(!S[i]&&!r1[i]&&!r2[i]&&nb(x,y,r2)) this.ring3.push({x,y}); }
+    // contour de l'image : deux dilatations en croix du masque rendu (épaisseur d'un pixel de sprite, coins adoucis)
+    const H2=H*Q, A1=this.o1a, O1=this.o1; A1.fill(0); O1.fill(0);
+    for(let y=0;y<H2;y++) for(let x=0;x<W2;x++){ const o=y*W2+x; if(I[o]) continue;
+      if((x>0&&I[o-1])||(x<W2-1&&I[o+1])||(y>0&&I[o-W2])||(y<H2-1&&I[o+W2])) A1[o]=1; }
+    for(let y=0;y<H2;y++) for(let x=0;x<W2;x++){ const o=y*W2+x; if(I[o]) continue;
+      if(A1[o]||(x>0&&A1[o-1])||(x<W2-1&&A1[o+1])||(y>0&&A1[o-W2])||(y<H2-1&&A1[o+W2])) O1[o]=1; }
   };
   // source d'effet : pixels émetteurs du sprite (hors contour), avec leur place sur la surface avant du volume
   Fx.prototype.source=function(s){
@@ -2328,14 +2343,13 @@
     for(const bo of this.bolts){ const a=bo.age; for(const [x,y] of bo.pts){
       pf.globalAlpha=a===0?.7:.4; pf.fillStyle=a===0?"#9AD8FF":"#5EA7FF"; pf.fillRect(x+1,y,1,1); pf.fillRect(x-1,y,1,1); pf.fillRect(x,y-1,1,1); pf.fillRect(x,y+1,1,1); }
       for(const [x,y] of bo.pts) dot(pf,x,y,a===0?"#FFFFFF":a===1?"#CFEFFF":"#5EA7FF",a<2?1:.6); }
-    const W=this.W, H=this.H, W2=W*Q, S=this.img32, O=this.out32, B=pb.d, F=pf.d, r1=this.r1;
+    const W=this.W, H=this.H, W2=W*Q, S=this.img32, O=this.out32, B=pb.d, F=pf.d, o1=this.o1;
     for(let ly=0;ly<H;ly++) for(let lx=0;lx<W;lx++){ const lp=ly*W+lx, li=lp*4, fa=F[li+3], ba=B[li+3];
       let bg=0;
-      if(r1[lp]) bg=OUTC;                                          // contour de la silhouette, toujours net
-      else if(ba>0||fa>0){ let r=B[li], g=B[li+1], b=B[li+2], a=ba;
+      if(ba>0||fa>0){ let r=B[li], g=B[li+1], b=B[li+2], a=ba;
         if(fa>0){ const na=fa+a*(1-fa), k=a*(1-fa); r=(F[li]*fa+r*k)/na; g=(F[li+1]*fa+g*k)/na; b=(F[li+2]*fa+b*k)/na; a=na; }
         bg=((a*255)<<24)|((b&255)<<16)|((g&255)<<8)|(r&255); }
-      for(let j=0;j<Q;j++){ let o=(ly*Q+j)*W2+lx*Q; for(let i=0;i<Q;i++,o++){ let sp=S[o]; if(!sp) sp=r1[lp]?OUTC:0;
+      for(let j=0;j<Q;j++){ let o=(ly*Q+j)*W2+lx*Q; for(let i=0;i<Q;i++,o++){ let sp=S[o]; if(!sp) sp=o1[o]?OUTC:0;
         if(!sp){ O[o]=bg; continue; }
         if(!(fa>0)){ O[o]=sp; continue; }
         const k=1-fa; O[o]=(255<<24)|(((F[li+2]*fa+((sp>>16)&255)*k)&255)<<16)|(((F[li+1]*fa+((sp>>8)&255)*k)&255)<<8)|((F[li]*fa+(sp&255)*k)&255); } } }
