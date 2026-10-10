@@ -1794,7 +1794,7 @@
 (function(){
   "use strict";
 
-  const APP_VERSION = "56";                 // numéro affiché dans les réglages
+  const APP_VERSION = "57";                 // numéro affiché dans les réglages
   const APP_DATE = "2026-10-10";             // date de cette version
   const STORAGE_KEY = "suivi-calories:v1";
   const MEALS = [
@@ -5520,10 +5520,15 @@
   // ---------- objets ----------
   const ITEMS=(window.PX_ITEMS||[]).slice();
   const ITEM=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+  // v57 : niveaux requis ramenés de 1–50 à 1–15, dans le même ordre. « tier » garde le rang d'origine,
+  // qui décide toujours de la rareté (et donc des cadres et des effets) ; les prix ne changent pas.
+  const UNLOCK_MAX=15;
+  ITEMS.forEach(it=>{ if(it.tier==null) it.tier=it.lvl;
+    it.lvl=Math.max(1, Math.round(1+(it.tier-1)*(UNLOCK_MAX-1)/49)); if(it.gift) it.lvl=Math.max(it.lvl, it.gift); });
   const SLOT_ORDER=["head","chest","legs","feet","weapon","pet"];
   const SLOT_NAMES={head:["Casque","Helmet"],chest:["Plastron","Chest"],legs:["Jambes","Legs"],feet:["Bottes","Boots"],weapon:["Arme","Weapon"],pet:["Familier","Companion"]};
   const DEFAULT_EQ={chest:"c_tunique",legs:"l_braies",feet:"b_sandales",weapon:"w_baton"};
-  function rarityOf(it){ const l=it.lvl; return l>=50?"mythique":l>=35?"legendaire":l>=20?"epique":l>=10?"rare":"commun"; }
+  function rarityOf(it){ const l=it.tier||it.lvl; return l>=50?"mythique":l>=35?"legendaire":l>=20?"epique":l>=10?"rare":"commun"; }
   const RARITY={commun:["Commun","Common"],rare:["Rare","Rare"],epique:["Épique","Epic"],legendaire:["Légendaire","Legendary"],mythique:["Mythique","Mythic"]};
   const GLORY={commun:10,rare:30,epique:80,legendaire:200,mythique:500};
   function owns(id){ const it=ITEM[id]; if(!it) return false; if(it.starter) return true; if(it.gift && lastState && lastState.level>=it.gift) return true; return !!G.inv[id]; }
@@ -5857,6 +5862,9 @@
       if(G.seen.lvl>0) gLevelUp(G.seen.lvl, S.level);
       G.seen.lvl=S.level; changed=true;
     } else if(S.level<G.seen.lvl){ G.seen.lvl=S.level; changed=true; }
+    if(!G.seen.unlock15){ G.seen.unlock15=1; changed=true;
+      const fresh=ITEMS.filter(i=>!i.starter && !i.gift && i.lvl<=S.level && i.tier>S.level);
+      if(fresh.length) gUnlockNews(fresh); }
     // le chien rejoint le camp au niveau 3
     if(S.level>=3 && !G.inv.p_chien){ G.inv.p_chien={d:todayISO(),stars:0,gift:true}; if(!G.eq.pet) G.eq.pet="p_chien"; changed=true;
       showToast(L2("Un chien de berger rejoint ton camp !","A sheepdog joins your camp!")); }
@@ -5882,6 +5890,21 @@
     if(m.onBind) m.onBind(root);
     const b=root.querySelector("button"); if(b) b.focus({preventScroll:true});
   }
+  // vignettes des objets débloqués : les plus rares d'abord, 8 au plus
+  function gUnlockList(list){
+    const top=list.slice().sort((a,b)=>b.tier-a.tier||b.price-a.price);
+    return `<div class="g-unlocks">${top.slice(0,8).map(i=>`<span class="g-tile r-${rarityOf(i)}"><img src="${i.slot==="pet"?petURL(i.id,2):iconURL(i.id,40)}" alt="${gEsc(nm(i.n))}"></span>`).join("")}</div>`+
+      (top.length>8?`<p class="g-line small">${L2("et ","and ")}${top.length-8}${L2(" autres"," more")}</p>`:"");
+  }
+  // une seule fois après la v57 : ce que la baisse des niveaux vient d'ouvrir
+  function gUnlockNews(list){
+    gModal(`<div class="g-kick">${L2("Nouveauté","What's new")}</div><h3 class="g-h">${L2("L'équipement s'ouvre plus tôt","Gear unlocks sooner")}</h3>
+      <p class="g-line">${L2("Tous les équipements et familiers sont maintenant accessibles avant le niveau 15. Leur rareté et leurs effets ne changent pas.","All gear and companions are now available before level 15. Their rarity and effects stay the same.")}</p>
+      <div class="g-sub">${L2("Déjà à ta portée","Already within reach")} (${list.length})</div>${gUnlockList(list)}
+      <div class="g-sheet-actions"><button class="btn primary" data-gshop>${L2("Voir la boutique","Open the shop")}</button><button class="btn secondary" data-gclose>${L2("Plus tard","Later")}</button></div>`, root=>{
+      const b=root.querySelector("[data-gshop]"); if(b) b.addEventListener("click",()=>{ gNextModal(); showView("hero"); });
+    });
+  }
   function gLevelUp(from, to){
     const lines=[];
     for(let l=from+1;l<=to;l++){ const t=TITLES.find(x=>x[0]===l); if(t) lines.push(L2("Nouveau titre : ","New title: ")+titleOf(l)); if(l===10) lines.push(L2("Tu peux choisir une classe (Héros).","You can pick a class (Hero).")); if(l===10) lines.push(L2("Les festins en trop et les surplus coûtent désormais de l'XP et de l'or.","Extra feasts and surpluses now cost XP and gold.")); }
@@ -5889,7 +5912,7 @@
     gModal(`<div class="g-kick">${L2("Montée de niveau","Level up")}</div><div class="g-big">${L2("Niveau ","Level ")+to}</div><h3 class="g-h">${gEsc(titleOf(to))}</h3>
       <div class="g-hero-mini"><img src="${heroURL(4)}" alt=""></div>
       ${lines.map(l=>`<p class="g-line">${gEsc(l)}</p>`).join("")}
-      ${unlocked.length?`<div class="g-sub">${L2("Nouveaux objets en boutique","New items in the shop")}</div><div class="g-unlocks">${unlocked.slice(0,8).map(i=>`<span class="g-tile r-${rarityOf(i)}"><img src="${i.slot==="pet"?petURL(i.id,2):iconURL(i.id,40)}" alt="${gEsc(nm(i.n))}"></span>`).join("")}</div>`:""}
+      ${unlocked.length?`<div class="g-sub">${L2("Nouveaux objets en boutique","New items in the shop")}</div>${gUnlockList(unlocked)}`:""}
       <button class="btn primary" data-gclose>${L2("Continuer","Continue")}</button>`);
   }
   function gBilan(r){
@@ -6109,7 +6132,7 @@
     const slot=(s)=>{ const id=equipped(s); return `<button class="g-slot${id?" r-"+rarityOf(ITEM[id]):""}" data-gslot="${s}" aria-label="${nm(SLOT_NAMES[s])}">${id?(FXOK?fxCanvas(id,"slot"):`<img src="${s==="pet"?petURL(id,2):iconURL(id,36)}" alt="">`):`<span class="g-slot-e">${nm(SLOT_NAMES[s])}</span>`}${id&&stars(id)?`<span class="g-stars">${"★".repeat(stars(id))}</span>`:""}</button>`; };
     const pid=equipped("pet");
     const owned=ownedCount(), total=ITEMS.length;
-    const list=ITEMS.filter(i=>i.slot===gCat).sort((a,b)=>a.lvl-b.lvl||a.price-b.price);
+    const list=ITEMS.filter(i=>i.slot===gCat).sort((a,b)=>a.lvl-b.lvl||a.tier-b.tier||a.price-b.price);
     box.innerHTML=`<div class="card g-stage">
         <div class="g-stage-grid">
           <div class="g-col">${slot("head")}${slot("chest")}${slot("legs")}</div>
@@ -6221,7 +6244,7 @@
         gLookDraft[k] = k==="hair" ? v : k==="beard" ? v==="1" : Number(v); draw(); }));
       sheetRoot.querySelector("[data-glsave]").addEventListener("click",()=>{
         G.hero={...gLookDraft, name:String(gLookDraft.name||"").trim().slice(0,18)};
-        if(creating){ G.created=true; const S=lastState||replayGame(); G.seen.lvl=S.level; G.seen.ach=Object.assign({},S.ach); G.seen.bilan=addDays(todayISO(),-1); if(S.level>=3){ G.inv.p_chien={d:todayISO(),stars:0,gift:true}; G.eq.pet="p_chien"; } }
+        if(creating){ G.created=true; const S=lastState||replayGame(); G.seen.lvl=S.level; G.seen.unlock15=1; G.seen.ach=Object.assign({},S.ach); G.seen.bilan=addDays(todayISO(),-1); if(S.level>=3){ G.inv.p_chien={d:todayISO(),stars:0,gift:true}; G.eq.pet="p_chien"; } }
         saveGame(); closeSheet(); gRefresh({silent:true});
         if(currentView==="hero") gRenderHero(); else if(currentView==="day") renderDay();
         if(creating) showToast(L2("Bienvenue au Royaume, ","Welcome to the Realm, ")+(G.hero.name||L2("héros","hero"))+" !");
