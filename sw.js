@@ -1,6 +1,6 @@
 // Service worker : permet d'ouvrir l'app même sans connexion.
 // Les données ne sont PAS ici (elles sont dans localStorage) ; ce fichier ne met en cache que l'interface.
-const CACHE = "suivi-calories-v57";
+const CACHE = "suivi-calories-v58";
 const FILES = ["./", "./index.html", "./manifest.json", "./zxing.min.js", "./pixel-art.js", "./fonts/jersey-10-latin-400-normal.woff2", "./fonts/pixelify-sans-latin-400-normal.woff2", "./fonts/pixelify-sans-latin-700-normal.woff2", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
